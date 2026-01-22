@@ -1,0 +1,163 @@
+'use client';
+import { trpc } from '../../utils/trpc';
+import { format } from 'date-fns';
+import { Link2, Clock, Package, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+
+export default function ChangelogPage() {
+    const { data: docs, isLoading } = trpc.documentation.list.useQuery();
+
+    const processUrl = (url: string, variables: Record<string, string>) => {
+        if (!url) return '';
+        let processed = url;
+        Object.keys(variables || {}).forEach(key => {
+            const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+            processed = processed.replace(regex, variables[key]);
+        });
+        return processed;
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent shadow-lg" />
+                    <p className="text-gray-500 font-medium">Fetching API Lifecycle Data...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Flatten all endpoints across all collections
+    const changelog = (docs || []).flatMap(doc => {
+        let content: any = {};
+        if (doc.content) {
+            try {
+                if (typeof doc.content === 'string') {
+                    if (doc.content.trim().startsWith('{')) {
+                        content = JSON.parse(doc.content);
+                    }
+                } else {
+                    content = doc.content;
+                }
+            } catch (e) {
+                // Silently skip malformed JSON
+            }
+        }
+
+        const endpoints = content?.endpoints || [];
+        const vars = content?.variables || {};
+
+        return endpoints.map((ep: any) => ({
+            id: doc.id,
+            collectionName: doc.title,
+            apiName: ep.name || 'Untitled Request',
+            method: ep.method,
+            rawUrl: ep.url,
+            actualUrl: processUrl(ep.url, vars),
+            updatedAt: new Date(doc.updatedAt),
+            status: ep.lastResponse?.status
+        }));
+    }).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+
+    return (
+        <div className="min-h-screen bg-[#F9FAFB] pb-20">
+            {/* Hero Section */}
+            <div className="bg-white border-b border-gray-200 py-12 px-6 mb-8">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-indigo-50 rounded-lg">
+                            <Clock className="text-indigo-600" size={24} />
+                        </div>
+                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">API Changelog</h1>
+                    </div>
+                    <p className="text-gray-500 max-w-2xl font-medium">
+                        Track recent additions and modifications across all your API collections.
+                        Sorted by the most recent activity.
+                    </p>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-6">
+                {/* Sketch-style Table Container */}
+                <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-200 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-gray-50/50 border-b border-gray-100">
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest w-48">Collection</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest w-76">Endpoint</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Resolved URL</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest w-36">Last Sync</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest w-24 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {changelog.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-20 text-center text-gray-400">
+                                        <Package size={48} className="mx-auto mb-4 opacity-20" />
+                                        <p className="text-sm">No API endpoints detected yet.</p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                changelog.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-indigo-50/30 transition-colors group">
+                                        <td className="px-6 py-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]"></div>
+                                                <span className="font-semibold text-gray-700 text-sm truncate max-w-[180px]" title={item.collectionName}>
+                                                    {item.collectionName}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm ${item.method === 'GET' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                                        item.method === 'POST' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                                            'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                                                        }`}>
+                                                        {item.method}
+                                                    </span>
+                                                    <span className="font-bold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors">
+                                                        {item.apiName}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2 group/url">
+                                                <Link2 size={12} className="text-gray-400" />
+                                                <code className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100 truncate max-w-md font-mono" title={item.actualUrl}>
+                                                    {item.actualUrl}
+                                                </code>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className="text-xs text-gray-400 font-medium">
+                                                {format(item.updatedAt, 'MMM dd, HH:mm')}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5 text-center">
+                                            <Link
+                                                href={`/docs/${item.id}`}
+                                                className="inline-flex p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-lg border border-transparent hover:border-gray-200 shadow-none hover:shadow-sm transition-all"
+                                            >
+                                                <ExternalLink size={16} />
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="mt-8 flex justify-between items-center text-gray-400 text-[10px] font-bold uppercase tracking-widest px-2">
+                    <span>Showing {changelog.length} Endpoints</span>
+                    <span>System Generated Lifecycle List</span>
+                </div>
+            </div>
+        </div>
+    );
+}
