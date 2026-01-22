@@ -1,5 +1,6 @@
 'use client';
-import { trpc } from '../../utils/trpc';
+import { api } from '../../utils/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -8,10 +9,14 @@ import toast from 'react-hot-toast';
 import { Trash2, ExternalLink, AlertTriangle } from 'lucide-react';
 
 export default function Dashboard() {
-    const { data: docs, isLoading } = trpc.documentation.list.useQuery();
-    const createEmptyMutation = trpc.documentation.createEmpty.useMutation();
-    const deleteMutation = trpc.documentation.delete.useMutation();
-    const utils = trpc.useUtils();
+    const queryClient = useQueryClient();
+    const { data: docs, isLoading } = useQuery({ queryKey: ['docs'], queryFn: api.documentation.list });
+    const createEmptyMutation = useMutation({
+        mutationFn: (data: { title: string }) => api.documentation.createEmpty(data)
+    });
+    const deleteMutation = useMutation({
+        mutationFn: (data: { id: string }) => api.documentation.delete(data.id)
+    });
     const router = useRouter();
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -55,7 +60,7 @@ export default function Dashboard() {
         setIsDeleting(true);
         try {
             await deleteMutation.mutateAsync({ id: docToDelete.id });
-            utils.documentation.list.invalidate();
+            queryClient.invalidateQueries({ queryKey: ['docs'] });
             setIsDeleteModalOpen(false);
             toast.success('Collection deleted');
         } catch (e) {
@@ -90,7 +95,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {docs?.map((doc) => (
+                    {(docs as any[])?.map((doc) => (
                         <div key={doc.id} className="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-gray-500 transition-colors">
                             <h2 className="text-xl font-semibold mb-2">{doc.title}</h2>
                             <p className="text-sm text-gray-400 mb-4 truncate text-wrap">Layout: {doc.layout}</p>
