@@ -1,5 +1,6 @@
 'use client';
-import { trpc } from '../../../utils/trpc';
+import { api } from '../../../utils/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { Download, Layout, Settings, Save, Share2, Plus, Sparkles, Send, Copy, Trash2, ChevronLeft, ChevronRight, Columns2, Rows2, FileText, CheckCircle2, Clock, History, X, RotateCcw, MoreVertical, GripVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -12,25 +13,37 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 export default function ApiClient() {
     const { id } = useParams();
     const router = useRouter();
-    const utils = trpc.useUtils();
+    const queryClient = useQueryClient();
 
     // Queries & Mutations
-    const { data: doc, isLoading, error } = trpc.documentation.getById.useQuery({ id: id as string });
+    const { data: doc, isLoading, error } = useQuery<any>({
+        queryKey: ['doc', id],
+        queryFn: () => api.documentation.getById(id as string),
+        retry: false
+    });
 
     // Redirection for private docs
     useEffect(() => {
-        if (error?.data?.code === 'UNAUTHORIZED') {
+        if (error && (error as any).message?.toLowerCase().includes('unauthorized')) {
             localStorage.setItem('redirect_message', "This collection is private. Please sign in with an authorized account to view it.");
             router.push('/login');
         }
     }, [error, router]);
-    const { data: me } = trpc.auth.me.useQuery(undefined, {
+    const { data: me } = useQuery<any>({
+        queryKey: ['me'],
+        queryFn: api.auth.me,
         retry: false,
         enabled: typeof window !== 'undefined' && !!localStorage.getItem('token')
     });
-    const updateMutation = trpc.documentation.update.useMutation();
-    const togglePublicMutation = trpc.documentation.togglePublic.useMutation();
-    const aiMutation = trpc.ai.generateDocs.useMutation();
+    const updateMutation = useMutation({
+        mutationFn: (data: { id: string, content: any }) => api.documentation.update(data.id, data.content)
+    });
+    const togglePublicMutation = useMutation({
+        mutationFn: (data: { id: string, isPublic: boolean }) => api.documentation.togglePublic(data.id, data.isPublic)
+    });
+    const aiMutation = useMutation({
+        mutationFn: (data: any) => api.ai.generateDocs(data)
+    });
 
     const isOwner = me && doc && me.userId === (doc as any).userId;
     const canEdit = isOwner;
@@ -233,7 +246,7 @@ export default function ApiClient() {
             });
             toast.success('Collection saved!');
             setIsDirty(false);
-            utils.documentation.invalidate();
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
         } catch (e) {
             toast.error('Failed to save');
         }
@@ -247,7 +260,7 @@ export default function ApiClient() {
         try {
             await togglePublicMutation.mutateAsync({ id: id as string, isPublic: newStatus });
             toast.success(newStatus ? 'Collection is now Public' : 'Collection is now Private');
-            utils.documentation.invalidate();
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
         } catch (e) {
             toast.error('Failed to update share status');
         }

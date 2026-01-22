@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { trpc } from '../../utils/trpc';
+import { api } from '../../utils/api';
+import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
@@ -8,12 +9,13 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const router = useRouter();
-    const registerMutation = trpc.auth.register.useMutation({
-        onSuccess: (data) => {
+    const registerMutation = useMutation({
+        mutationFn: api.auth.register,
+        onSuccess: (data: any) => {
             localStorage.setItem('token', data.token);
             router.push('/dashboard');
         },
-        onError: (err) => {
+        onError: (err: any) => {
             toast.error(err.message);
         }
     });

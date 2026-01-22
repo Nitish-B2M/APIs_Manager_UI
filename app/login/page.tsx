@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { trpc } from '../../utils/trpc';
+import { api } from '../../utils/api';
+import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Lock } from 'lucide-react';
@@ -19,12 +20,13 @@ export default function LoginPage() {
         }
     }, []);
 
-    const loginMutation = trpc.auth.login.useMutation({
-        onSuccess: (data) => {
+    const loginMutation = useMutation({
+        mutationFn: api.auth.login,
+        onSuccess: (data: any) => {
             localStorage.setItem('token', data.token);
             router.push('/dashboard');
         },
-        onError: (err) => {
+        onError: (err: any) => {
             toast.error(err.message);
         }
     });

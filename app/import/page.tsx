@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { trpc } from '../../utils/trpc';
+import { api } from '../../utils/api';
+import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
@@ -9,11 +10,12 @@ export default function ImportPage() {
     const [fileContent, setFileContent] = useState<string | null>(null);
     const router = useRouter();
 
-    const createDocMutation = trpc.documentation.create.useMutation({
-        onSuccess: (data) => {
+    const createDocMutation = useMutation({
+        mutationFn: api.documentation.create,
+        onSuccess: (data: any) => {
             router.push(`/docs/${data.id}`);
         },
-        onError: (err) => {
+        onError: (err: any) => {
             toast.error(err.message);
         }
     });

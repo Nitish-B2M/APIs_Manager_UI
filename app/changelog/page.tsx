@@ -1,11 +1,17 @@
 'use client';
-import { trpc } from '../../utils/trpc';
+import { api } from '../../utils/api';
+import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Link2, Clock, Package, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
+import { Documentation } from '../../types';
+
 export default function ChangelogPage() {
-    const { data: docs, isLoading } = trpc.documentation.list.useQuery();
+    const { data: docs, isLoading } = useQuery<Documentation[]>({
+        queryKey: ['docs'],
+        queryFn: () => api.documentation.list()
+    });
 
     const processUrl = (url: string, variables: Record<string, string>) => {
         if (!url) return '';
@@ -29,7 +35,7 @@ export default function ChangelogPage() {
     }
 
     // Flatten all endpoints across all collections
-    const changelog = (docs || []).flatMap(doc => {
+    const changelog = (docs || []).flatMap((doc: Documentation) => {
         let content: any = {};
         if (doc.content) {
             try {
@@ -58,7 +64,7 @@ export default function ChangelogPage() {
             updatedAt: new Date(doc.updatedAt),
             status: ep.lastResponse?.status
         }));
-    }).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    }).sort((a: any, b: any) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
     return (
         <div className="min-h-screen bg-[#F9FAFB] pb-20">
