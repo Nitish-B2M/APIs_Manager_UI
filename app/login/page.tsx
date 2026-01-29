@@ -4,13 +4,21 @@ import { api } from '../../utils/api';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Lock, User } from 'lucide-react';
+import { Lock, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { loginSchema, LoginFormData } from '@/types';
+import { ZodError } from 'zod';
+
+interface FormErrors {
+    email?: string;
+    password?: string;
+}
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState<string | null>(null);
+    const [errors, setErrors] = useState<FormErrors>({});
     const router = useRouter();
     const { theme } = useTheme();
 
@@ -22,27 +30,66 @@ export default function LoginPage() {
         }
     }, []);
 
+    // Clear field errors when user types
+    useEffect(() => {
+        if (email && errors.email) {
+            setErrors(prev => ({ ...prev, email: undefined }));
+        }
+    }, [email]);
+
+    useEffect(() => {
+        if (password && errors.password) {
+            setErrors(prev => ({ ...prev, password: undefined }));
+        }
+    }, [password]);
+
     const loginMutation = useMutation({
         mutationFn: api.auth.login,
-        onSuccess: (res: any) => {
+        onSuccess: (res: { data: { token: string }; message?: string }) => {
             const data = res.data;
             localStorage.setItem('token', data.token);
             toast.success(res.message || 'Login successful');
             router.push('/dashboard');
         },
-        onError: (err: any) => {
-            toast.error(err.message);
+        onError: (err: Error) => {
+            toast.error(err.message || 'Login failed');
         }
     });
 
+    const validateForm = (): boolean => {
+        try {
+            loginSchema.parse({ email, password });
+            setErrors({});
+            return true;
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const fieldErrors: FormErrors = {};
+                error.errors.forEach((err) => {
+                    const field = err.path[0] as keyof FormErrors;
+                    if (!fieldErrors[field]) {
+                        fieldErrors[field] = err.message;
+                    }
+                });
+                setErrors(fieldErrors);
+            }
+            return false;
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!validateForm()) {
+            return;
+        }
+
         loginMutation.mutate({ email, password });
     };
 
     const mainBg = theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900';
     const cardBg = theme === 'dark' ? 'bg-gray-900 border-gray-800 shadow-2xl' : 'bg-white border-gray-100 shadow-xl';
     const inputBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white focus:border-indigo-500' : 'bg-white border-gray-200 text-gray-900 focus:border-indigo-500';
+    const inputErrorBg = theme === 'dark' ? 'bg-gray-800 border-red-500 text-white focus:border-red-400' : 'bg-white border-red-500 text-gray-900 focus:border-red-400';
     const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
 
@@ -68,28 +115,46 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                     <div className="space-y-1.5">
-                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>Email address</label>
+                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
+                            Email address
+                        </label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="name@company.com"
-                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${inputBg}`}
-                            required
+                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.email ? inputErrorBg : inputBg}`}
+                            aria-invalid={!!errors.email}
+                            aria-describedby={errors.email ? 'email-error' : undefined}
                         />
+                        {errors.email && (
+                            <div id="email-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                                <AlertCircle size={12} />
+                                <span>{errors.email}</span>
+                            </div>
+                        )}
                     </div>
                     <div className="space-y-1.5">
-                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>Password</label>
+                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
+                            Password
+                        </label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
-                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${inputBg}`}
-                            required
+                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.password ? inputErrorBg : inputBg}`}
+                            aria-invalid={!!errors.password}
+                            aria-describedby={errors.password ? 'password-error' : undefined}
                         />
+                        {errors.password && (
+                            <div id="password-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                                <AlertCircle size={12} />
+                                <span>{errors.password}</span>
+                            </div>
+                        )}
                     </div>
                     <button
                         type="submit"
