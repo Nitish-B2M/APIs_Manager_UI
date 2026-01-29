@@ -3,15 +3,28 @@ import { api } from '../../utils/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
+import { DashboardSkeleton } from '../../components/Skeleton';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import toast from 'react-hot-toast';
-import { Trash2, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Trash2, ExternalLink, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { createCollectionSchema } from '@/types';
+import { ZodError } from 'zod';
+import { Documentation } from '@/types';
 
-export default function Dashboard() {
+interface FormErrors {
+    title?: string;
+}
+
+function DashboardContent() {
     const queryClient = useQueryClient();
-    const { data: res, isLoading } = useQuery({ queryKey: ['docs'], queryFn: api.documentation.list });
+    const { data: res, isLoading, error } = useQuery({ 
+        queryKey: ['docs'], 
+        queryFn: api.documentation.list,
+        retry: 1
+    });
     const { data: meRes } = useQuery({ queryKey: ['me'], queryFn: api.auth.me });
     const docs = res?.data || [];
     const me = meRes?.data;
@@ -30,6 +43,7 @@ export default function Dashboard() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [docToDelete, setDocToDelete] = useState<{ id: string, title: string } | null>(null);
     const [newCollectionTitle, setNewCollectionTitle] = useState('New Collection');
+    const [formErrors, setFormErrors] = useState<FormErrors>({});
     const [isCreating, setIsCreating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -38,32 +52,67 @@ export default function Dashboard() {
     const cardBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 hover:border-gray-500' : 'bg-white border-gray-200 hover:border-indigo-300 shadow-sm transition-all';
     const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+    const inputBg = theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900';
+    const inputErrorBg = theme === 'dark' ? 'bg-gray-900 border-red-500 text-white' : 'bg-gray-50 border-red-500 text-gray-900';
+
+    // Clear form errors when typing
+    useEffect(() => {
+        if (newCollectionTitle && formErrors.title) {
+            setFormErrors({});
+        }
+    }, [newCollectionTitle]);
 
     const handleCreateBlank = () => {
         setNewCollectionTitle('New Collection');
+        setFormErrors({});
         setIsCreateModalOpen(true);
+    };
+
+    const validateForm = (): boolean => {
+        try {
+            createCollectionSchema.parse({ title: newCollectionTitle });
+            setFormErrors({});
+            return true;
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const fieldErrors: FormErrors = {};
+                error.errors.forEach((err) => {
+                    const field = err.path[0] as keyof FormErrors;
+                    if (!fieldErrors[field]) {
+                        fieldErrors[field] = err.message;
+                    }
+                });
+                setFormErrors(fieldErrors);
+            }
+            return false;
+        }
     };
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newCollectionTitle.trim()) return;
+        
+        if (!validateForm()) {
+            return;
+        }
+
         setIsCreating(true);
 
         try {
             const res = await createEmptyMutation.mutateAsync({
-                title: newCollectionTitle
+                title: newCollectionTitle.trim()
             });
             setIsCreateModalOpen(false);
             toast.success(res.message || 'Collection created!');
             router.push(`/docs/${res.data.id}`);
-        } catch (e: any) {
-            toast.error(e.message || 'Failed to create collection');
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : 'Failed to create collection';
+            toast.error(errorMessage);
         } finally {
             setIsCreating(false);
         }
     };
 
-    const handleDeleteClick = (doc: any) => {
+    const handleDeleteClick = (doc: Documentation) => {
         setDocToDelete({ id: doc.id, title: doc.title });
         setIsDeleteModalOpen(true);
     };
@@ -76,15 +125,47 @@ export default function Dashboard() {
             queryClient.invalidateQueries({ queryKey: ['docs'] });
             setIsDeleteModalOpen(false);
             toast.success('Collection deleted');
-        } catch (e: any) {
-            toast.error(e.message || 'Failed to delete collection');
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : 'Failed to delete collection';
+            toast.error(errorMessage);
         } finally {
             setIsDeleting(false);
             setDocToDelete(null);
         }
     };
 
-    if (isLoading) return <div className={`min-h-screen ${mainBg} flex items-center justify-center`}>Loading...</div>;
+    if (isLoading) {
+        return (
+            <div className={`min-h-[calc(100vh-64px)] ${mainBg} p-8 transition-colors duration-300`}>
+                <div className="max-w-6xl mx-auto">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h1 className={`text-3xl font-bold ${textColor}`}>Your Documentations</h1>
+                        </div>
+                    </div>
+                    <DashboardSkeleton />
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={`min-h-[calc(100vh-64px)] ${mainBg} flex items-center justify-center`}>
+                <div className="text-center">
+                    <AlertTriangle className="mx-auto mb-4 text-red-500" size={48} />
+                    <h2 className={`text-xl font-bold ${textColor} mb-2`}>Failed to load documentations</h2>
+                    <p className={subTextColor}>Please try refreshing the page</p>
+                    <button 
+                        onClick={() => queryClient.invalidateQueries({ queryKey: ['docs'] })}
+                        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`min-h-[calc(100vh-64px)] ${mainBg} p-8 transition-colors duration-300`}>
@@ -111,7 +192,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(docs as any[])?.map((doc) => (
+                    {(docs as Documentation[])?.map((doc) => (
                         <div key={doc.id} className={`${cardBg} p-6 rounded-lg border`}>
                             <h2 className={`text-xl font-semibold mb-2 ${textColor}`}>{doc.title}</h2>
                             <p className={`text-sm ${subTextColor} mb-4 truncate text-wrap`}>Layout: {doc.layout}</p>
@@ -142,7 +223,7 @@ export default function Dashboard() {
                 onClose={() => setIsCreateModalOpen(false)}
                 title="Create New Collection"
             >
-                <form onSubmit={handleCreateSubmit} className="space-y-4">
+                <form onSubmit={handleCreateSubmit} className="space-y-4" noValidate>
                     <div>
                         <label htmlFor="collection-name" className={`block text-sm font-medium ${subTextColor} mb-1`}>
                             Collection Name
@@ -153,9 +234,17 @@ export default function Dashboard() {
                             value={newCollectionTitle}
                             onChange={(e) => setNewCollectionTitle(e.target.value)}
                             placeholder="e.g. My API Documentation"
-                            className={`w-full ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'} rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                            className={`w-full rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 border ${formErrors.title ? inputErrorBg : inputBg}`}
                             autoFocus
+                            aria-invalid={!!formErrors.title}
+                            aria-describedby={formErrors.title ? 'title-error' : undefined}
                         />
+                        {formErrors.title && (
+                            <div id="title-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                                <AlertCircle size={12} />
+                                <span>{formErrors.title}</span>
+                            </div>
+                        )}
                     </div>
                     <div className="flex justify-end gap-2">
                         <button
@@ -167,7 +256,7 @@ export default function Dashboard() {
                         </button>
                         <button
                             type="submit"
-                            disabled={isCreating || !newCollectionTitle.trim()}
+                            disabled={isCreating}
                             className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             {isCreating ? 'Creating...' : 'Create Collection'}
@@ -210,5 +299,13 @@ export default function Dashboard() {
                 </div>
             </Modal>
         </div>
+    );
+}
+
+export default function Dashboard() {
+    return (
+        <ErrorBoundary>
+            <DashboardContent />
+        </ErrorBoundary>
     );
 }

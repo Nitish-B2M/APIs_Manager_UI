@@ -7,11 +7,38 @@ import Link from 'next/link';
 import { useTheme } from '../../context/ThemeContext';
 import { Documentation } from '../../types';
 
+interface EndpointData {
+    id: string;
+    name: string;
+    method: string;
+    url: string;
+    lastResponse?: {
+        status: number;
+    };
+    updatedAt: string;
+}
+
+interface CollectionData {
+    id: string;
+    title: string;
+    requests?: EndpointData[];
+    updatedAt: string;
+    content?: string;
+}
+
+interface ApiResponse {
+    data: CollectionData[];
+    message?: string;
+    status: boolean;
+}
+
 export default function ChangelogPage() {
-    const { data: docs, isLoading } = useQuery<Documentation[]>({
-        queryKey: ['docs'],
-        queryFn: () => api.documentation.list()
+    const { data: response, isLoading } = useQuery<ApiResponse>({
+        queryKey: ['changelog'],
+        queryFn: api.documentation.list,
+        refetchInterval: 60000 // Refresh every 60 seconds
     });
+
     const { theme } = useTheme();
 
     const processUrl = (url: string, variables: Record<string, string>) => {
@@ -40,7 +67,9 @@ export default function ChangelogPage() {
         );
     }
 
-    const changelog = ((docs as any)?.data || []).flatMap((doc: Documentation) => {
+    const collections: CollectionData[] = response?.data || [];
+
+    const changelog = collections.flatMap((doc: CollectionData) => {
         let content: any = {};
         if (doc.content) {
             try {
@@ -51,20 +80,22 @@ export default function ChangelogPage() {
                 } else {
                     content = doc.content;
                 }
-            } catch (e) { }
+            } catch (parseError) {
+                console.debug('Could not parse documentation content:', parseError);
+            }
         }
 
         const endpoints = doc.requests || content?.endpoints || [];
         const vars = content?.variables || {};
 
-        return endpoints.map((ep: any) => ({
+        return endpoints.map((ep: EndpointData) => ({
             id: doc.id,
             collectionName: doc.title,
             apiName: ep.name || 'Untitled Request',
             method: ep.method,
             rawUrl: ep.url,
             actualUrl: processUrl(ep.url, vars),
-            updatedAt: new Date(doc.updatedAt),
+            updatedAt: new Date(ep.updatedAt || doc.updatedAt),
             status: ep.lastResponse?.status
         }));
     }).sort((a: any, b: any) => b.updatedAt.getTime() - a.updatedAt.getTime());
