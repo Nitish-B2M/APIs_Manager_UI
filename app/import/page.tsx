@@ -34,7 +34,11 @@ export default function ImportPage() {
                     try {
                         const json = JSON.parse(event.target?.result as string);
                         if (json.info?.name) setTitle(json.info.name);
-                    } catch (e) { }
+                    } catch (parseError) {
+                        // File selected but couldn't parse for title - this is fine, 
+                        // we'll validate properly on submit
+                        console.debug('Could not auto-extract title from file:', parseError);
+                    }
                 }
             };
             reader.readAsText(file);
