@@ -14,12 +14,12 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
         headers,
     });
 
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'An error occurred' }));
-        throw new Error(error.message || 'An error occurred');
+    const json = await response.json();
+    if (!json.status) {
+        throw new Error(json.message || 'An error occurred');
     }
 
-    return response.json();
+    return json;
 }
 
 export const api = {
@@ -34,6 +34,8 @@ export const api = {
         create: (data: any) => apiFetch('/documentation/create', { method: 'POST', body: JSON.stringify(data) }),
         createEmpty: (data: any) => apiFetch('/documentation/create-empty', { method: 'POST', body: JSON.stringify(data) }),
         update: (id: string, content: any) => apiFetch(`/documentation/${id}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
+        updateRequest: (requestId: string, data: any) => apiFetch(`/documentation/request/${requestId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        createRequest: (id: string, data: any = {}) => apiFetch(`/documentation/${id}/request`, { method: 'POST', body: JSON.stringify(data) }),
         delete: (id: string) => apiFetch(`/documentation/${id}`, { method: 'DELETE' }),
         togglePublic: (id: string, isPublic: boolean) => apiFetch(`/documentation/${id}/toggle-public`, { method: 'PATCH', body: JSON.stringify({ isPublic }) }),
     },

@@ -7,6 +7,7 @@ export interface Documentation {
     isPublic: boolean;
     createdAt: string;
     updatedAt: string;
+    requests?: any[];
 }
 
 export interface User {
