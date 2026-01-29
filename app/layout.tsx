@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: 'Generate API documentation from Postman collections',
 };
 
+import { ThemeProvider } from '../context/ThemeContext';
+
 export default function RootLayout({
   children,
 }: {
@@ -20,11 +22,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Provider>
-          <Toaster position="bottom-right" />
-          <Header />
-          {children}
-        </Provider>
+        <ThemeProvider>
+          <Provider>
+            <Toaster position="bottom-right" />
+            <Header />
+            {children}
+          </Provider>
+        </ThemeProvider>
       </body>
     </html>
   );

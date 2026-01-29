@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { Play, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useTheme } from '../../context/ThemeContext';
 
 interface EndpointCardProps {
     endpoint: any;
@@ -10,6 +11,7 @@ interface EndpointCardProps {
 }
 
 export default function EndpointCard({ endpoint, variables }: EndpointCardProps) {
+    const { theme } = useTheme();
     const [mode, setMode] = useState<'view' | 'run'>('view');
     const [url, setUrl] = useState(endpoint.url || '');
     const [body, setBody] = useState(endpoint.body?.raw || '');
@@ -76,14 +78,14 @@ export default function EndpointCard({ endpoint, variables }: EndpointCardProps)
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+        <div className={`rounded-xl shadow-sm p-6 border transition-all duration-300 ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100 hover:shadow-md'}`}>
             {/* Header */}
             <div className="flex items-center gap-4 mb-4">
                 <span className={`px-3 py-1 rounded font-semibold text-sm h-fit ${endpoint.method === 'GET' ? 'bg-green-100 text-green-700' :
-                        endpoint.method === 'POST' ? 'bg-blue-100 text-blue-700' :
-                            endpoint.method === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
-                                endpoint.method === 'DELETE' ? 'bg-red-100 text-red-700' :
-                                    'bg-gray-100 text-gray-700'
+                    endpoint.method === 'POST' ? 'bg-blue-100 text-blue-700' :
+                        endpoint.method === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
+                            endpoint.method === 'DELETE' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
                     }`}>
                     {endpoint.method}
                 </span>
@@ -164,12 +166,18 @@ export default function EndpointCard({ endpoint, variables }: EndpointCardProps)
                             Error: {response.message}
                         </div>
                     ) : (
-                        <div className="rounded-md overflow-hidden bg-[#1e1e1e] border border-[#2d2d2d]">
+                        <div className={`rounded-xl overflow-hidden border ${theme === 'dark' ? 'bg-[#1e1e1e] border-gray-800' : 'bg-[#fafafa] border-gray-200 shadow-inner'}`}>
                             <SyntaxHighlighter
-                                style={vscDarkPlus}
+                                style={theme === 'dark' ? vscDarkPlus : materialLight}
                                 language="json"
                                 PreTag="div"
-                                customStyle={{ margin: 0, padding: '1rem', backgroundColor: '#1e1e1e', fontSize: '13px' }}
+                                customStyle={{
+                                    margin: 0,
+                                    padding: '1.5rem',
+                                    backgroundColor: 'transparent',
+                                    fontSize: '13px',
+                                    lineHeight: '1.5'
+                                }}
                             >
                                 {typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
                             </SyntaxHighlighter>
@@ -182,15 +190,21 @@ export default function EndpointCard({ endpoint, variables }: EndpointCardProps)
             {mode === 'view' && endpoint.body && endpoint.body.raw && (
                 <div className="mb-4">
                     <h4 className="font-medium text-gray-700 mb-2 text-sm uppercase tracking-wide">Request Body</h4>
-                    <pre className="bg-gray-900 text-gray-100 rounded p-4 text-sm overflow-x-auto font-mono">
-                        {(() => {
-                            try {
-                                return JSON.stringify(JSON.parse(endpoint.body.raw), null, 2);
-                            } catch {
-                                return endpoint.body.raw;
-                            }
-                        })()}
-                    </pre>
+                    <div className={`mb-4 rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                        <SyntaxHighlighter
+                            style={theme === 'dark' ? vscDarkPlus : materialLight}
+                            language="json"
+                            customStyle={{ margin: 0, padding: '1.25rem', backgroundColor: 'transparent', fontSize: '13px' }}
+                        >
+                            {(() => {
+                                try {
+                                    return JSON.stringify(JSON.parse(endpoint.body.raw), null, 2);
+                                } catch {
+                                    return endpoint.body.raw;
+                                }
+                            })()}
+                        </SyntaxHighlighter>
+                    </div>
                 </div>
             )}
 
@@ -205,15 +219,21 @@ export default function EndpointCard({ endpoint, variables }: EndpointCardProps)
                                 </span>
                             </div>
                             {resp.body && (
-                                <pre className="bg-gray-50 text-gray-700 rounded p-4 text-sm overflow-x-auto border border-gray-200 font-mono">
-                                    {(() => {
-                                        try {
-                                            return JSON.stringify(JSON.parse(resp.body), null, 2);
-                                        } catch {
-                                            return resp.body;
-                                        }
-                                    })()}
-                                </pre>
+                                <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                                    <SyntaxHighlighter
+                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
+                                        language="json"
+                                        customStyle={{ margin: 0, padding: '1.25rem', backgroundColor: 'transparent', fontSize: '13px' }}
+                                    >
+                                        {(() => {
+                                            try {
+                                                return JSON.stringify(JSON.parse(resp.body), null, 2);
+                                            } catch {
+                                                return resp.body;
+                                            }
+                                        })()}
+                                    </SyntaxHighlighter>
+                                </div>
                             )}
                         </div>
                     ))}

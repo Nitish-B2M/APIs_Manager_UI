@@ -1,0 +1,7 @@
+{
+    "name": "apis-manager-client",
+    "framework": "nextjs",
+    "env": {
+        "NEXT_PUBLIC_API_URL": "https://apis-manager-h3n7.onrender.com"
+    }
+}

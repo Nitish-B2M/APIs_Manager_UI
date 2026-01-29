@@ -1,36 +1,64 @@
 'use client';
-import { trpc } from '../../../utils/trpc';
+import { api } from '../../../utils/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { Download, Layout, Settings, Save, Share2, Plus, Sparkles, Send, Copy, Trash2, ChevronLeft, ChevronRight, Columns2, Rows2, FileText, CheckCircle2, Clock, History, X, RotateCcw, MoreVertical, GripVertical } from 'lucide-react';
+import { Download, Layout, Settings, Save, Share2, Plus, Sparkles, Send, Copy, Trash2, ChevronLeft, ChevronRight, Columns2, Rows2, FileText, CheckCircle2, Clock, History, X, RotateCcw, MoreVertical, GripVertical, Sun, Moon, Terminal, Code, Search, Keyboard } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import EndpointCard from '../../components/EndpointCard';
 import EnvModal from '../../components/EnvModal';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, prism, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useTheme } from '../../../context/ThemeContext';
+import { useKeyboardShortcuts, createCommonShortcuts } from '../../../hooks/useKeyboardShortcuts';
+import { SearchBar } from '../../../components/SearchBar';
+import { KeyboardShortcutsModal } from '../../../components/KeyboardShortcutsModal';
+import { Endpoint, HttpMethod } from '../../../types';
 
 export default function ApiClient() {
     const { id } = useParams();
     const router = useRouter();
-    const utils = trpc.useUtils();
+    const queryClient = useQueryClient();
 
     // Queries & Mutations
-    const { data: doc, isLoading, error } = trpc.documentation.getById.useQuery({ id: id as string });
+    const { data: docRes, isLoading, error } = useQuery<any>({
+        queryKey: ['doc', id],
+        queryFn: () => api.documentation.getById(id as string),
+        retry: false
+    });
+    const doc = docRes?.data;
 
     // Redirection for private docs
     useEffect(() => {
-        if (error?.data?.code === 'UNAUTHORIZED') {
+        if (error && (error as any).message?.toLowerCase().includes('unauthorized')) {
             localStorage.setItem('redirect_message', "This collection is private. Please sign in with an authorized account to view it.");
             router.push('/login');
         }
     }, [error, router]);
-    const { data: me } = trpc.auth.me.useQuery(undefined, {
+    const { data: meRes } = useQuery<any>({
+        queryKey: ['me'],
+        queryFn: api.auth.me,
         retry: false,
         enabled: typeof window !== 'undefined' && !!localStorage.getItem('token')
     });
-    const updateMutation = trpc.documentation.update.useMutation();
-    const togglePublicMutation = trpc.documentation.togglePublic.useMutation();
-    const aiMutation = trpc.ai.generateDocs.useMutation();
+    const me = meRes?.data;
+    const updateMutation = useMutation({
+        mutationFn: (data: { id: string, content: any }) => api.documentation.update(data.id, data.content)
+    });
+    const togglePublicMutation = useMutation({
+        mutationFn: (data: { id: string, isPublic: boolean }) => api.documentation.togglePublic(data.id, data.isPublic)
+    });
+    const aiMutation = useMutation({
+        mutationFn: (data: any) => api.ai.generateDocs(data)
+    });
+    const updateRequestMutation = useMutation({
+        mutationFn: (data: { requestId: string, content: any }) => api.documentation.updateRequest(data.requestId, data.content)
+    });
+    const createRequestMutation = useMutation({
+        mutationFn: (data: { id: string, name?: string }) => api.documentation.createRequest(data.id, data)
+    });
 
     const isOwner = me && doc && me.userId === (doc as any).userId;
     const canEdit = isOwner;
@@ -66,25 +94,104 @@ export default function ApiClient() {
     const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null);
     const [isDirty, setIsDirty] = useState(false);
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewContent, setPreviewContent] = useState('');
+    const [responseFilter, setResponseFilter] = useState('');
+    const [showResponseFilter, setShowResponseFilter] = useState(false);
+    const [showSearchModal, setShowSearchModal] = useState(false);
+    const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+    const [urlHistory, setUrlHistory] = useState<string[]>([]);
+    const { theme, toggleTheme } = useTheme();
+    const bodyEditorRef = useRef<HTMLDivElement>(null);
+
+    // Keyboard shortcuts
+    const shortcuts = useMemo(() => createCommonShortcuts({
+        onSend: () => {
+            if (currentReq && !reqLoading) {
+                handleSendRequest();
+            }
+        },
+        onSave: () => {
+            if (canEdit && isDirty) {
+                handleSaveSingleRequest();
+            }
+        },
+        onNewRequest: () => {
+            if (canEdit) {
+                handleAddRequest();
+            }
+        },
+        onSearch: () => {
+            setShowSearchModal(true);
+        },
+        onToggleTheme: toggleTheme,
+        onShowShortcuts: () => {
+            setShowShortcutsModal(true);
+        }
+    }), [currentReq, reqLoading, canEdit, isDirty, toggleTheme]);
+
+    useKeyboardShortcuts({ shortcuts, enabled: !showSearchModal && !showShortcutsModal });
+
+    // Load URL history from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('urlHistory');
+        if (saved) {
+            try {
+                setUrlHistory(JSON.parse(saved));
+            } catch (e) {
+                console.debug('Failed to parse URL history');
+            }
+        }
+    }, []);
+
+    // Save URL to history after successful request
+    const addToUrlHistory = useCallback((url: string) => {
+        if (!url || url.length < 5) return;
+        setUrlHistory(prev => {
+            const filtered = prev.filter(u => u !== url);
+            const newHistory = [url, ...filtered].slice(0, 20);
+            localStorage.setItem('urlHistory', JSON.stringify(newHistory));
+            return newHistory;
+        });
+    }, []);
 
     // Initialize state from doc
     useEffect(() => {
-        if (doc && doc.content) {
+        if (doc) {
             try {
-                let content: any = { endpoints: [], variables: {} };
-                if (typeof doc.content === 'string') {
-                    if (doc.content.trim().startsWith('{')) {
-                        content = JSON.parse(doc.content);
+                // 1. Load requests (either from doc.requests or doc.content.endpoints)
+                let eps = (doc as any).requests || [];
+
+                // Fallback for old records still stored as JSON in content
+                if (eps.length === 0 && doc.content) {
+                    let content: any = {};
+                    if (typeof doc.content === 'string') {
+                        if (doc.content.trim().startsWith('{')) {
+                            content = JSON.parse(doc.content);
+                        }
+                    } else {
+                        content = doc.content;
                     }
-                } else {
-                    content = doc.content;
+                    eps = content.endpoints || [];
                 }
 
-                const eps = content.endpoints || [];
                 setEndpoints(eps);
-                if (content.variables) {
-                    setVariables(content.variables);
+
+                // 2. Load variables
+                let vars = {};
+                if (doc.content) {
+                    let content: any = {};
+                    if (typeof doc.content === 'string') {
+                        if (doc.content.trim().startsWith('{')) {
+                            content = JSON.parse(doc.content);
+                        }
+                    } else {
+                        content = doc.content;
+                    }
+                    vars = content.variables || {};
                 }
+                setVariables(vars);
+
                 if (eps.length > 0 && !currentReq) {
                     setCurrentReq(eps[0]);
                 }
@@ -189,6 +296,20 @@ export default function ApiClient() {
         return result;
     };
 
+    const handleAddRequest = async () => {
+        try {
+            const res = await createRequestMutation.mutateAsync({ id: id as string });
+            const newReq = res.data;
+            const newEps = [...endpoints, newReq];
+            setEndpoints(newEps);
+            setSelectedIdx(newEps.length - 1);
+            toast.success('New request added');
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to add request');
+        }
+    };
+
     const resolveUrl = (ep: any) => {
         let finalUrl = resolveAll(ep.url, ep);
         const queryParams = (ep.params || []).filter((p: any) => p.type === 'query' && p.key);
@@ -203,9 +324,48 @@ export default function ApiClient() {
                 });
                 const newQuery = searchParams.toString();
                 finalUrl = newQuery ? `${baseUrl}?${newQuery}` : baseUrl;
-            } catch (e) { }
+            } catch (urlError) {
+                // URL parameter parsing failed - proceed with basic URL
+                console.debug('URL parameter enhancement failed:', urlError);
+            }
         }
         return finalUrl;
+    };
+
+    const handleSaveSingleRequest = async () => {
+        if (!currentReq || !currentReq.id) {
+            toast.error('Cannot save: Request not yet created on server');
+            return;
+        }
+
+        try {
+            const res = await updateRequestMutation.mutateAsync({
+                requestId: currentReq.id,
+                content: {
+                    name: currentReq.name,
+                    method: currentReq.method,
+                    url: currentReq.url,
+                    description: currentReq.description,
+                    body: currentReq.body,
+                    headers: currentReq.headers,
+                    params: currentReq.params,
+                    lastResponse: currentReq.lastResponse,
+                    history: currentReq.history || []
+                }
+            });
+            toast.success(res.message || 'Request saved!');
+            setIsDirty(false);
+
+            // Sync local state with saved data including history
+            const newEps = [...endpoints];
+            newEps[selectedIdx] = res.data;
+            setEndpoints(newEps);
+            setCurrentReq(res.data);
+
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to save request');
+        }
     };
 
     const handleSaveCollection = async (specificEndpoints?: any[]) => {
@@ -222,7 +382,6 @@ export default function ApiClient() {
         const content = typeof doc?.content === 'string' ? JSON.parse(doc.content) : doc?.content;
         const newContent = {
             ...content,
-            endpoints: updatedEndpoints,
             variables: variables
         };
 
@@ -231,11 +390,11 @@ export default function ApiClient() {
                 id: id as string,
                 content: newContent
             });
-            toast.success('Collection saved!');
+            toast.success('Collection settings saved!');
             setIsDirty(false);
-            utils.documentation.invalidate();
-        } catch (e) {
-            toast.error('Failed to save');
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to save collection');
         }
     };
 
@@ -245,11 +404,11 @@ export default function ApiClient() {
         // The type for doc might not strictly have isPublic yet if not regenerated, but DB has it.
         // We act optimistically.
         try {
-            await togglePublicMutation.mutateAsync({ id: id as string, isPublic: newStatus });
-            toast.success(newStatus ? 'Collection is now Public' : 'Collection is now Private');
-            utils.documentation.invalidate();
-        } catch (e) {
-            toast.error('Failed to update share status');
+            const res = await togglePublicMutation.mutateAsync({ id: id as string, isPublic: newStatus });
+            toast.success(res.message || (newStatus ? 'Collection is now Public' : 'Collection is now Private'));
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to update share status');
         }
     };
 
@@ -259,14 +418,15 @@ export default function ApiClient() {
             const res = await aiMutation.mutateAsync({
                 method: currentReq.method,
                 url: currentReq.url,
-                body: currentReq.body,
-                response: response?.data,
+                body: currentReq.body.text_array,
+                response: response?.data.translate,
                 userCommand: aiCommand
             });
+            const data = res.data;
             const updatedReq = {
                 ...currentReq,
-                name: res.name || currentReq.name,
-                description: res.description
+                name: data.name || currentReq.name,
+                description: data.description
             };
             setCurrentReq(updatedReq);
 
@@ -276,9 +436,9 @@ export default function ApiClient() {
             setEndpoints(newEps);
             setIsDirty(true);
 
-            toast.success('Documentation updated with AI!');
-        } catch (e) {
-            toast.error('AI generation failed');
+            toast.success(res.message || 'Documentation updated with AI!');
+        } catch (e: any) {
+            toast.error(e.message || 'AI generation failed');
         }
     };
 
@@ -299,47 +459,256 @@ export default function ApiClient() {
         }
     };
 
-    const handleGenerateMarkdown = () => {
-        if (!doc) return;
-        let md = `# ${doc.title}\n\n`;
-        endpoints.forEach((ep) => {
-            const resolvedUrl = resolveUrl(ep);
-            const resolvedDescription = resolveAll(ep.description || '', ep);
+    const getMarkdownForEndpoint = (ep: any) => {
+        const resolvedUrl = resolveUrl(ep);
+        const resolvedDescription = resolveAll(ep.description || '', ep);
 
-            md += `## ${ep.name}\n\n`;
-            md += `**Method:** ${ep.method}\n\n`;
-            md += `**URL:** \`${resolvedUrl}\`\n\n`;
-            if (resolvedDescription) md += `**Description:** ${resolvedDescription}\n\n`;
+        let md = `## ${ep.name}\n\n`;
+        md += `**Method:** \`${ep.method}\`  \n`;
+        md += `**URL:** \`${resolvedUrl}\`\n\n`;
 
-            const resolvedHeaders = (ep.headers || []).map((h: any) => ({
-                key: h.key,
-                value: resolveAll(h.value, ep)
-            }));
+        if (resolvedDescription) {
+            md += `### Description\n> ${resolvedDescription.split('\n').join('\n> ')}\n\n`;
+        }
 
-            if (resolvedHeaders.length > 0) {
-                md += `### Headers\n| Key | Value |\n|---|---|\n`;
-                resolvedHeaders.forEach((h: any) => md += `| ${h.key} | ${h.value} |\n`);
-                md += `\n`;
-            }
+        const resolvedHeaders = (ep.headers || []).map((h: any) => ({
+            key: h.key,
+            value: resolveAll(h.value, ep)
+        }));
 
-            if (ep.body?.raw) {
-                const resolvedBody = resolveAll(ep.body.raw, ep);
-                md += `### Body\n\`\`\`json\n${resolvedBody}\n\`\`\`\n\n`;
-            }
+        if (resolvedHeaders.length > 0) {
+            md += `### Headers\n| Key | Value |\n|---|---|\n`;
+            resolvedHeaders.forEach((h: any) => md += `| ${h.key} | ${h.value} |\n`);
+            md += `\n`;
+        }
 
-            if (ep.lastResponse) {
-                md += `### Last Response (${ep.lastResponse.status})\n\`\`\`json\n${JSON.stringify(ep.lastResponse.data, null, 2)}\n\`\`\`\n\n`;
-            }
-            md += `---\n\n`;
-        });
+        if (ep.body?.raw) {
+            const resolvedBody = resolveAll(ep.body.raw, ep);
+            md += `### Request Body\n\`\`\`json\n${resolvedBody}\n\`\`\`\n\n`;
+        }
 
+        if (ep.lastResponse) {
+            md += `### Last Response (${ep.lastResponse.status})\n\`\`\`json\n${JSON.stringify(ep.lastResponse.data, null, 2)}\n\`\`\`\n\n`;
+        }
+        md += `\n---\n\n`;
+        return md;
+    };
+
+    const handleCopyMarkdown = (ep: any) => {
+        const md = getMarkdownForEndpoint(ep);
+        navigator.clipboard.writeText(md);
+        toast.success('Markdown copied');
+    };
+
+    const handleDownloadIndividualMarkdown = (ep: any) => {
+        if (!ep) return;
+        const md = getMarkdownForEndpoint(ep);
         const blob = new Blob([md], { type: 'text/markdown' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${doc.title.replace(/\s+/g, '_')}_docs.md`;
+        a.download = `${ep.name || 'request'}_${ep.method}.md`;
         a.click();
-        toast.success('Markdown generated!');
+        URL.revokeObjectURL(url);
+        toast.success('Markdown downloaded!');
+    };
+
+    const handleGenerateMarkdown = (download = true) => {
+        if (!doc) return;
+        let md = `# ${doc.title}\n\n`;
+        md += `Generated on ${new Date().toLocaleString()}\n\n---\n\n`;
+
+        endpoints.forEach((ep) => {
+            md += getMarkdownForEndpoint(ep);
+        });
+
+        if (download) {
+            const blob = new Blob([md], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${doc.title.replace(/\s+/g, '_')}_docs.md`;
+            a.click();
+            toast.success('Markdown generated!');
+        } else {
+            setPreviewContent(md);
+            setShowPreview(true);
+        }
+    };
+
+    const handleDownloadPdf = async () => {
+        if (typeof window === 'undefined') return;
+        toast.loading('Preparing PDF...', { id: 'pdf-loading' });
+        
+        // Helper to resolve URL with variables
+        const resolveUrlForPdf = (url: string, ep: any) => {
+            let resolved = url;
+            
+            // Replace environment variables
+            Object.keys(variables).forEach(key => {
+                const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                resolved = resolved.replace(regex, variables[key] || `[${key}]`);
+            });
+            
+            // Replace path params like :id with sample values
+            resolved = resolved.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, param) => {
+                return `[${param}]`;
+            });
+            
+            return resolved;
+        };
+        
+        // Create complete standalone HTML document for printing
+        const docTitle = doc?.title || 'API Documentation';
+        const dateStr = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        const methodColors: Record<string, { bg: string; color: string }> = {
+            'GET': { bg: '#dcfce7', color: '#16a34a' },
+            'POST': { bg: '#dbeafe', color: '#2563eb' },
+            'PUT': { bg: '#fef9c3', color: '#ca8a04' },
+            'DELETE': { bg: '#fee2e2', color: '#dc2626' },
+            'PATCH': { bg: '#f3e8ff', color: '#9333ea' }
+        };
+        
+        let content = '';
+        endpoints.forEach((ep, idx) => {
+            const m = methodColors[ep.method] || { bg: '#f3f4f6', color: '#6b7280' };
+            const resolvedUrl = resolveUrlForPdf(ep.url, ep);
+            
+            content += `
+                <div class="endpoint" style="margin-bottom: 24px; page-break-inside: avoid;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <span style="background: ${m.bg}; color: ${m.color}; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; font-family: system-ui;">${ep.method}</span>
+                        <h2 style="margin: 0; font-size: 18px; color: #111827; font-family: system-ui;">${ep.name || 'Untitled'}</h2>
+                    </div>
+                    <code style="display: block; background: #f3f4f6; padding: 10px; border-radius: 6px; font-size: 12px; font-family: 'SF Mono', Monaco, monospace; color: #374151; margin: 8px 0; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">${resolvedUrl}</code>
+                    ${ep.description ? `<p style="margin: 10px 0; color: #4b5563; font-size: 13px; line-height: 1.5;">${ep.description}</p>` : ''}
+            `;
+            
+            if (ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key)) {
+                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px; font-family: system-ui;">Headers</h3>`;
+                content += `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background: #f9fafb;"><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Key</th><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Value</th></tr></thead><tbody>`;
+                ep.headers.filter((h: any) => h.key).forEach((h: any) => {
+                    let headerValue = h.value || '';
+                    Object.keys(variables).forEach(key => {
+                        const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                        headerValue = headerValue.replace(regex, variables[key] || `[${key}]`);
+                    });
+                    content += `<tr><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace; font-size: 11px;">${h.key}</td><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace; font-size: 11px;">${headerValue}</td></tr>`;
+                });
+                content += `</tbody></table>`;
+            }
+            
+            if (ep.body?.raw) {
+                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px; font-family: system-ui;">Request Body</h3>`;
+                let bodyContent = ep.body.raw;
+                Object.keys(variables).forEach(key => {
+                    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                    bodyContent = bodyContent.replace(regex, variables[key] || `[${key}]`);
+                });
+                content += `<pre style="background: #1f2937; color: #e5e7eb; padding: 12px; border-radius: 6px; font-size: 11px; line-height: 1.5; overflow-x: auto; margin: 0;">${bodyContent}</pre>`;
+            }
+            
+            if (ep.lastResponse) {
+                const statusColor = ep.lastResponse.status >= 200 && ep.lastResponse.status < 300 ? '#16a34a' : '#dc2626';
+                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px; font-family: system-ui;">Response <span style="color: ${statusColor}; font-weight: normal;">${ep.lastResponse.status}</span></h3>`;
+                content += `<pre style="background: #1f2937; color: #e5e7eb; padding: 12px; border-radius: 6px; font-size: 11px; line-height: 1.5; overflow-x: auto; margin: 0;">${JSON.stringify(ep.lastResponse.data, null, 2)}</pre>`;
+            }
+            
+            content += `</div>`;
+            if (idx < endpoints.length - 1) {
+                content += `<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">`;
+            }
+        });
+        
+        const printHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <title>${docTitle}</title>
+    <style>
+        @page { margin: 1.5cm; size: A4 portrait; }
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            font-size: 14px; 
+            line-height: 1.5; 
+            color: #1f2937;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        h1 { font-size: 26px; color: #111827; margin: 0 0 8px 0; font-family: system-ui; }
+        h2 { font-size: 18px; color: #111827; margin: 0; font-family: system-ui; }
+        h3 { font-size: 14px; color: #111827; margin: 14px 0 6px 0; font-family: system-ui; }
+        p { margin: 10px 0; color: #4b5563; }
+        hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+        pre { 
+            background: #1f2937; 
+            color: #e5e7eb; 
+            padding: 12px; 
+            border-radius: 6px; 
+            font-size: 11px; 
+            line-height: 1.5; 
+            overflow-x: auto; 
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        code { font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-size: 12px; }
+        th { background: #f9fafb; font-weight: 600; }
+        .title-meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+        .endpoint { margin-bottom: 20px; }
+        .method { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; font-family: system-ui; }
+    </style>
+</head>
+<body>
+    <h1>${docTitle}</h1>
+    <p class="title-meta">Generated on ${dateStr}</p>
+    <hr>
+    ${content}
+</body>
+</html>`;
+        
+        // Create hidden iframe for printing
+        let iframe = document.getElementById('pdf-print-iframe') as HTMLIFrameElement;
+        if (iframe) {
+            document.body.removeChild(iframe);
+        }
+        
+        iframe = document.createElement('iframe');
+        iframe.id = 'pdf-print-iframe';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '800px';
+        iframe.style.height = '600px';
+        iframe.style.border = 'none';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+        
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+            iframeDoc.open();
+            iframeDoc.write(printHtml);
+            iframeDoc.close();
+            
+            setTimeout(() => {
+                iframe.contentWindow?.print();
+                toast.success('Print dialog opened!', { id: 'pdf-loading' });
+                setTimeout(() => {
+                    iframe.remove();
+                }, 1000);
+            }, 300);
+        } else {
+            toast.error('Failed to generate PDF', { id: 'pdf-loading' });
+        }
     };
 
     const processUrl = (url: string) => {
@@ -356,6 +725,45 @@ export default function ApiClient() {
         const finalUrl = processUrl(currentReq.url);
         navigator.clipboard.writeText(finalUrl);
         toast.success('URL copied to clipboard');
+    };
+
+    const handleCopyAsCurl = (ep: any = currentReq) => {
+        if (!ep) return;
+        const finalUrl = resolveUrl(ep);
+        let curl = `curl --location '${finalUrl}' \\\n--request ${ep.method}`;
+
+        (ep.headers || []).forEach((h: any) => {
+            if (h.key) curl += ` \\\n--header '${h.key}: ${resolveAll(h.value, ep)}'`;
+        });
+
+        if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) {
+            curl += ` \\\n--data '${resolveAll(ep.body.raw, ep)}'`;
+        }
+
+        navigator.clipboard.writeText(curl);
+        toast.success('cURL copied');
+    };
+
+    const handleCopyAsFetch = (ep: any = currentReq) => {
+        if (!ep) return;
+        const finalUrl = resolveUrl(ep);
+        const headers: Record<string, string> = {};
+        (ep.headers || []).forEach((h: any) => {
+            if (h.key) headers[h.key] = resolveAll(h.value, ep);
+        });
+
+        const options: any = {
+            method: ep.method,
+            headers
+        };
+
+        if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) {
+            options.body = resolveAll(ep.body.raw, ep);
+        }
+
+        const fetchCode = `fetch("${finalUrl}", ${JSON.stringify(options, null, 2)});`;
+        navigator.clipboard.writeText(fetchCode);
+        toast.success('Fetch code copied');
     };
 
     const handleCopyRequest = () => {
@@ -443,9 +851,9 @@ export default function ApiClient() {
                         return (
                             <span
                                 key={i}
-                                className={`py-1 rounded ${isSet
-                                    ? 'bg-blue-100 text-blue-600'
-                                    : 'bg-red-100 text-red-600'
+                                className={`px-1 rounded ${isSet
+                                    ? theme === 'dark' ? 'bg-blue-600/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                                    : theme === 'dark' ? 'bg-red-600/20 text-red-400' : 'bg-red-100 text-red-600'
                                     }`}
                             >
                                 {part}
@@ -464,23 +872,35 @@ export default function ApiClient() {
         setCursorPos(pos);
         setCurrentReq({ ...currentReq, url: val });
 
-        // Environment Variable Suggestions
+        // Environment Variable Suggestions (when typing {{)
         const beforeCursor = val.slice(0, pos);
         const lastDoubleBrace = beforeCursor.lastIndexOf('{{');
         if (lastDoubleBrace !== -1 && !beforeCursor.slice(lastDoubleBrace).includes('}}')) {
             const query = beforeCursor.slice(lastDoubleBrace + 2).toLowerCase();
             const matches = Object.keys(variables).filter(k => k.toLowerCase().includes(query));
-            setSuggestions(matches);
+            setSuggestions(matches.map(m => `env:${m}`)); // Prefix with env: to identify type
             setSuggestionIndex(0);
             return;
         }
 
-        // URL Protocol/Base Suggestions
-        if (val.length > 0 && val.length < 15) {
-            const bases = ['https://', 'http://', 'localhost:3000', 'localhost:4000', 'localhost:8080', 'api.example.com'];
-            const matches = bases.filter(b => b.startsWith(val.toLowerCase()) && b !== val);
-            if (matches.length > 0) {
-                setSuggestions(matches);
+        // URL History Suggestions (match from history + common bases)
+        if (val.length > 0 && val.length < 50) {
+            const lowerVal = val.toLowerCase();
+            
+            // Get matching URLs from history
+            const historyMatches = urlHistory
+                .filter(u => u.toLowerCase().includes(lowerVal) && u !== val)
+                .slice(0, 3);
+            
+            // Common URL bases
+            const bases = ['https://', 'http://', 'http://localhost:3000', 'http://localhost:4000', 'http://localhost:8080'];
+            const baseMatches = bases.filter(b => b.startsWith(lowerVal) && b !== val);
+            
+            // Combine: history first, then bases
+            const allMatches = [...new Set([...historyMatches, ...baseMatches])].slice(0, 5);
+            
+            if (allMatches.length > 0) {
+                setSuggestions(allMatches.map(m => `url:${m}`)); // Prefix with url: to identify type
                 setSuggestionIndex(0);
                 return;
             }
@@ -489,14 +909,26 @@ export default function ApiClient() {
         setIsDirty(true);
     };
 
-    const handleSuggestionSelect = (varName: string) => {
+    const handleSuggestionSelect = (suggestion: string) => {
         const val = currentReq.url;
         const beforeCursor = val.slice(0, cursorPos);
         const afterCursor = val.slice(cursorPos);
-        const lastDoubleBrace = beforeCursor.lastIndexOf('{{');
 
-        const newVal = beforeCursor.slice(0, lastDoubleBrace) + `{{${varName}}}` + afterCursor;
-        setCurrentReq({ ...currentReq, url: newVal });
+        // Check if it's an env variable or URL suggestion
+        if (suggestion.startsWith('env:')) {
+            const varName = suggestion.slice(4);
+            const lastDoubleBrace = beforeCursor.lastIndexOf('{{');
+            const newVal = beforeCursor.slice(0, lastDoubleBrace) + `{{${varName}}}` + afterCursor;
+            setCurrentReq({ ...currentReq, url: newVal });
+        } else if (suggestion.startsWith('url:')) {
+            const url = suggestion.slice(4);
+            setCurrentReq({ ...currentReq, url: url });
+        } else {
+            // Fallback for backward compatibility
+            const lastDoubleBrace = beforeCursor.lastIndexOf('{{');
+            const newVal = beforeCursor.slice(0, lastDoubleBrace) + `{{${suggestion}}}` + afterCursor;
+            setCurrentReq({ ...currentReq, url: newVal });
+        }
         setSuggestions([]);
         setIsDirty(true);
     };
@@ -648,6 +1080,9 @@ export default function ApiClient() {
 
             setResponse(responseObj);
 
+            // Save URL to history for future suggestions
+            addToUrlHistory(finalUrl);
+
             // Persist the request/response into the currentReq and endpoints list
             const historyItem = {
                 ...currentReq,
@@ -759,33 +1194,70 @@ export default function ApiClient() {
         setDraggedIdx(null);
     };
 
-    if (isLoading) return <div className="h-screen flex items-center justify-center text-gray-500">Loading Client...</div>;
-    if (error || !doc) return <div className="h-screen flex items-center justify-center text-red-500">Failed to load</div>;
+    const secondaryBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+    const borderCol = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
+    const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
+    const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
+    const mainBg = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
+    const inputBg = theme === 'dark' ? 'bg-gray-950' : 'bg-white';
+    const hoverBg = theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100';
+    const activeHoverBg = theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-200';
+
+    if (isLoading) return <div className={`h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-gray-500' : 'bg-gray-50 text-gray-400'}`}>Loading Client...</div>;
+    if (error || !doc) return <div className={`h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-red-500' : 'bg-gray-50 text-red-600'}`}>Failed to load</div>;
 
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden font-sans text-sm relative">
+        <div className={`flex h-[calc(100vh-64px)] overflow-hidden font-sans text-xs relative ${theme === 'dark' ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
             {/* Sidebar */}
             <div
-                className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-200 shadow-sm z-20 ${isSidebarCollapsed ? 'w-12' : ''}`}
+                className={`${secondaryBg} border-r ${borderCol} flex flex-col transition-all duration-200 shadow-xl z-20 ${isSidebarCollapsed ? 'w-12' : ''}`}
                 style={{ width: isSidebarCollapsed ? '48px' : `${sidebarWidth}px` }}
             >
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50 min-h-[60px]">
-                    {!isSidebarCollapsed && <h2 className="font-semibold text-gray-700 truncate" title={doc.title}>{doc.title}</h2>}
-                    <div className="flex gap-1 mx-auto">
-                        {!isSidebarCollapsed && canEdit && (
-                            <>
-                                <button onClick={() => setShowEnv(!showEnv)} className="p-1.5 hover:bg-gray-200 rounded text-gray-600" title="Environment">
-                                    <Settings size={16} />
-                                </button>
-                                <button onClick={addNewRequest} className="p-1.5 hover:bg-indigo-100 text-indigo-600 rounded" title="New Request">
-                                    <Plus size={16} />
-                                </button>
-                            </>
-                        )}
-                        <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-1.5 hover:bg-gray-200 rounded text-gray-400">
-                            {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                        </button>
+                <div className={`p-3 border-b ${borderCol} flex flex-col gap-2 ${secondaryBg} min-h-[60px]`}>
+                    <div className="flex items-center justify-between">
+                        {!isSidebarCollapsed && <h2 className={`font-bold ${textColor} truncate text-sm`} title={doc.title}>{doc.title}</h2>}
+                        <div className="flex items-center gap-1 ml-auto">
+                            <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`p-1 rounded ${subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}>
+                                {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                            </button>
+                        </div>
                     </div>
+
+                    {!isSidebarCollapsed && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                            {canEdit && (
+                                <button
+                                    onClick={handleAddRequest}
+                                    className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${theme === 'dark' ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-600/40' : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'}`}
+                                    title="Add New Request (Alt+N)"
+                                >
+                                    <Plus size={14} /> <span className="font-bold">NEW</span>
+                                </button>
+                            )}
+                            {canEdit && (
+                                <>
+                                    <button onClick={() => handleSaveCollection()} className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all relative border ${theme === 'dark' ? 'bg-green-600/20 text-green-400 border-green-600/30 hover:bg-green-600/40' : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'}`} title="Save Collection (Ctrl+S)">
+                                        <Save size={14} /> {isDirty && <span className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-gray-800 animate-pulse" />}
+                                    </button>
+                                    <button onClick={handleShare} className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${doc.isPublic ? 'bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700' : theme === 'dark' ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'}`} title={doc.isPublic ? 'Make Private' : 'Make Public'}>
+                                        <Share2 size={14} />
+                                    </button>
+                                </>
+                            )}
+                            <button 
+                                onClick={() => handleGenerateMarkdown(false)} 
+                                className={`p-1.5 rounded border flex-1 flex items-center justify-center gap-1 transition-all ${theme === 'dark' ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'}`} 
+                                title="Export Documentation"
+                            >
+                                <FileText size={14} />
+                            </button>
+                            {canEdit && (
+                                <button onClick={() => setShowEnv(!showEnv)} className={`p-1.5 rounded border flex-1 flex items-center justify-center gap-1 transition-all ${theme === 'dark' ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'}`} title="Environment Variables">
+                                    <Settings size={14} />
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Env Modal */}
@@ -809,43 +1281,66 @@ export default function ApiClient() {
                                 onDragStart={() => canEdit && handleDragStart(idx)}
                                 onDragOver={(e) => canEdit && handleDragOver(e, idx)}
                                 onDragEnd={() => canEdit && handleDragEnd()}
-                                className={`group flex items-center justify-between p-3 cursor-pointer border-l-2 transition-all relative ${selectedIdx === idx ? 'bg-indigo-50 border-indigo-500' : 'border-transparent hover:bg-gray-50'} ${canEdit && draggedIdx === idx ? 'opacity-50 ring-2 ring-indigo-500 ring-inset shadow-inner' : ''}`}
+                                className={`group flex items-center justify-between p-2.5 cursor-pointer border-l-2 transition-all relative ${
+                                    selectedIdx === idx 
+                                        ? theme === 'dark' 
+                                            ? 'bg-indigo-600/20 border-indigo-500' 
+                                            : 'bg-indigo-50 border-indigo-500' 
+                                        : theme === 'dark'
+                                            ? 'border-transparent hover:bg-gray-700/50'
+                                            : 'border-transparent hover:bg-gray-100'
+                                } ${canEdit && draggedIdx === idx ? 'opacity-50 ring-1 ring-indigo-500 ring-inset' : ''}`}
                             >
                                 <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                    {canEdit && <GripVertical size={14} className="text-gray-300 group-hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0" />}
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-10 text-center flex-shrink-0 ${ep.method === 'GET' ? 'bg-green-100 text-green-700' :
-                                        ep.method === 'POST' ? 'bg-blue-100 text-blue-700' :
-                                            ep.method === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
-                                                ep.method === 'DELETE' ? 'bg-red-100 text-red-700' :
-                                                    'bg-gray-200 text-gray-700'
+                                    {canEdit && <GripVertical size={12} className={`${theme === 'dark' ? 'text-gray-600 group-hover:text-gray-400' : 'text-gray-400 group-hover:text-gray-600'} cursor-grab active:cursor-grabbing flex-shrink-0`} />}
+                                    <span className={`text-[9px] font-bold px-1 py-0.5 rounded w-10 text-center flex-shrink-0 ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
+                                        ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
+                                            ep.method === 'PUT' ? 'bg-yellow-600/20 text-yellow-600' :
+                                                ep.method === 'DELETE' ? 'bg-red-600/20 text-red-500' :
+                                                    theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
                                         }`}>{ep.method}</span>
-                                    <span className={`truncate ${selectedIdx === idx ? 'font-medium text-gray-900' : 'text-gray-600'}`}>{ep.name || 'Untitled'}</span>
+                                    <span className={`truncate text-[11px] ${selectedIdx === idx ? `font-bold ${textColor}` : theme === 'dark' ? 'text-gray-400 group-hover:text-gray-200' : 'text-gray-600 group-hover:text-gray-900'}`}>{ep.name || 'Untitled'}</span>
                                 </div>
 
-                                {canEdit && (
-                                    <div className="relative">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenMenuIdx(openMenuIdx === idx ? null : idx);
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-600 p-1 rounded hover:bg-gray-200 transition-all"
-                                        >
-                                            <MoreVertical size={14} />
-                                        </button>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleCopyMarkdown(ep); }}
+                                        className={`opacity-0 group-hover:opacity-100 p-1 transition-all ${theme === 'dark' ? 'text-gray-500 hover:text-indigo-400' : 'text-gray-400 hover:text-indigo-600'}`}
+                                        title="Copy Request Markdown"
+                                    >
+                                        <Copy size={12} />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenMenuIdx(openMenuIdx === idx ? null : idx);
+                                        }}
+                                        className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-all ${theme === 'dark' ? 'text-gray-400 hover:text-indigo-400 hover:bg-gray-700' : 'text-gray-400 hover:text-indigo-600 hover:bg-gray-200'}`}
+                                    >
+                                        <MoreVertical size={14} />
+                                    </button>
 
-                                        {openMenuIdx === idx && (
-                                            <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-xl z-50 py-1 text-xs">
-                                                <button onClick={(e) => duplicateRequest(idx, e)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                                                    <Copy size={12} /> Duplicate
-                                                </button>
-                                                <button onClick={(e) => deleteRequest(idx, e)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-gray-100">
-                                                    <Trash2 size={12} /> Delete
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                    {openMenuIdx === idx && (
+                                        <div className={`absolute right-0 mt-1 w-40 ${secondaryBg} border ${borderCol} rounded-lg shadow-2xl z-50 py-1 text-[10px]`}>
+                                            <button onClick={(e) => { e.stopPropagation(); handleCopyAsCurl(ep); setOpenMenuIdx(null); }} className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                                                <Terminal size={12} className="text-orange-500" /> Copy as cURL
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleCopyAsFetch(ep); setOpenMenuIdx(null); }} className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                                                <Code size={12} className="text-blue-500" /> Copy as Fetch
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(resolveUrl(ep)); toast.success('URL copied'); setOpenMenuIdx(null); }} className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                                                <Copy size={12} className="text-green-500" /> Copy URL
+                                            </button>
+                                            <div className={`h-px ${borderCol} my-1`} />
+                                            <button onClick={(e) => duplicateRequest(idx, e)} className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                                                <Plus size={12} /> Duplicate
+                                            </button>
+                                            <button onClick={(e) => deleteRequest(idx, e)} className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${theme === 'dark' ? 'text-red-400 hover:bg-red-500/20' : 'text-red-600 hover:bg-red-50'}`}>
+                                                <Trash2 size={12} /> Delete
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -865,7 +1360,7 @@ export default function ApiClient() {
                 {currentReq ? (
                     <>
                         {/* Top Bar */}
-                        <div className="bg-white border-b border-gray-200 p-4 flex items-center gap-4 shadow-sm z-10">
+                        <div className={`${secondaryBg} border-b ${borderCol} p-3 flex items-center gap-3 shadow-md z-10`}>
                             <div className="flex-1 flex gap-2 min-w-0">
                                 <select
                                     value={currentReq.method}
@@ -874,7 +1369,7 @@ export default function ApiClient() {
                                         setCurrentReq({ ...currentReq, method: e.target.value });
                                         setIsDirty(true);
                                     }}
-                                    className="flex-shrink-0 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg font-semibold text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50"
+                                    className={`flex-shrink-0 px-2 py-1.5 ${inputBg} border ${borderCol} rounded-lg font-bold ${textColor} focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 text-[11px]`}
                                 >
                                     <option>GET</option>
                                     <option>POST</option>
@@ -883,73 +1378,119 @@ export default function ApiClient() {
                                     <option>PATCH</option>
                                 </select>
                                 <div className="flex-1 relative group min-w-0">
+                                    {/* Hidden overlay for syntax highlighting */}
+                                    <div 
+                                        className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg border border-transparent"
+                                        style={{ 
+                                            padding: '6px 32px 6px 12px',
+                                            lineHeight: '20px'
+                                        }}
+                                    >
+                                        <HighlightedText
+                                            text={currentReq.url}
+                                            className="text-[11px] font-mono leading-[20px]"
+                                        />
+                                    </div>
+                                    {/* Actual input */}
                                     <input
                                         type="text"
                                         value={currentReq.url}
                                         readOnly={!canEdit}
                                         onChange={handleUrlChange}
                                         onKeyDown={handleKeyDown}
-                                        className={`w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm bg-transparent relative z-10 text-transparent caret-gray-800 ${!canEdit ? 'cursor-default' : ''}`}
+                                        className={`w-full border ${borderCol} rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none font-mono text-[11px] ${inputBg} ${!canEdit ? 'cursor-default' : ''}`}
+                                        style={{ 
+                                            color: 'transparent',
+                                            caretColor: theme === 'dark' ? '#e5e7eb' : '#1f2937',
+                                            padding: '6px 32px 6px 12px',
+                                            lineHeight: '20px'
+                                        }}
                                         placeholder="Enter Request URL"
                                     />
+                                    {/* Copy button */}
                                     <div className="absolute inset-y-0 right-0 z-20 flex items-center pr-2">
                                         <button
                                             onClick={handleCopyUrl}
-                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all"
+                                            className={`p-1 ${subTextColor} hover:text-indigo-400 hover:bg-gray-500/10 rounded-md transition-all`}
                                             title="Copy full URL"
                                         >
-                                            <Copy size={16} />
+                                            <Copy size={12} />
                                         </button>
-                                    </div>
-                                    <div className="absolute inset-0 px-4 py-2 flex items-center pointer-events-none overflow-hidden h-full">
-                                        <HighlightedText
-                                            text={currentReq.url}
-                                            className="text-sm w-full"
-                                        />
                                     </div>
 
                                     {/* Suggestions Dropdown */}
                                     {suggestions.length > 0 && (
-                                        <div className="absolute left-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1 max-h-60 overflow-y-auto">
-                                            {suggestions.map((s, idx) => (
-                                                <div
-                                                    key={s}
-                                                    onClick={() => handleSuggestionSelect(s)}
-                                                    className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between ${idx === suggestionIndex ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                                                >
-                                                    <span className="font-mono text-xs">{`{{${s}}}`}</span>
-                                                    <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{variables[s]}</span>
-                                                </div>
-                                            ))}
+                                        <div className={`absolute left-0 top-full mt-1 w-80 ${secondaryBg} border ${borderCol} rounded-lg shadow-2xl z-50 py-1 max-h-60 overflow-y-auto`}>
+                                            {suggestions.map((s, idx) => {
+                                                const isEnv = s.startsWith('env:');
+                                                const isUrl = s.startsWith('url:');
+                                                const displayValue = isEnv ? s.slice(4) : isUrl ? s.slice(4) : s;
+                                                
+                                                return (
+                                                    <div
+                                                        key={s}
+                                                        onClick={() => handleSuggestionSelect(s)}
+                                                        className={`px-3 py-2 text-[11px] cursor-pointer flex items-center gap-2 ${idx === suggestionIndex ? 'bg-indigo-600 text-white' : `${subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}`}
+                                                    >
+                                                        {isEnv ? (
+                                                            <>
+                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${idx === suggestionIndex ? 'bg-indigo-500' : 'bg-blue-600/20 text-blue-400'}`}>
+                                                                    ENV
+                                                                </span>
+                                                                <span className="font-mono flex-1">{`{{${displayValue}}}`}</span>
+                                                                <span className={`text-[9px] truncate max-w-[100px] ${idx === suggestionIndex ? 'text-indigo-200' : 'text-gray-500'}`}>
+                                                                    {variables[displayValue]}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${idx === suggestionIndex ? 'bg-indigo-500' : 'bg-green-600/20 text-green-400'}`}>
+                                                                    URL
+                                                                </span>
+                                                                <span className="font-mono flex-1 truncate">{displayValue}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
                                 <button
                                     onClick={handleSendRequest}
                                     disabled={reqLoading}
-                                    className="flex-shrink-0 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+                                    className="flex-shrink-0 px-5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 text-[11px] disabled:opacity-50"
                                 >
-                                    {reqLoading ? <span className="animate-spin">⌛</span> : <Send size={16} />}
-                                    Send
+                                    {reqLoading ? <span className="animate-spin text-xs">⌛</span> : <Send size={14} />}
+                                    SEND
                                 </button>
-                            </div>
-                            <div className="flex gap-2 border-l pl-4 border-gray-200 flex-shrink-0">
-                                <div className="flex gap-2">
-                                    <button onClick={handleGenerateMarkdown} className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Export Markdown">
-                                        <FileText size={20} />
+                                {canEdit && (
+                                    <button
+                                        onClick={handleSaveSingleRequest}
+                                        disabled={!isDirty}
+                                        className={`flex-shrink-0 px-4 py-1.5 ${isDirty ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-900/20' : `${theme === 'dark' ? 'bg-gray-800 text-gray-500 border-gray-700' : 'bg-gray-100 text-gray-400 border-gray-200'} cursor-not-allowed opacity-50`} rounded-lg font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 text-[11px] border`}
+                                        title={isDirty ? "Save this request" : "No changes to save"}
+                                    >
+                                        <Save size={14} />
+                                        SAVE
                                     </button>
-                                    {canEdit && (
-                                        <>
-                                            <button onClick={() => handleSaveCollection()} className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors relative" title="Save Collection">
-                                                <Save size={20} />
-                                                {isDirty && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 rounded-full border border-white shadow-sm animate-pulse" />}
-                                            </button>
-                                            <button onClick={handleShare} className={`p-2 hover:bg-indigo-50 rounded-lg transition-colors ${(doc as any).isPublic ? 'text-green-600' : 'text-gray-600 hover:text-indigo-600'}`} title={(doc as any).isPublic ? 'Privatize' : 'Share Publicly'}>
-                                                <Share2 size={20} />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
+                                )}
+                            </div>
+                            <div className={`flex items-center gap-1 border-l pl-3 ${borderCol} flex-shrink-0`}>
+                                <button
+                                    onClick={() => handleDownloadIndividualMarkdown(currentReq)}
+                                    className={`p-1.5 ${subTextColor} hover:text-green-500 hover:bg-green-500/10 rounded-md transition-all`}
+                                    title="Download Request Markdown"
+                                >
+                                    <Download size={16} />
+                                </button>
+                                <button
+                                    onClick={() => handleCopyMarkdown(currentReq)}
+                                    className={`p-1.5 ${subTextColor} hover:text-indigo-500 hover:bg-indigo-500/10 rounded-md transition-all`}
+                                    title="Copy Request Markdown"
+                                >
+                                    <Copy size={16} />
+                                </button>
                             </div>
                         </div>
 
@@ -957,26 +1498,26 @@ export default function ApiClient() {
                         <div className={`flex-1 overflow-hidden flex ${paneLayout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
                             {/* Left Pane: Config */}
                             <div
-                                className={`border-r border-gray-200 flex flex-col min-h-0 min-w-0 ${paneLayout === 'horizontal' ? '' : 'overflow-y-auto'}`}
+                                className={`border-r ${borderCol} flex flex-col min-h-0 min-w-0 ${mainBg} ${paneLayout === 'horizontal' ? '' : 'overflow-y-auto'}`}
                                 style={paneLayout === 'horizontal' ? { width: `${mainSplitRatio}%` } : { height: `${verticalSplitRatio}%` }}
                             >
-                                <div className="flex border-b border-gray-200 bg-gray-50">
+                                <div className={`flex border-b ${borderCol} ${secondaryBg}`}>
                                     {['docs', 'params', 'headers', 'body'].map(tab => (
                                         <button
                                             key={tab}
                                             onClick={() => setActiveTab(tab as any)}
-                                            className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors capitalize ${activeTab === tab ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                                            className={`px-4 py-2 font-bold text-[10px] border-b-2 transition-colors capitalize ${activeTab === tab ? 'border-indigo-500 text-indigo-500 bg-indigo-500/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
                                         >
                                             {tab}
                                         </button>
                                     ))}
                                 </div>
 
-                                <div className="p-4 flex-1 overflow-y-auto">
+                                <div className="p-3 flex-1 overflow-y-auto">
                                     {activeTab === 'headers' && (
                                         <div className="space-y-2">
-                                            <div className="flex justify-between text-xs font-semibold text-gray-500 mb-2 px-1">
-                                                <span>Key</span><span>Value</span>
+                                            <div className="flex justify-between text-[10px] font-bold text-gray-500 mb-1 px-1">
+                                                <span>KEY</span><span>VALUE</span>
                                             </div>
                                             {(currentReq.headers || []).map((h: any, i: number) => (
                                                 <div key={i} className="flex gap-2">
@@ -989,7 +1530,7 @@ export default function ApiClient() {
                                                             setCurrentReq({ ...currentReq, headers: newH });
                                                             setIsDirty(true);
                                                         }}
-                                                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                                                        className={`flex-1 px-2 py-1.5 ${inputBg} border ${borderCol} ${textColor} rounded text-[11px]`}
                                                         placeholder="Key"
                                                     />
                                                     <input
@@ -1001,65 +1542,129 @@ export default function ApiClient() {
                                                             setCurrentReq({ ...currentReq, headers: newH });
                                                             setIsDirty(true);
                                                         }}
-                                                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                                                        className={`flex-1 px-2 py-1.5 ${inputBg} border ${borderCol} ${textColor} rounded text-[11px]`}
                                                         placeholder="Value"
                                                     />
                                                     {canEdit && <button onClick={() => {
                                                         const newH = currentReq.headers.filter((_: any, idx: number) => idx !== i);
                                                         setCurrentReq({ ...currentReq, headers: newH });
                                                         setIsDirty(true);
-                                                    }} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>}
+                                                    }} className="p-1 text-gray-500 hover:text-red-400"><Trash2 size={12} /></button>}
                                                 </div>
                                             ))}
                                             {canEdit && <button onClick={() => {
                                                 setCurrentReq({ ...currentReq, headers: [...(currentReq.headers || []), { key: '', value: '' }] });
                                                 setIsDirty(true);
-                                            }} className="text-sm text-indigo-600 font-medium">+ Add Header</button>}
+                                            }} className="text-[10px] text-indigo-400 font-bold hover:text-indigo-300 transition-colors">+ ADD HEADER</button>}
                                         </div>
                                     )}
 
                                     {activeTab === 'body' && (
-                                        <div className="h-full flex flex-col">
-                                            <div className="mb-2 flex justify-between items-center text-xs text-gray-500">
-                                                <div className="flex items-center gap-4">
-                                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" checked readOnly /> Raw (JSON)</label>
-                                                    <button onClick={handleCopyRequest} className="text-gray-400 hover:text-indigo-600 flex items-center gap-1">
-                                                        <Copy size={12} /> Copy Body
+                                        <div className="h-full flex flex-col min-h-[300px]">
+                                            <div className="mb-2 flex justify-between items-center text-[10px] text-gray-500 font-bold">
+                                                <div className="flex items-center gap-3">
+                                                    <label className="flex items-center gap-1.5 cursor-pointer text-indigo-400 group">
+                                                        <div className={`w-3 h-3 rounded-full border ${theme === 'dark' ? 'border-indigo-500 bg-indigo-500/20' : 'border-indigo-400 bg-indigo-50'} flex items-center justify-center`}>
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                        </div>
+                                                        RAW (JSON)
+                                                    </label>
+                                                    <button onClick={handleCopyRequest} className="text-gray-500 hover:text-indigo-400 flex items-center gap-1 transition-colors">
+                                                        <Copy size={10} /> COPY BODY
                                                     </button>
                                                 </div>
-                                                {canEdit && <button onClick={handleFormatJson} className="px-2 py-1 hover:bg-indigo-50 text-indigo-600 rounded flex items-center gap-1 font-medium transition-colors">
-                                                    <CheckCircle2 size={12} /> Format JSON
+                                                {canEdit && <button onClick={handleFormatJson} className="px-1.5 py-0.5 hover:bg-indigo-600/20 text-indigo-400 rounded border border-indigo-600/30 flex items-center gap-1 font-bold transition-all">
+                                                    <CheckCircle2 size={10} /> FORMAT JSON
                                                 </button>}
                                             </div>
-                                            <textarea
-                                                value={currentReq.body?.raw || ''}
-                                                readOnly={!canEdit}
-                                                onChange={(e) => {
-                                                    setCurrentReq({ ...currentReq, body: { ...currentReq.body, raw: e.target.value } });
-                                                    setIsDirty(true);
-                                                }}
-                                                className="flex-1 w-full font-mono text-sm p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-                                                placeholder='{ "key": "value" }'
-                                            />
+
+                                            <div className={`relative flex-1 rounded-xl border ${borderCol} overflow-hidden ${theme === 'dark' ? 'bg-[#1e1e1e]' : 'bg-[#fafafa]'}`}>
+                                                <div
+                                                    ref={bodyEditorRef}
+                                                    className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
+                                                >
+                                                    <SyntaxHighlighter
+                                                        language="json"
+                                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
+                                                        codeTagProps={{
+                                                            style: {
+                                                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                                                                fontSize: '13px',
+                                                                lineHeight: '20px',
+                                                                padding: 0
+                                                            }
+                                                        }}
+                                                        customStyle={{
+                                                            margin: 0,
+                                                            background: 'transparent',
+                                                            padding: '12px',
+                                                            fontSize: '13px',
+                                                            lineHeight: '20px',
+                                                            minHeight: '100%',
+                                                            whiteSpace: 'pre-wrap',
+                                                            wordBreak: 'break-all',
+                                                            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+                                                        }}
+                                                    >
+                                                        {(currentReq?.body?.raw || '') + ((currentReq?.body?.raw || '').endsWith('\n') ? ' ' : '')}
+                                                    </SyntaxHighlighter>
+                                                </div>
+                                                <textarea
+                                                    value={currentReq?.body?.raw || ''}
+                                                    readOnly={!canEdit}
+                                                    spellCheck={false}
+                                                    onScroll={(e) => {
+                                                        if (bodyEditorRef.current) {
+                                                            bodyEditorRef.current.scrollTop = e.currentTarget.scrollTop;
+                                                            bodyEditorRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                                                        }
+                                                    }}
+                                                    onChange={(e) => {
+                                                        if (!currentReq) return;
+                                                        setCurrentReq({ ...currentReq, body: { ...currentReq.body, raw: e.target.value } });
+                                                        setIsDirty(true);
+                                                    }}
+                                                    className="absolute inset-0 w-full h-full bg-transparent text-transparent outline-none resize-none overflow-auto selection:bg-indigo-500/30 z-10"
+                                                    placeholder='{ "key": "value" }'
+                                                    style={{
+                                                        padding: '12px',
+                                                        fontSize: '13px',
+                                                        lineHeight: '20px',
+                                                        whiteSpace: 'pre-wrap',
+                                                        wordBreak: 'break-all',
+                                                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                                                        caretColor: theme === 'dark' ? '#fff' : '#6366f1'
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                     )}
 
                                     {activeTab === 'docs' && (
                                         <div className="space-y-4">
-                                            <div>
-                                                <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Request Name</label>
-                                                <input
-                                                    value={currentReq.name}
-                                                    readOnly={!canEdit}
-                                                    onChange={(e) => {
-                                                        setCurrentReq({ ...currentReq, name: e.target.value });
-                                                        setIsDirty(true);
-                                                    }}
-                                                    className={`w-full text-lg font-bold px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none ${!canEdit ? 'bg-transparent border-transparent px-0' : ''}`}
-                                                />
+                                            <div className="flex justify-between items-end">
+                                                <div className="flex-1">
+                                                    <label className={`text-[10px] font-bold ${textColor} opacity-60 uppercase mb-1 block`}>REQUEST NAME</label>
+                                                    <input
+                                                        value={currentReq.name}
+                                                        readOnly={!canEdit}
+                                                        onChange={(e) => {
+                                                            setCurrentReq({ ...currentReq, name: e.target.value });
+                                                            setIsDirty(true);
+                                                        }}
+                                                        className={`w-full text-base font-bold px-2 py-1.5 ${inputBg} border ${borderCol} ${textColor} rounded focus:ring-1 focus:ring-indigo-500 outline-none ${!canEdit ? 'bg-transparent border-transparent px-0' : ''}`}
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={() => handleCopyMarkdown(currentReq)}
+                                                    className="mb-0.5 ml-2 p-2 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 rounded-lg flex items-center gap-2 font-bold text-[10px] transition-all border border-indigo-600/20"
+                                                    title="Copy as Markdown"
+                                                >
+                                                    <Copy size={14} /> COPY MKD
+                                                </button>
                                             </div>
                                             <div>
-                                                <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Description</label>
+                                                <label className={`text-[10px] font-bold ${textColor} opacity-60 uppercase mb-1 block`}>DESCRIPTION</label>
                                                 <textarea
                                                     value={currentReq.description || ''}
                                                     readOnly={!canEdit}
@@ -1067,30 +1672,30 @@ export default function ApiClient() {
                                                         setCurrentReq({ ...currentReq, description: e.target.value });
                                                         setIsDirty(true);
                                                     }}
-                                                    className={`w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-sm leading-relaxed ${!canEdit ? 'bg-transparent border-transparent px-0 h-auto min-h-[100px]' : ''}`}
+                                                    className={`w-full h-40 p-3 ${inputBg} border ${borderCol} ${textColor} rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none resize-none text-[11px] leading-relaxed ${!canEdit ? 'bg-transparent border-transparent px-0 h-auto min-h-[100px]' : ''}`}
                                                     placeholder="API Documentation..."
                                                 />
                                             </div>
 
                                             {canEdit && (
-                                                <div className="pt-4 border-t border-gray-100">
-                                                    <label className="text-xs font-semibold text-indigo-600 uppercase mb-2 flex items-center gap-2">
-                                                        <Sparkles size={14} />
-                                                        AI Generation Command
+                                                <div className={`pt-3 border-t ${borderCol}`}>
+                                                    <label className="text-[10px] font-bold text-indigo-400 uppercase mb-1.5 flex items-center gap-1.5">
+                                                        <Sparkles size={12} />
+                                                        AI GENERATION COMMAND
                                                     </label>
                                                     <div className="flex flex-col gap-2">
                                                         <textarea
                                                             value={aiCommand}
                                                             onChange={(e) => setAiCommand(e.target.value)}
-                                                            className="w-full h-24 p-3 border border-indigo-100 bg-indigo-50/30 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-xs"
+                                                            className={`w-full h-20 p-2 border ${theme === 'dark' ? 'border-indigo-900/50 bg-indigo-950/20 text-indigo-200' : 'border-indigo-200 bg-indigo-50 text-indigo-700'} rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none resize-none text-[10px]`}
                                                             placeholder="Custom AI instructions..."
                                                         />
                                                         <button
                                                             onClick={handleAiGenerate}
                                                             disabled={aiMutation.isPending}
-                                                            className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-indigo-700 shadow-sm transition-all disabled:opacity-50"
+                                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50"
                                                         >
-                                                            {aiMutation.isPending ? 'Refining Documentation...' : 'Generate/Refine with AI'}
+                                                            {aiMutation.isPending ? 'REFINING...' : 'GENERATE / REFINE WITH AI'}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1101,29 +1706,29 @@ export default function ApiClient() {
                                     {activeTab === 'params' && (
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center px-1">
-                                                <h4 className="text-xs font-semibold text-gray-500 uppercase">Query & Path Params</h4>
+                                                <h4 className="text-[10px] font-bold text-gray-500 uppercase">QUERY & PATH PARAMS</h4>
                                                 {canEdit && <button
                                                     onClick={() => {
                                                         const newParams = [...(currentReq.params || []), { key: '', value: '', type: 'query' }];
                                                         setCurrentReq({ ...currentReq, params: newParams });
                                                         setIsDirty(true);
                                                     }}
-                                                    className="p-1 px-2 text-[10px] bg-indigo-50 text-indigo-600 rounded flex items-center gap-1 font-bold hover:bg-indigo-100"
+                                                    className="p-1 px-1.5 text-[9px] bg-indigo-600/20 text-indigo-400 rounded flex items-center gap-1 font-bold hover:bg-indigo-600/30 border border-indigo-600/30"
                                                 >
-                                                    <Plus size={12} /> Add Param
+                                                    <Plus size={10} /> ADD PARAM
                                                 </button>}
                                             </div>
 
-                                            <div className="space-y-2">
-                                                <div className="flex text-[10px] font-bold text-gray-400 px-1 border-b border-gray-100 pb-1">
-                                                    <span className="w-20">Type</span>
-                                                    <span className="flex-1">Key</span>
-                                                    <span className="flex-1 ml-2">Value</span>
-                                                    <span className="w-8"></span>
+                                            <div className="space-y-1.5">
+                                                <div className="flex text-[9px] font-bold text-gray-600 px-1 border-b border-gray-800 pb-1 uppercase">
+                                                    <span className="w-16">TYPE</span>
+                                                    <span className="flex-1">KEY</span>
+                                                    <span className="flex-1 ml-2">VALUE</span>
+                                                    <span className="w-6"></span>
                                                 </div>
                                                 {(currentReq.params || []).map((p: any, i: number) => (
                                                     <div key={i} className="flex gap-2 items-center">
-                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-20 text-center uppercase ${p.type === 'path' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                        <span className={`text-[8px] font-bold px-1 py-0.5 rounded w-16 text-center uppercase ${p.type === 'path' ? 'bg-orange-600/20 text-orange-400 border border-orange-600/20' : 'bg-blue-600/20 text-blue-500 border border-blue-600/20'}`}>
                                                             {p.type}
                                                         </span>
                                                         <input
@@ -1135,7 +1740,7 @@ export default function ApiClient() {
                                                                 setCurrentReq({ ...currentReq, params: newP });
                                                                 setIsDirty(true);
                                                             }}
-                                                            className={`flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs ${(!canEdit || p.type === 'path') ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                                                            className={`flex-1 px-2 py-1 ${inputBg} border ${borderCol} ${textColor} rounded text-[11px] ${(!canEdit || p.type === 'path') ? 'opacity-60 grayscale cursor-not-allowed' : ''}`}
                                                             placeholder="Key"
                                                         />
                                                         <input
@@ -1147,7 +1752,7 @@ export default function ApiClient() {
                                                                 setCurrentReq({ ...currentReq, params: newP });
                                                                 setIsDirty(true);
                                                             }}
-                                                            className={`flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs ${!canEdit ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                                                            className={`flex-1 px-2 py-1 ${inputBg} border ${borderCol} ${textColor} rounded text-[11px] ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
                                                             placeholder="Value"
                                                         />
                                                         {canEdit && (
@@ -1158,16 +1763,16 @@ export default function ApiClient() {
                                                                     setCurrentReq({ ...currentReq, params: newP });
                                                                     setIsDirty(true);
                                                                 }}
-                                                                className={`p-1.5 text-gray-400 hover:text-red-500 ${p.type === 'path' ? 'opacity-20 cursor-not-allowed' : ''}`}
+                                                                className={`p-1 text-gray-500 hover:text-red-400 ${p.type === 'path' ? 'opacity-10 cursor-not-allowed' : ''}`}
                                                             >
-                                                                <Trash2 size={14} />
+                                                                <Trash2 size={12} />
                                                             </button>
                                                         )}
                                                     </div>
                                                 ))}
                                                 {!(currentReq.params || []).length && (
-                                                    <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-lg text-gray-400 text-xs">
-                                                        No parameters detected. Use :var in URL for path variables.
+                                                    <div className="text-center py-4 border border-dashed border-gray-800 rounded-lg text-gray-600 text-[10px]">
+                                                        NO PARAMETERS DETECTED
                                                     </div>
                                                 )}
                                             </div>
@@ -1179,88 +1784,119 @@ export default function ApiClient() {
                             {/* Main divider resizer */}
                             {paneLayout === 'horizontal' ? (
                                 <div
-                                    className={`w-1 cursor-col-resize hover:bg-indigo-400 transition-colors z-10 flex-shrink-0 ${isResizingMain ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                                    className={`w-1 cursor-col-resize hover:bg-indigo-500 transition-colors z-10 flex-shrink-0 ${isResizingMain ? 'bg-indigo-600' : borderCol}`}
                                     onMouseDown={() => setIsResizingMain(true)}
                                 />
                             ) : (
                                 <div
-                                    className={`h-1 cursor-row-resize hover:bg-indigo-400 transition-colors z-10 flex-shrink-0 ${isResizingVertical ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                                    className={`h-1 cursor-row-resize hover:bg-indigo-500 transition-colors z-10 flex-shrink-0 ${isResizingVertical ? 'bg-indigo-600' : borderCol}`}
                                     onMouseDown={() => setIsResizingVertical(true)}
                                 />
                             )}
 
                             {/* Right Pane: Response */}
                             <div
-                                className={`bg-gray-50 flex flex-col border-l border-gray-200 min-w-0 relative ${paneLayout === 'horizontal' ? '' : 'border-t'}`}
+                                className={`${mainBg} flex flex-col border-l ${borderCol} min-w-0 relative ${paneLayout === 'horizontal' ? '' : 'border-t'}`}
                                 style={paneLayout === 'horizontal' ? { width: `${100 - mainSplitRatio}%` } : { height: `${100 - verticalSplitRatio}%` }}
                             >
-                                <div className="p-3 border-b border-gray-200 bg-white flex justify-between items-center z-10 relative">
+                                <div className={`p-2 border-b ${borderCol} ${secondaryBg} flex justify-between items-center z-10 relative`}>
                                     <div className="flex items-center gap-4">
-                                        <h3 className="font-semibold text-gray-700">Response</h3>
+                                        <h3 className={`font-bold ${textColor} opacity-60 text-[10px] uppercase`}>Response</h3>
                                         {response && (
-                                            <div className="flex items-center gap-3 text-xs">
-                                                <span className={`font-bold ${response.status >= 200 && response.status < 300 ? 'text-green-600' : 'text-red-600'}`}>
+                                            <div className="flex items-center gap-3 text-[10px]">
+                                                <span className={`font-bold ${response.status >= 200 && response.status < 300 ? 'text-green-500' : 'text-red-500'}`}>
                                                     {response.status} {response.statusText}
                                                 </span>
-                                                <span className="text-gray-500">{response.time}ms</span>
+                                                <span className={subTextColor}>{response.time}ms</span>
                                                 <button
                                                     onClick={() => setShowAbsoluteTime(!showAbsoluteTime)}
-                                                    className="text-[10px] text-gray-400 hover:text-indigo-600 flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200"
+                                                    className={`text-[9px] ${subTextColor} hover:text-indigo-500 flex items-center gap-1 ${inputBg} px-1.5 py-0.5 rounded border ${borderCol}`}
                                                 >
                                                     {showAbsoluteTime
                                                         ? new Date(response.timestamp || Date.now()).toLocaleTimeString()
-                                                        : 'Just now'}
+                                                        : 'JUST NOW'}
                                                 </button>
                                             </div>
                                         )}
                                     </div>
                                     <div className="flex gap-1 items-center">
                                         {response && (
-                                            <button
-                                                onClick={handleCopyResponse}
-                                                className="p-1 px-2 text-[10px] text-gray-500 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50 rounded border border-gray-200 flex items-center gap-1 transition-all mr-2"
-                                            >
-                                                <Copy size={12} /> Copy
-                                            </button>
+                                            <>
+                                                {showResponseFilter ? (
+                                                    <div className="flex items-center gap-1 mr-1">
+                                                        <div className="relative">
+                                                            <Search size={12} className={`absolute left-2 top-1/2 -translate-y-1/2 ${subTextColor}`} />
+                                                            <input
+                                                                type="text"
+                                                                value={responseFilter}
+                                                                onChange={(e) => setResponseFilter(e.target.value)}
+                                                                placeholder="Filter response..."
+                                                                className={`pl-7 pr-2 py-1 text-[10px] ${inputBg} border ${borderCol} rounded focus:ring-1 focus:ring-indigo-500 outline-none w-40 ${textColor}`}
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => { setShowResponseFilter(false); setResponseFilter(''); }}
+                                                            className={`p-1 ${subTextColor} hover:text-red-400 rounded`}
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setShowResponseFilter(true)}
+                                                        className={`p-1 rounded transition-all ${subTextColor} hover:bg-gray-600 hover:text-white`}
+                                                        title="Filter Response (Ctrl+F)"
+                                                    >
+                                                        <Search size={14} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={handleCopyResponse}
+                                                    className={`p-1 px-2 text-[9px] ${subTextColor} hover:text-indigo-500 ${inputBg} hover:bg-opacity-50 rounded border ${borderCol} flex items-center gap-1 transition-all mr-1 font-bold`}
+                                                >
+                                                    <Copy size={10} /> COPY
+                                                </button>
+                                            </>
                                         )}
                                         <button
                                             onClick={() => setShowHistory(!showHistory)}
-                                            className={`p-1 rounded ${showHistory ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:bg-gray-100'}`}
+                                            className={`p-1 rounded ${showHistory ? 'bg-indigo-600 text-white' : `${subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}`}
                                             title="History"
                                         >
-                                            <History size={16} />
+                                            <History size={14} />
                                         </button>
                                         <button
                                             onClick={() => setPaneLayout('horizontal')}
-                                            className={`p-1 rounded ${paneLayout === 'horizontal' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:bg-gray-100'}`}
+                                            className={`p-1 rounded ${paneLayout === 'horizontal' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-700'}`}
                                             title="Layout Right"
                                         >
-                                            <Columns2 size={16} />
+                                            <Columns2 size={14} />
                                         </button>
                                         <button
                                             onClick={() => setPaneLayout('vertical')}
-                                            className={`p-1 rounded ${paneLayout === 'vertical' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:bg-gray-100'}`}
+                                            className={`p-1 rounded ${paneLayout === 'vertical' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-700'}`}
                                             title="Layout Bottom"
                                         >
-                                            <Rows2 size={16} />
+                                            <Rows2 size={14} />
                                         </button>
                                     </div>
                                 </div>
-                                <div className="flex-1 relative w-full h-full">
+                                <div className={`flex-1 relative w-full h-full ${inputBg}`}>
                                     {showHistory && (
-                                        <div className="absolute inset-0 z-20 bg-white/95 backdrop-blur-sm border-r border-gray-200 p-4 overflow-y-auto animate-in slide-in-from-right duration-200">
+                                        <div className={`absolute inset-0 z-20 ${secondaryBg} backdrop-blur-sm border-r ${borderCol} p-4 overflow-y-auto animate-in slide-in-from-right duration-200 shadow-2xl`}>
                                             <div className="flex justify-between items-center mb-4">
-                                                <h4 className="font-bold text-gray-700 flex items-center gap-2">
-                                                    <RotateCcw size={16} className="text-indigo-600" />
+                                                <h4 className={`font-bold ${textColor} text-sm flex items-center gap-2`}>
+                                                    <RotateCcw size={16} className="text-indigo-500" />
                                                     Response History
                                                 </h4>
-                                                <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                                                <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-gray-800 rounded-full">
                                                     <X size={18} className="text-gray-400" />
                                                 </button>
                                             </div>
                                             <div className="space-y-3">
                                                 {!(currentReq.history || []).length && (
-                                                    <div className="text-center py-10 text-gray-400 text-xs text-center border-2 border-dashed border-gray-100 rounded-xl">
+                                                    <div className="text-center py-10 text-gray-500 text-[11px] border-2 border-dashed border-gray-800 rounded-xl">
                                                         No history found for this endpoint.
                                                     </div>
                                                 )}
@@ -1274,20 +1910,20 @@ export default function ApiClient() {
                                                             setShowHistory(false);
                                                             toast.success('Loaded from history');
                                                         }}
-                                                        className="p-3 border border-gray-100 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-all relative group"
+                                                        className={`p-3 border ${borderCol} rounded-lg hover:border-indigo-500 hover:bg-indigo-500/5 cursor-pointer transition-all relative group`}
                                                     >
                                                         <div className="flex justify-between items-start mb-1">
-                                                            <span className={`text-[10px] font-bold px-1 rounded ${item.lastResponse?.status >= 200 && item.lastResponse?.status < 300
-                                                                ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                            <span className={`text-[9px] font-bold px-1 rounded ${item.lastResponse?.status >= 200 && item.lastResponse?.status < 300
+                                                                ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'
                                                                 }`}>
                                                                 {item.lastResponse?.status}
                                                             </span>
-                                                            <span className="text-[10px] text-gray-400">
+                                                            <span className="text-[9px] text-gray-500">
                                                                 {new Date(item.timestamp).toLocaleString()}
                                                             </span>
                                                         </div>
-                                                        <div className="text-xs font-medium text-gray-700 truncate">{item.method} {item.url}</div>
-                                                        <div className="text-[10px] text-gray-400 mt-1">{item.lastResponse?.time}ms • {item.name || 'Untitled'}</div>
+                                                        <div className={`text-[11px] font-bold ${textColor} truncate tracking-tight`}>{item.method} {item.url}</div>
+                                                        <div className={`text-[9px] ${subTextColor} mt-1`}>{item.lastResponse?.time}ms • {item.name || 'Untitled'}</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -1295,27 +1931,26 @@ export default function ApiClient() {
                                     )}
 
                                     {isViewingHistory && (
-                                        <div className="absolute top-0 left-0 right-0 z-30 bg-amber-50 border-b border-amber-200 px-4 py-2 flex justify-between items-center animate-in fade-in duration-200">
-                                            <span className="text-xs text-amber-700 font-medium flex items-center gap-2">
-                                                <Clock size={14} /> Viewing historical snapshot
+                                        <div className="absolute top-0 left-0 right-0 z-30 bg-indigo-900 border-b border-indigo-500/30 px-4 py-2 flex justify-between items-center animate-in fade-in duration-200">
+                                            <span className="text-[10px] text-indigo-200 font-bold flex items-center gap-2">
+                                                <Clock size={12} /> VIEWING HISTORICAL SNAPSHOT
                                             </span>
                                             <button
                                                 onClick={() => {
-                                                    // Reload from main list
                                                     const latest = endpoints[selectedIdx];
                                                     setCurrentReq({ ...latest });
                                                     setResponse(latest.lastResponse || null);
                                                     setIsViewingHistory(false);
                                                 }}
-                                                className="text-[10px] bg-white border border-amber-300 text-amber-700 px-2 py-1 rounded hover:bg-amber-100 font-bold transition-colors"
+                                                className="text-[9px] bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500 font-bold transition-colors shadow-lg"
                                             >
-                                                Back to Latest
+                                                BACK TO LATEST
                                             </button>
                                         </div>
                                     )}
                                     {!response && !reqLoading && (
-                                        <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                                            Hit Send to see response
+                                        <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-[11px] font-bold">
+                                            HIT SEND TO SEE RESPONSE
                                         </div>
                                     )}
                                     {reqLoading && (
@@ -1323,21 +1958,70 @@ export default function ApiClient() {
                                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                                         </div>
                                     )}
-                                    {response && !response.error && (
-                                        <div className="absolute inset-0 overflow-auto">
-                                            <SyntaxHighlighter
-                                                style={vscDarkPlus}
-                                                language="json"
-                                                customStyle={{ margin: 0, minHeight: '100%', borderRadius: 0, fontSize: '12px' }}
-                                                wrapLongLines={false}
-                                            >
-                                                {typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
-                                            </SyntaxHighlighter>
-                                        </div>
-                                    )}
+                                    {response && !response.error && (() => {
+                                        const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
+                                        const filterLower = responseFilter.toLowerCase().trim();
+                                        const hasFilter = filterLower.length > 0;
+                                        const matchCount = hasFilter ? (responseText.toLowerCase().match(new RegExp(filterLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length : 0;
+                                        
+                                        // Highlight matches in the response
+                                        const highlightMatches = (text: string) => {
+                                            if (!hasFilter) return text;
+                                            const escapedFilter = filterLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                            const regex = new RegExp(`(${escapedFilter})`, 'gi');
+                                            return text.replace(regex, '<<<HIGHLIGHT>>>$1<<<ENDHIGHLIGHT>>>');
+                                        };
+                                        
+                                        const highlightedText = highlightMatches(responseText);
+                                        
+                                        return (
+                                            <div className="absolute inset-0 overflow-auto scrollbar-thin">
+                                                {hasFilter && (
+                                                    <div className={`sticky top-0 z-10 px-4 py-2 text-[10px] font-bold ${theme === 'dark' ? 'bg-indigo-900/90 text-indigo-200' : 'bg-indigo-100 text-indigo-700'} border-b ${borderCol} flex items-center gap-2`}>
+                                                        <Search size={12} />
+                                                        {matchCount > 0 ? (
+                                                            <span>{matchCount} match{matchCount !== 1 ? 'es' : ''} found for "{responseFilter}"</span>
+                                                        ) : (
+                                                            <span>No matches found for "{responseFilter}"</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {hasFilter ? (
+                                                    <pre 
+                                                        className="p-6 font-mono text-[13px] whitespace-pre-wrap break-words"
+                                                        style={{ color: theme === 'dark' ? '#d4d4d4' : '#1f2937' }}
+                                                    >
+                                                        {highlightedText.split(/<<<HIGHLIGHT>>>|<<<ENDHIGHLIGHT>>>/).map((part, i) => 
+                                                            i % 2 === 1 ? (
+                                                                <mark key={i} className="bg-yellow-400 text-black px-0.5 rounded">{part}</mark>
+                                                            ) : (
+                                                                <span key={i}>{part}</span>
+                                                            )
+                                                        )}
+                                                    </pre>
+                                                ) : (
+                                                    <SyntaxHighlighter
+                                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
+                                                        language="json"
+                                                        customStyle={{
+                                                            margin: 0,
+                                                            minHeight: '100%',
+                                                            borderRadius: 0,
+                                                            fontSize: '13px',
+                                                            backgroundColor: theme === 'dark' ? 'transparent' : '#fafafa',
+                                                            padding: '24px'
+                                                        }}
+                                                        wrapLongLines={false}
+                                                    >
+                                                        {responseText}
+                                                    </SyntaxHighlighter>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                     {response && response.error && (
-                                        <div className="absolute inset-0 p-4 text-red-600 bg-red-50 overflow-auto">
-                                            <pre className="text-red-600 whitespace-pre-wrap break-all font-mono text-xs">Error: {response.message}</pre>
+                                        <div className="absolute inset-0 p-4 text-red-400 bg-red-950/20 overflow-auto">
+                                            <pre className="text-red-400 whitespace-pre-wrap break-all font-mono text-[11px]">Error: {response.message}</pre>
                                         </div>
                                     )}
                                 </div>
@@ -1350,6 +2034,275 @@ export default function ApiClient() {
                         <p>Select a request from the sidebar</p>
                     </div>
                 )}
+            </div>
+            {showPreview && (
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowPreview(false);
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Escape') setShowPreview(false);
+                    }}
+                    tabIndex={0}
+                >
+                    <div className={`${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-slideIn`}>
+                        {/* Header */}
+                        <div className={`px-6 py-4 border-b no-print ${theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-100 bg-gray-50'} flex justify-between items-center`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-600/20' : 'bg-indigo-50'}`}>
+                                    <FileText size={20} className="text-indigo-500" />
+                                </div>
+                                <div>
+                                    <h3 className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                        {doc?.title || 'Documentation'} 
+                                    </h3>
+                                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        {endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} documented
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(previewContent);
+                                        toast.success('Markdown copied!');
+                                    }}
+                                    className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'} rounded-lg transition-all text-xs font-medium`}
+                                >
+                                    <Copy size={14} />
+                                    Copy MD
+                                </button>
+                                <button
+                                    onClick={() => handleGenerateMarkdown(true)}
+                                    className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'} rounded-lg transition-all text-xs font-medium`}
+                                >
+                                    <Download size={14} />
+                                    Download MD
+                                </button>
+                                <button
+                                    onClick={handleDownloadPdf}
+                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all text-xs font-medium shadow-lg"
+                                >
+                                    <Download size={14} />
+                                    Export PDF
+                                </button>
+                                <div className={`w-px h-8 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'} mx-2`} />
+                                <button
+                                    onClick={() => setShowPreview(false)}
+                                    className={`p-2 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'} rounded-lg transition-all`}
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 flex overflow-hidden">
+                            {/* Sidebar - Table of Contents */}
+                            <div className={`w-56 flex-shrink-0 border-r no-print ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} overflow-y-auto p-4`}>
+                                <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    Contents
+                                </h4>
+                                <nav className="space-y-1">
+                                    {endpoints.map((ep, idx) => (
+                                        <a
+                                            key={idx}
+                                            href={`#endpoint-${idx}`}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                document.getElementById(`endpoint-${idx}`)?.scrollIntoView({ behavior: 'smooth' });
+                                            }}
+                                            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-gray-100'}`}
+                                        >
+                                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
+                                                ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
+                                                ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
+                                                ep.method === 'PUT' ? 'bg-yellow-600/20 text-yellow-600' :
+                                                ep.method === 'DELETE' ? 'bg-red-600/20 text-red-500' :
+                                                'bg-purple-600/20 text-purple-500'
+                                            }`}>
+                                                {ep.method}
+                                            </span>
+                                            <span className="truncate">{ep.name || 'Untitled'}</span>
+                                        </a>
+                                    ))}
+                                </nav>
+                            </div>
+
+                            {/* Main Content */}
+                            <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`} id="markdown-preview-content">
+                                <div className="max-w-4xl mx-auto px-8 py-10" id="printable-content">
+                                    {/* Document Header */}
+                                    <div className="mb-12 pb-8 border-b border-gray-700/20">
+                                        <h1 className={`text-4xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                            {doc?.title || 'API Documentation'}
+                                        </h1>
+                                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            Generated on {new Date().toLocaleDateString('en-US', { 
+                                                weekday: 'long', 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric' 
+                                            })}
+                                        </p>
+                                    </div>
+
+                                    {/* Endpoints */}
+                                    {endpoints.map((ep, idx) => (
+                                        <div key={idx} id={`endpoint-${idx}`} className="mb-16 scroll-mt-8">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                                    ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
+                                                    ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
+                                                    ep.method === 'PUT' ? 'bg-yellow-600/20 text-yellow-600' :
+                                                    ep.method === 'DELETE' ? 'bg-red-600/20 text-red-500' :
+                                                    'bg-purple-600/20 text-purple-500'
+                                                }`}>
+                                                    {ep.method}
+                                                </span>
+                                                <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                                    {ep.name || 'Untitled'}
+                                                </h2>
+                                            </div>
+
+                                            <div className={`px-4 py-3 rounded-lg font-mono text-sm mb-6 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                                                {resolveUrl(ep)}
+                                            </div>
+
+                                            {ep.description && (
+                                                <p className={`mb-6 text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                    {resolveAll(ep.description, ep)}
+                                                </p>
+                                            )}
+
+                                            {/* Headers */}
+                                            {ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key) && (
+                                                <div className="mb-6">
+                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                                                        Headers
+                                                    </h3>
+                                                    <div className={`rounded-lg border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} overflow-hidden`}>
+                                                        <table className="w-full text-sm">
+                                                            <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}>
+                                                                <tr>
+                                                                    <th className={`px-4 py-2 text-left font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Key</th>
+                                                                    <th className={`px-4 py-2 text-left font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Value</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {ep.headers.filter((h: any) => h.key).map((h: any, hidx: number) => (
+                                                                    <tr key={hidx} className={`border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                                                                        <td className={`px-4 py-2 font-mono ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{h.key}</td>
+                                                                        <td className={`px-4 py-2 font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{resolveAll(h.value, ep)}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Request Body */}
+                                            {ep.body?.raw && (
+                                                <div className="mb-6">
+                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                                                        Request Body
+                                                    </h3>
+                                                    <SyntaxHighlighter
+                                                        language="json"
+                                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
+                                                        customStyle={{
+                                                            margin: 0,
+                                                            borderRadius: '0.5rem',
+                                                            fontSize: '13px',
+                                                            padding: '16px'
+                                                        }}
+                                                    >
+                                                        {resolveAll(ep.body.raw, ep)}
+                                                    </SyntaxHighlighter>
+                                                </div>
+                                            )}
+
+                                            {/* Last Response */}
+                                            {ep.lastResponse && (
+                                                <div className="mb-6">
+                                                    <h3 className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                                                        Response
+                                                        <span className={`text-xs px-2 py-0.5 rounded ${
+                                                            ep.lastResponse.status >= 200 && ep.lastResponse.status < 300 
+                                                                ? 'bg-green-600/20 text-green-500' 
+                                                                : 'bg-red-600/20 text-red-500'
+                                                        }`}>
+                                                            {ep.lastResponse.status}
+                                                        </span>
+                                                    </h3>
+                                                    <SyntaxHighlighter
+                                                        language="json"
+                                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
+                                                        customStyle={{
+                                                            margin: 0,
+                                                            borderRadius: '0.5rem',
+                                                            fontSize: '13px',
+                                                            padding: '16px',
+                                                            maxHeight: '400px',
+                                                            overflow: 'auto'
+                                                        }}
+                                                    >
+                                                        {JSON.stringify(ep.lastResponse.data, null, 2)}
+                                                    </SyntaxHighlighter>
+                                                </div>
+                                            )}
+
+                                            {idx < endpoints.length - 1 && (
+                                                <hr className={`my-12 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`} />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Endpoint Search Modal */}
+            <SearchBar
+                endpoints={endpoints}
+                isOpen={showSearchModal}
+                onClose={() => setShowSearchModal(false)}
+                onSelect={(idx) => {
+                    setSelectedIdx(idx);
+                    setShowSearchModal(false);
+                }}
+            />
+
+            {/* Keyboard Shortcuts Modal */}
+            <KeyboardShortcutsModal
+                isOpen={showShortcutsModal}
+                onClose={() => setShowShortcutsModal(false)}
+            />
+
+            {/* Floating Action Buttons */}
+            <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
+                <button
+                    onClick={() => setShowShortcutsModal(true)}
+                    className={`p-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-400 border-gray-700 hover:text-indigo-400' : 'bg-white text-gray-500 border-gray-200 hover:text-indigo-600'} border rounded-lg shadow-lg hover:shadow-xl transition-all`}
+                    title="Keyboard Shortcuts (Ctrl+/)"
+                >
+                    <Keyboard size={16} />
+                </button>
+                <button
+                    onClick={() => setShowSearchModal(true)}
+                    className={`px-3 py-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-300 border-gray-700' : 'bg-white text-gray-600 border-gray-200'} border rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-[11px] font-medium`}
+                    title="Search Endpoints (Ctrl+K)"
+                >
+                    <Search size={14} />
+                    <span>Search</span>
+                    <kbd className={`ml-1 px-1.5 py-0.5 ${theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'} rounded text-[9px]`}>
+                        Ctrl+K
+                    </kbd>
+                </button>
             </div>
         </div>
     );
