@@ -103,7 +103,7 @@ The application will be available at `http://localhost:3000`
 ### Environment Variables
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:4000/api
+NEXT_PUBLIC_API_URL=http://localhost:4001/api
 ```
 
 ---
@@ -230,7 +230,7 @@ client/
 
 The client communicates with the server at the URL specified in `NEXT_PUBLIC_API_URL`. Ensure the server is running before starting the client.
 
-Default server URL: `http://localhost:4000/api`
+Default server URL: `http://localhost:4001/api`
 
 ---
 
