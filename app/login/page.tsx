@@ -78,7 +78,7 @@ export default function LoginPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
@@ -137,9 +137,18 @@ export default function LoginPage() {
                         )}
                     </div>
                     <div className="space-y-1.5">
-                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
-                            Password
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
+                                Password
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => router.push('/forgot-password')}
+                                className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                            >
+                                Forgot password?
+                            </button>
+                        </div>
                         <input
                             type="password"
                             value={password}
