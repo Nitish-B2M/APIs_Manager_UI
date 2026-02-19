@@ -28,7 +28,7 @@ interface HighlightedTextProps {
 
 function HighlightedText({ text, variables, className = '' }: HighlightedTextProps) {
     const { theme } = useTheme();
-    
+
     if (!text) return null;
 
     // Regex to find {{var}} or :var
@@ -50,7 +50,7 @@ function HighlightedText({ text, variables, className = '' }: HighlightedTextPro
                             className={`px-1 rounded ${isSet
                                 ? theme === 'dark' ? 'bg-blue-600/20 text-blue-400' : 'bg-blue-100 text-blue-600'
                                 : theme === 'dark' ? 'bg-red-600/20 text-red-400' : 'bg-red-100 text-red-600'
-                            }`}
+                                }`}
                         >
                             {part}
                         </span>
@@ -106,7 +106,7 @@ function UrlBarComponent({
 
         // URL Protocol/Base Suggestions
         if (val.length > 0 && val.length < 15) {
-            const bases = ['https://', 'http://', 'localhost:3000', 'localhost:4000', 'localhost:8080', 'api.example.com'];
+            const bases = ['https://', 'http://', 'localhost:3000', 'localhost:4001', 'localhost:8080', 'api.example.com'];
             const matches = bases.filter(b => b.startsWith(val.toLowerCase()) && b !== val);
             if (matches.length > 0) {
                 setSuggestions(matches);
@@ -160,7 +160,7 @@ function UrlBarComponent({
                         <option key={m}>{m}</option>
                     ))}
                 </select>
-                
+
                 <div className="flex-1 relative group min-w-0">
                     <input
                         type="text"
@@ -205,7 +205,7 @@ function UrlBarComponent({
                         </div>
                     )}
                 </div>
-                
+
                 <button
                     onClick={onSend}
                     disabled={isLoading}
@@ -215,7 +215,7 @@ function UrlBarComponent({
                     {isLoading ? <span className="animate-spin text-xs">⌛</span> : <Send size={14} />}
                     SEND
                 </button>
-                
+
                 {canEdit && (
                     <button
                         onClick={onSave}
@@ -228,7 +228,7 @@ function UrlBarComponent({
                     </button>
                 )}
             </div>
-            
+
             <div className={`flex items-center gap-1 border-l pl-3 ${borderCol} flex-shrink-0`}>
                 <button
                     onClick={onCopyMarkdown}
@@ -237,9 +237,9 @@ function UrlBarComponent({
                 >
                     <Copy size={16} />
                 </button>
-                <button 
-                    onClick={onPreviewMarkdown} 
-                    className={`p-1.5 ${subTextColor} hover:text-indigo-400 hover:bg-gray-500/10 rounded-md transition-all`} 
+                <button
+                    onClick={onPreviewMarkdown}
+                    className={`p-1.5 ${subTextColor} hover:text-indigo-400 hover:bg-gray-500/10 rounded-md transition-all`}
                     title="Preview Markdown"
                 >
                     <FileText size={16} />

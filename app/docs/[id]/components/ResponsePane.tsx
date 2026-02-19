@@ -106,7 +106,7 @@ function ResponsePaneComponent({
                     </button>
                 </div>
             </div>
-            
+
             {/* Content */}
             <div className={`flex-1 relative w-full h-full ${inputBg}`}>
                 {/* History Panel */}
@@ -134,11 +134,10 @@ function ResponsePaneComponent({
                                     className={`p-3 border ${borderCol} rounded-lg hover:border-indigo-500 hover:bg-indigo-500/5 cursor-pointer transition-all relative group`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
-                                        <span className={`text-[9px] font-bold px-1 rounded ${
-                                            item.lastResponse && item.lastResponse.status >= 200 && item.lastResponse.status < 300
-                                                ? 'bg-green-600/20 text-green-400' 
-                                                : 'bg-red-600/20 text-red-400'
-                                        }`}>
+                                        <span className={`text-[9px] font-bold px-1 rounded ${item.lastResponse && item.lastResponse.status >= 200 && item.lastResponse.status < 300
+                                            ? 'bg-green-600/20 text-green-400'
+                                            : 'bg-red-600/20 text-red-400'
+                                            }`}>
                                             {item.lastResponse?.status}
                                         </span>
                                         <span className="text-[9px] text-gray-500">
@@ -171,21 +170,21 @@ function ResponsePaneComponent({
                         </button>
                     </div>
                 )}
-                
+
                 {/* Empty State */}
                 {!response && !isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-[11px] font-bold">
                         HIT SEND TO SEE RESPONSE
                     </div>
                 )}
-                
+
                 {/* Loading State */}
                 {isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center text-gray-400">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                     </div>
                 )}
-                
+
                 {/* Response Data */}
                 {response && isApiResponse(response) && (
                     <div className="absolute inset-0 overflow-auto scrollbar-thin">
@@ -206,7 +205,7 @@ function ResponsePaneComponent({
                         </SyntaxHighlighter>
                     </div>
                 )}
-                
+
                 {/* Error State */}
                 {response && !isApiResponse(response) && (
                     <div className="absolute inset-0 p-4 text-red-400 bg-red-950/20 overflow-auto">
