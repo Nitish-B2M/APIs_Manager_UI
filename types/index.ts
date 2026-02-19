@@ -64,8 +64,44 @@ export interface Endpoint {
     description: string;
     lastResponse: ApiResponse | null;
     history: HistoryItem[];
+    folderId?: string | null;
     createdAt?: string;
     updatedAt?: string;
+}
+
+// ============================================
+// Folder Types
+// ============================================
+
+export interface Folder {
+    id: string;
+    documentationId: string;
+    name: string;
+    description?: string | null;
+    parentId?: string | null;
+    order: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface FolderWithChildren extends Folder {
+    children: FolderWithChildren[];
+    requests: Endpoint[];
+}
+
+// ============================================
+// Environment Types
+// ============================================
+
+export interface Environment {
+    id: string;
+    documentationId: string;
+    name: string;
+    variables: Record<string, string>;
+    isActive: boolean;
+    order: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
 // ============================================
@@ -86,6 +122,7 @@ export interface Documentation {
     layout: LayoutType;
     userId: string;
     isPublic: boolean;
+    slug?: string;
     createdAt: string;
     updatedAt: string;
     requests?: Endpoint[];
@@ -99,6 +136,8 @@ export interface User {
     id: string;
     email: string;
     userId?: string;
+    name?: string;
+    avatarUrl?: string;
 }
 
 export interface AuthResponse {
@@ -138,7 +177,7 @@ export interface ApiListResponse<T> {
 // UI State Types
 // ============================================
 
-export type TabType = 'params' | 'headers' | 'body' | 'docs' | 'ai' | 'share';
+export type TabType = 'params' | 'headers' | 'body' | 'docs' | 'ai' | 'share' | 'code';
 
 export type PaneLayout = 'horizontal' | 'vertical';
 
@@ -164,9 +203,15 @@ export const createCollectionSchema = z.object({
     title: z.string().min(1, 'Title is required').max(100, 'Title too long'),
 });
 
+export const createFolderSchema = z.object({
+    name: z.string().min(1, 'Folder name is required').max(100, 'Name too long'),
+    description: z.string().max(500, 'Description too long').optional(),
+});
+
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type CreateCollectionFormData = z.infer<typeof createCollectionSchema>;
+export type CreateFolderFormData = z.infer<typeof createFolderSchema>;
 
 // ============================================
 // Utility Types
