@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, ClipboardList, LayoutDashboard, Database, Sun, Moon } from 'lucide-react';
+import { LogOut, ClipboardList, LayoutDashboard, Database, Sun, Moon, CheckSquare, StickyNote } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
@@ -28,7 +28,7 @@ export default function Header() {
         <header className={`${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} border-b sticky top-0 z-50 transition-colors duration-300`}>
             <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-8">
-                    <Link href={isLoggedIn ? "/dashboard" : "/"} className={`text-xl font-bold transition-all ${theme === 'dark' ? 'text-white' : 'text-gray-900'} flex items-center gap-2 hover:opacity-80`}>
+                    <Link href={isLoggedIn ? "/" : "/"} className={`text-xl font-bold transition-all ${theme === 'dark' ? 'text-white' : 'text-gray-900'} flex items-center gap-2 hover:opacity-80`}>
                         <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs">P</div>
                         PostmanClone
                     </Link>
@@ -36,6 +36,12 @@ export default function Header() {
                         <nav className="hidden md:flex gap-6 text-sm font-medium">
                             <Link href="/dashboard" className={`flex items-center gap-2 transition-all ${pathname === '/dashboard' ? 'text-indigo-500 font-bold underline decoration-2 underline-offset-4' : `${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'}`}`}>
                                 <LayoutDashboard size={16} /> Dashboard
+                            </Link>
+                            <Link href="/todos" className={`flex items-center gap-2 transition-all ${pathname === '/todos' ? 'text-indigo-500 font-bold underline decoration-2 underline-offset-4' : `${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'}`}`}>
+                                <CheckSquare size={16} /> Tasks
+                            </Link>
+                            <Link href="/modules/notes" className={`flex items-center gap-2 transition-all ${pathname === '/modules/notes' ? 'text-indigo-500 font-bold underline decoration-2 underline-offset-4' : `${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'}`}`}>
+                                <StickyNote size={16} /> Notes
                             </Link>
                             <Link href="/import" className={`flex items-center gap-2 transition-all ${pathname === '/import' ? 'text-indigo-500 font-bold underline decoration-2 underline-offset-4' : `${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'}`}`}>
                                 <Database size={16} /> Import
@@ -57,7 +63,9 @@ export default function Header() {
 
                     {isLoggedIn ? (
                         <>
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-gray-700 shadow-inner"></div>
+                            <Link href="/profile" title="Profile Settings">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-gray-700 shadow-inner cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-all"></div>
+                            </Link>
                             <button
                                 onClick={handleLogout}
                                 className={`p-2 transition-all group lg:flex items-center gap-2 cursor-pointer rounded-lg ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-red-400/10' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'}`}
