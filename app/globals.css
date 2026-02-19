@@ -1,9 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --font-size-base: 14px;
+  --font-size-base: 16px;
+  --font-size-description: 14px;
+  --font-family: 'Poppins', sans-serif;
+  --font-geist-sans: sans-serif;
+  --font-geist-mono: monospace;
+  --font-family-poppins: 'Poppins', sans-serif;
 }
 
 @theme inline {
@@ -13,11 +19,19 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+
+/* Allow manual toggle via class with higher specificity */
+:root.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 * {
@@ -33,21 +47,26 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 14px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-description);
   line-height: 1.5;
   margin: 0;
   padding: 0;
 }
 
 /* Consistent input styling */
-input, textarea, select, button {
+input,
+textarea,
+select,
+button {
   font-family: inherit;
   font-size: inherit;
 }
 
 /* Monospace font for code */
-code, pre, .font-mono {
+code,
+pre,
+.font-mono {
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
@@ -91,8 +110,8 @@ code, pre, .font-mono {
 
 /* Focus states */
 :focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 2px;
+  /* outline: 2px solid #6366f1; */
+  /* outline-offset: 2px; */
 }
 
 /* Disable outline for mouse users */
@@ -102,16 +121,22 @@ code, pre, .font-mono {
 
 /* Animation utilities */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideIn {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(-10px);
   }
-  to { 
+
+  to {
     opacity: 1;
     transform: translateY(0);
   }

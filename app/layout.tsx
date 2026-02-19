@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from 'react-hot-toast';
 import Provider from '../components/Provider';
 import Header from './components/Header';
+import SystemResourceWidget from '../components/SystemResourceWidget';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
             <Toaster position="bottom-right" />
             <Header />
             {children}
+            <SystemResourceWidget />
           </Provider>
         </ThemeProvider>
       </body>
