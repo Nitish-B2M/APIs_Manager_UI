@@ -20,8 +20,8 @@ interface FormErrors {
 
 function DashboardContent() {
     const queryClient = useQueryClient();
-    const { data: res, isLoading, error } = useQuery({ 
-        queryKey: ['docs'], 
+    const { data: res, isLoading, error } = useQuery({
+        queryKey: ['docs'],
         queryFn: api.documentation.list,
         retry: 1
     });
@@ -90,7 +90,7 @@ function DashboardContent() {
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
@@ -156,7 +156,7 @@ function DashboardContent() {
                     <AlertTriangle className="mx-auto mb-4 text-red-500" size={48} />
                     <h2 className={`text-xl font-bold ${textColor} mb-2`}>Failed to load documentations</h2>
                     <p className={subTextColor}>Please try refreshing the page</p>
-                    <button 
+                    <button
                         onClick={() => queryClient.invalidateQueries({ queryKey: ['docs'] })}
                         className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                     >
@@ -193,21 +193,28 @@ function DashboardContent() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {(docs as Documentation[])?.map((doc) => (
-                        <div key={doc.id} className={`${cardBg} p-6 rounded-lg border`}>
-                            <h2 className={`text-xl font-semibold mb-2 ${textColor}`}>{doc.title}</h2>
-                            <p className={`text-sm ${subTextColor} mb-4 truncate text-wrap`}>Layout: {doc.layout}</p>
-                            <div className="flex gap-2">
+                        <div key={doc.id} className={`${cardBg} p-6 rounded-lg border flex justify-between`}>
+                            <div className="">
+                                <p className={`text-[10px] ${subTextColor} mt-1 truncate text-wrap`}>{doc.layout}</p>
+                                <h2 className={`text-xl font-semibold mb-2 ${textColor}`}>{doc.title}</h2>
+
+                                {/* time */}
+                                <p className={`${subTextColor} text-xs`}>
+                                    {new Date(doc.updatedAt).toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-2">
                                 <Link
                                     href={`/docs/${doc.id}`}
                                     className="bg-indigo-600 text-white text-xs px-4 py-1.5 rounded-md hover:bg-indigo-700 transition-colors flex items-center gap-1 font-medium"
                                 >
-                                    <ExternalLink size={14} /> Open
+                                    <ExternalLink size={16} />
                                 </Link>
                                 <button
                                     onClick={() => handleDeleteClick(doc)}
                                     className={`text-xs px-4 py-1.5 rounded-md transition-all flex items-center gap-1 font-medium ${theme === 'dark' ? 'bg-gray-700 text-gray-300 hover:bg-red-600/20 hover:text-red-400' : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'}`}
                                 >
-                                    <Trash2 size={14} /> Delete
+                                    <Trash2 size={16} className="text-red-600/80" />
                                 </button>
                             </div>
                         </div>
