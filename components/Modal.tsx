@@ -39,11 +39,11 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
             onClick={onClose}
         >
             <div
-                className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+                className="dark:bg-gray-800 bg-white border border-gray-700 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center p-4 border-b border-gray-700">
-                    <h3 className="text-xl font-semibold text-gray-100">{title}</h3>
+                    <h3 className="text-xl font-semibold dark:text-gray-100 text-gray-800">{title}</h3>
                     <button
                         onClick={onClose}
                         className="text-gray-400 hover:text-white transition-colors p-1 rounded-md hover:bg-gray-700"
