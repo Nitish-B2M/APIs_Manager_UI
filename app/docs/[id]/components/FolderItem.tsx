@@ -1,10 +1,10 @@
 'use client';
 
 import React, { memo, useState } from 'react';
-import { 
-    ChevronRight, 
-    ChevronDown, 
-    Folder, 
+import {
+    ChevronRight,
+    ChevronDown,
+    Folder,
     FolderOpen,
     MoreVertical,
     Edit3,
@@ -222,22 +222,20 @@ function FolderItemComponent({
                                 onDragStart={() => canEdit && onDragStartRequest(globalIdx)}
                                 onDragOver={(e) => canEdit && onDragOverRequest(e, globalIdx)}
                                 onDragEnd={() => canEdit && onDragEndRequest()}
-                                className={`group flex items-center gap-2 px-2 py-1.5 cursor-pointer border-l-2 transition-all ${
-                                    isSelected
-                                        ? theme === 'dark'
-                                            ? 'bg-indigo-600/20 border-indigo-500'
-                                            : 'bg-indigo-50 border-indigo-500'
-                                        : `border-transparent ${hoverBg}`
-                                } ${draggedRequestIdx === globalIdx ? 'opacity-50' : ''}`}
+                                className={`group flex items-center gap-2 px-2 py-1.5 cursor-pointer border-l-2 transition-all ${isSelected
+                                    ? theme === 'dark'
+                                        ? 'bg-indigo-600/20 border-indigo-500'
+                                        : 'bg-indigo-50 border-indigo-500'
+                                    : `border-transparent ${hoverBg}`
+                                    } ${draggedRequestIdx === globalIdx ? 'opacity-50' : ''}`}
                             >
                                 <span className={`text-[9px] font-bold px-1 py-0.5 rounded w-10 text-center flex-shrink-0 ${getMethodColor(request.method)}`}>
                                     {request.method}
                                 </span>
-                                <span className={`truncate text-[11px] ${
-                                    isSelected
-                                        ? `font-bold ${textColor}`
-                                        : subTextColor
-                                }`}>
+                                <span className={`truncate text-[11px] ${isSelected
+                                    ? `font-bold ${textColor}`
+                                    : subTextColor
+                                    }`}>
                                     {request.name || 'Untitled'}
                                 </span>
                             </div>

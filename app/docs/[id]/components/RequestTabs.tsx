@@ -306,7 +306,7 @@ export function RequestTabs({
                             </div>
                             {(currentReq.params || []).map((p: any, i: number) => (
                                 <div key={i} className="flex gap-2 items-center">
-                                    <span className={`text-[8px] font-bold px-1 py-0.5 rounded w-16 text-center uppercase ${p.type === 'path' ? 'bg-orange-600/20 text-orange-400 border border-orange-600/20' : 'bg-blue-600/20 text-blue-500 border border-blue-600/20'}`}>
+                                    <span className={`text-[8px] font-bold px-1 py-0.5 rounded w-16 text-center uppercase ${p.type === 'path' ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-600/20' : 'bg-blue-600/20 text-blue-500 border border-blue-600/20'}`}>
                                         {p.type}
                                     </span>
                                     <input

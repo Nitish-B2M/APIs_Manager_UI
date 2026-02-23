@@ -204,7 +204,7 @@ function RequestMenuDropdown({
                         onClick={(e) => { e.stopPropagation(); onCopyAsCurl(request); onMenuToggle(null); }}
                         className={`w-full text-left px-3 py-1.5 ${hoverBg} flex items-center gap-2 ${textColor}`}
                     >
-                        <Terminal size={12} className="text-orange-500" /> Copy as cURL
+                        <Terminal size={12} className="text-indigo-500" /> Copy as cURL
                     </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopyAsFetch(request); onMenuToggle(null); }}
