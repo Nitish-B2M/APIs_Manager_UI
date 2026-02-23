@@ -1,10 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { Sparkles, ArrowRight, Zap, Shield, Layout } from 'lucide-react';
 
 export default function Home() {
   const { theme } = useTheme();
+  const { isLoggedIn } = useAuth();
 
   const mainBg = theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900';
   const cardBg = theme === 'dark' ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/50' : 'bg-white border-gray-200 hover:border-indigo-500 shadow-sm';
@@ -33,18 +35,29 @@ export default function Home() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full justify-center pt-4">
-          <Link
-            href="/register"
-            className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20 hover:scale-105 active:scale-95 group"
-          >
-            Get Started Free <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link
-            href="/login"
-            className={`px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all border ${theme === 'dark' ? 'bg-gray-900 border-gray-800 text-white hover:bg-gray-800' : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'} active:scale-95`}
-          >
-            Sign In
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20 hover:scale-105 active:scale-95 group"
+            >
+              Go to Dashboard <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20 hover:scale-105 active:scale-95 group"
+              >
+                Get Started Free <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="/login"
+                className={`px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all border ${theme === 'dark' ? 'bg-gray-900 border-gray-800 text-white hover:bg-gray-800' : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'} active:scale-95`}
+              >
+                Sign In
+              </Link>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full pt-16">
