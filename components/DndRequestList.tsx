@@ -76,24 +76,22 @@ export function SortableRequestItem({
             ref={setNodeRef}
             style={style}
             onClick={onSelect}
-            className={`group flex items-center justify-between p-2.5 cursor-pointer border-l-2 transition-all relative ${
-                isSelected 
-                    ? theme === 'dark' 
-                        ? 'bg-indigo-600/20 border-indigo-500 shadow-inner' 
-                        : 'bg-indigo-50 border-indigo-500' 
-                    : `border-transparent ${hoverBg}`
-            } ${isDragging ? 'ring-2 ring-indigo-500 shadow-lg z-50' : ''}`}
+            className={`group flex items-center justify-between p-2.5 cursor-pointer border-l-2 transition-all relative ${isSelected
+                ? theme === 'dark'
+                    ? 'bg-indigo-600/20 border-indigo-500 shadow-inner'
+                    : 'bg-indigo-50 border-indigo-500'
+                : `border-transparent ${hoverBg}`
+                } ${isDragging ? 'ring-2 ring-indigo-500 shadow-lg z-50' : ''}`}
         >
             <div className="flex items-center gap-2 overflow-hidden flex-1">
                 {canEdit && (
                     <button
                         {...attributes}
                         {...listeners}
-                        className={`cursor-grab active:cursor-grabbing flex-shrink-0 ${
-                            theme === 'dark' 
-                                ? 'text-gray-600 group-hover:text-gray-400' 
-                                : 'text-gray-300 group-hover:text-gray-500'
-                        }`}
+                        className={`cursor-grab active:cursor-grabbing flex-shrink-0 ${theme === 'dark'
+                            ? 'text-gray-600 group-hover:text-gray-400'
+                            : 'text-gray-300 group-hover:text-gray-500'
+                            }`}
                     >
                         <GripVertical size={12} />
                     </button>
@@ -101,11 +99,10 @@ export function SortableRequestItem({
                 <span className={`text-[9px] font-bold px-1 py-0.5 rounded w-10 text-center flex-shrink-0 ${getMethodColor(request.method)}`}>
                     {request.method}
                 </span>
-                <span className={`truncate text-[11px] ${
-                    isSelected 
-                        ? `font-bold ${textColor}` 
-                        : `${subTextColor} group-hover:${textColor}`
-                }`}>
+                <span className={`truncate text-[11px] ${isSelected
+                    ? `font-bold ${textColor}`
+                    : `${subTextColor} group-hover:${textColor}`
+                    }`}>
                     {request.name || 'Untitled'}
                 </span>
             </div>
@@ -137,7 +134,7 @@ export function DndRequestList({
     renderActions,
 }: DndRequestListProps) {
     const [activeId, setActiveId] = useState<string | null>(null);
-    
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -146,8 +143,8 @@ export function DndRequestList({
         })
     );
 
-    const requestIds = useMemo(() => 
-        requests.map((r, i) => r.id || `temp-${i}`), 
+    const requestIds = useMemo(() =>
+        requests.map((r, i) => r.id || `temp-${i}`),
         [requests]
     );
 
@@ -166,11 +163,11 @@ export function DndRequestList({
         }
     };
 
-    const activeRequest = activeId 
-        ? requests.find((r, i) => (r.id || `temp-${i}`) === activeId) 
+    const activeRequest = activeId
+        ? requests.find((r, i) => (r.id || `temp-${i}`) === activeId)
         : null;
-    const activeIndex = activeId 
-        ? requests.findIndex((r, i) => (r.id || `temp-${i}`) === activeId) 
+    const activeIndex = activeId
+        ? requests.findIndex((r, i) => (r.id || `temp-${i}`) === activeId)
         : -1;
 
     if (!canEdit) {
@@ -221,7 +218,7 @@ export function DndRequestList({
                             index={activeIndex}
                             isSelected={selectedIdx === activeIndex}
                             canEdit={false}
-                            onSelect={() => {}}
+                            onSelect={() => { }}
                         />
                     </div>
                 )}
@@ -241,7 +238,7 @@ export function useRequestReorder(
     const handleReorder = useCallback((oldIndex: number, newIndex: number) => {
         const newRequests = arrayMove(requests, oldIndex, newIndex);
         setRequests(newRequests);
-        
+
         // Update selected index to follow the moved item
         if (selectedIdx === oldIndex) {
             setSelectedIdx(newIndex);

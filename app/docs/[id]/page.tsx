@@ -23,19 +23,20 @@ import { ResponsePanel } from './components/ResponsePanel';
 import { getThemeClasses } from './utils/theme';
 import { useSidebarResize, useHorizontalPanelResize, useVerticalPanelResize } from './hooks/useResizable';
 import SyntaxHighlighter from 'react-syntax-highlighter';
-import { vscDarkPlus, prism, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { ProtectedRoute } from '../../../components/AuthGuard';
 
 const deduplicateEndpoints = (eps: any[]) => {
     const seen = new Set();
     return eps.filter(ep => {
-        if (!ep.id) return true; // Keep requests without IDs (though they should have them)
+        if (!ep.id) return true;
         if (seen.has(ep.id)) return false;
         seen.add(ep.id);
         return true;
     });
 };
 
-export default function ApiClient() {
+function ApiClientContent() {
     const { id } = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -139,7 +140,6 @@ export default function ApiClient() {
     useEffect(() => {
         if (activeEnvironment) {
             setVariables(activeEnvironment.variables || {});
-            // Reset collection dirty state when a new environment is loaded from server
             setIsCollectionDirty(false);
         }
     }, [activeEnvironment]);
@@ -200,7 +200,6 @@ export default function ApiClient() {
                 }
                 setEndpoints(deduplicateEndpoints(eps).sort((a: any, b: any) => a.id.localeCompare(b.id)));
 
-                // Only overwrite variables from doc if NO active environment is selected
                 if (!activeEnvironment) {
                     let vars = {};
                     if (doc.content) {
@@ -227,9 +226,9 @@ export default function ApiClient() {
             const req = { ...endpoints[selectedIdx] };
             setCurrentReq(req);
             setResponse(req.lastResponse || null);
-            setIsDirty(false); // Reset dirty state when switching requests
+            setIsDirty(false);
         }
-    }, [selectedIdx]); // Removed endpoints from dependencies to prevent keystroke resets
+    }, [selectedIdx]);
 
     // Close menus on click
     useEffect(() => {
@@ -322,7 +321,6 @@ export default function ApiClient() {
                     requestId: newReq.id,
                     content: updatePayload
                 });
-                // Merge response with our payload to ensure we have the latest state
                 newReq = { ...newReq, ...updateRes.data };
             }
 
@@ -358,7 +356,7 @@ export default function ApiClient() {
                 }
             });
             toast.success(res.message || 'Request saved!', { id: 'save-req' });
-            setIsDirty(false); // Disable SAVE button immediately
+            setIsDirty(false);
             queryClient.invalidateQueries({ queryKey: ['doc', id] });
         } catch (e: any) {
             toast.error(e.message || 'Failed to save request', { id: 'save-req' });
@@ -367,13 +365,10 @@ export default function ApiClient() {
 
     const handleSaveCollection = async () => {
         const content = typeof doc?.content === 'string' ? JSON.parse(doc.content) : (doc?.content || {});
-
-        // Merge current endpoints into content to ensure everything is saved
-        // This handles cases where requests are stored in the JSON blob
         const updatedContent = {
             ...content,
             variables,
-            endpoints // Include current detailed endpoints state
+            endpoints
         };
 
         try {
@@ -383,13 +378,8 @@ export default function ApiClient() {
                 content: updatedContent
             });
             toast.success('Collection saved!', { id: 'save-coll' });
-            setIsCollectionDirty(false); // Reset collection dirty state
-            // Only invalidate if we need fresh data from server, 
-            // but we already have variables in local state.
-            // Invalidating will trigger initialization which resets everything.
+            setIsCollectionDirty(false);
             await queryClient.invalidateQueries({ queryKey: ['doc', id] });
-            setIsCollectionDirty(false); // Reset collection dirty state AFTER refetch to ensure it stays clean
-            toast.success('Collection saved!', { id: 'save-coll' });
         } catch (e: any) {
             toast.error(e.message || 'Failed to save collection', { id: 'save-coll' });
         }
@@ -502,7 +492,6 @@ export default function ApiClient() {
             const newEps = [...endpoints];
             newEps[selectedIdx] = updatedReq;
             setEndpoints(newEps);
-            // Removed setIsDirty(true) - sending a request shouldn't mark it as unsaved
             setIsViewingHistory(false);
         } catch (e: any) {
             setResponse({ error: true, message: e.message });
@@ -539,7 +528,6 @@ export default function ApiClient() {
     const handleGenerateMarkdown = (download = true) => {
         if (!doc) return;
         let md = `# ${doc.title}\n\n`;
-        // md += `Generated on ${new Date().toLocaleString()}\n\n---\n\n`;
         endpoints.forEach(ep => md += getMarkdownForEndpoint(ep));
         if (download) {
             const blob = new Blob([md], { type: 'text/markdown' });
@@ -590,29 +578,22 @@ export default function ApiClient() {
     const deleteRequest = async (idx: number, e: React.MouseEvent) => {
         e.stopPropagation();
         const requestToDelete = endpoints[idx];
-
         if (!confirm('Delete this request?')) {
             setOpenMenuIdx(null);
             return;
         }
-
         try {
-            // If the request has an ID, delete from backend
             if (requestToDelete?.id) {
                 toast.loading('Deleting...', { id: 'delete-loading' });
                 await deleteRequestMutation.mutateAsync(requestToDelete.id);
                 toast.success('Request deleted!', { id: 'delete-loading' });
             }
-
-            // Update local state
             const newEps = endpoints.filter((_, i) => i !== idx);
             setEndpoints(newEps);
             if (selectedIdx === idx) {
                 if (newEps.length > 0) setSelectedIdx(Math.max(0, idx - 1));
                 else setCurrentReq(null);
             } else if (idx < selectedIdx) setSelectedIdx(selectedIdx - 1);
-
-            // Structural changes are immediate, no need for manual save dot
             queryClient.invalidateQueries({ queryKey: ['doc', id] });
         } catch (err: any) {
             toast.error(err.message || 'Failed to delete request', { id: 'delete-loading' });
@@ -634,44 +615,28 @@ export default function ApiClient() {
             setEndpoints(deduplicateEndpoints(newEps));
             setSelectedIdx(idx + 1);
             setOpenMenuIdx(null);
-            // Duplicate is immediate on server
             toast.success('Request duplicated!', { id: 'dup-loading' });
             queryClient.invalidateQueries({ queryKey: ['doc', id] });
         } catch (e: any) {
             toast.error(e.message || 'Failed to duplicate request', { id: 'dup-loading' });
         }
     };
+
     const handleDownloadPdf = async () => {
         if (typeof window === 'undefined') return;
         toast.loading('Preparing PDF...', { id: 'pdf-loading' });
 
-        // Helper to resolve URL with variables
         const resolveUrlForPdf = (url: string, ep: any) => {
             let resolved = url;
-
-            // Replace environment variables
             Object.keys(variables).forEach(key => {
                 const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
                 resolved = resolved.replace(regex, variables[key] || `[${key}]`);
             });
-
-            // Replace path params like :id with sample values
-            resolved = resolved.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, param) => {
-                return `[${param}]`;
-            });
-
+            resolved = resolved.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, param) => `[${param}]`);
             return resolved;
         };
 
-        // Create complete standalone HTML document for printing
         const docTitle = doc?.title || 'API Documentation';
-        const dateStr = new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-
         const methodColors: Record<string, { bg: string; color: string }> = {
             'GET': { bg: '#dcfce7', color: '#16a34a' },
             'POST': { bg: '#dbeafe', color: '#2563eb' },
@@ -684,132 +649,64 @@ export default function ApiClient() {
         endpoints.forEach((ep, idx) => {
             const m = methodColors[ep.method] || { bg: '#f3f4f6', color: '#6b7280' };
             const resolvedUrl = resolveUrlForPdf(ep.url, ep);
-
             content += `
                 <div class="endpoint" style="margin-bottom: 24px; page-break-inside: avoid;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                        <span style="background: ${m.bg}; color: ${m.color}; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; font-family: system-ui;">${ep.method}</span>
-                        <h2 style="margin: 0; font-size: 18px; color: #111827; font-family: system-ui;">${ep.name || 'Untitled'}</h2>
+                        <span style="background: ${m.bg}; color: ${m.color}; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">${ep.method}</span>
+                        <h2 style="margin: 0; font-size: 18px; color: #111827;">${ep.name || 'Untitled'}</h2>
                     </div>
-                    <code style="display: block; background: #f3f4f6; padding: 10px; border-radius: 6px; font-size: 12px; font-family: 'SF Mono', Monaco, monospace; color: #374151; margin: 8px 0; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">${resolvedUrl}</code>
-                    ${ep.description ? `<p style="margin: 10px 0; color: #4b5563; font-size: 13px; line-height: 1.5;">${ep.description}</p>` : ''}
+                    <code style="display: block; background: #f3f4f6; padding: 10px; border-radius: 6px; font-size: 12px; color: #374151; margin: 8px 0; white-space: pre-wrap; word-break: break-all;">${resolvedUrl}</code>
+                    ${ep.description ? `<p style="margin: 10px 0; color: #4b5563; font-size: 13px;">${ep.description}</p>` : ''}
             `;
 
             if (ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key)) {
-                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px; font-family: system-ui;">Headers</h3>`;
-                content += `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background: #f9fafb;"><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Key</th><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Value</th></tr></thead><tbody>`;
+                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px;">Headers</h3>`;
+                content += `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background: #f9fafb;"><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb;">Key</th><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb;">Value</th></tr></thead><tbody>`;
                 ep.headers.filter((h: any) => h.key).forEach((h: any) => {
                     let headerValue = h.value || '';
                     Object.keys(variables).forEach(key => {
                         const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
                         headerValue = headerValue.replace(regex, variables[key] || `[${key}]`);
                     });
-                    content += `<tr><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace; font-size: 11px;">${h.key}</td><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace; font-size: 11px;">${headerValue}</td></tr>`;
+                    content += `<tr><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace;">${h.key}</td><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace;">${headerValue}</td></tr>`;
                 });
                 content += `</tbody></table>`;
             }
 
             if (ep.body?.raw) {
-                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px; font-family: system-ui;">Request Body</h3>`;
+                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px;">Request Body</h3>`;
                 let bodyContent = ep.body.raw;
                 Object.keys(variables).forEach(key => {
                     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
                     bodyContent = bodyContent.replace(regex, variables[key] || `[${key}]`);
                 });
-                content += `<pre style="background: #1f2937; color: #e5e7eb; padding: 12px; border-radius: 6px; font-size: 11px; line-height: 1.5; overflow-x: auto; margin: 0;">${bodyContent}</pre>`;
+                content += `<pre style="background: #1f2937; color: #e5e7eb; padding: 12px; border-radius: 6px; font-size: 11px;">${bodyContent}</pre>`;
             }
 
             if (ep.lastResponse) {
                 const statusColor = ep.lastResponse.status >= 200 && ep.lastResponse.status < 300 ? '#16a34a' : '#dc2626';
-                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px; font-family: system-ui;">Response <span style="color: ${statusColor}; font-weight: normal;">${ep.lastResponse.status}</span></h3>`;
-                content += `<pre style="background: #1f2937; color: #e5e7eb; padding: 12px; border-radius: 6px; font-size: 11px; line-height: 1.5; overflow-x: auto; margin: 0;">${JSON.stringify(ep.lastResponse.data, null, 2)}</pre>`;
+                content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px;">Response <span style="color: ${statusColor};">${ep.lastResponse.status}</span></h3>`;
+                content += `<pre style="background: #1f2937; color: #e5e7eb; padding: 12px; border-radius: 6px; font-size: 11px;">${JSON.stringify(ep.lastResponse.data, null, 2)}</pre>`;
             }
-
             content += `</div>`;
-            if (idx < endpoints.length - 1) {
-                content += `<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">`;
-            }
+            if (idx < endpoints.length - 1) content += `<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">`;
         });
 
-        const printHtml = `<!DOCTYPE html>
-            <html>
-            <head>
-                <title>${docTitle}</title>
-                <style>
-                    @page { margin: 1.5cm; size: A4 portrait; }
-                    * { box-sizing: border-box; }
-                    body { 
-                        margin: 0; 
-                        padding: 0; 
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-                        font-size: 14px; 
-                        line-height: 1.5; 
-                        color: #1f2937;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    h1 { font-size: 26px; color: #111827; margin: 0 0 8px 0; font-family: system-ui; }
-                    h2 { font-size: 18px; color: #111827; margin: 0; font-family: system-ui; }
-                    h3 { font-size: 14px; color: #111827; margin: 14px 0 6px 0; font-family: system-ui; }
-                    p { margin: 10px 0; color: #4b5563; }
-                    hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
-                    pre { 
-                        background: #1f2937; 
-                        color: #e5e7eb; 
-                        padding: 12px; 
-                        border-radius: 6px; 
-                        font-size: 11px; 
-                        line-height: 1.5; 
-                        overflow-x: auto; 
-                        white-space: pre-wrap;
-                        word-wrap: break-word;
-                    }
-                    code { font-family: 'Poppins', Monaco, Consolas, monospace; font-size: 12px; }
-                    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-                    th, td { padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-size: 12px; }
-                    th { background: #f9fafb; font-weight: 600; }
-                    .title-meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
-                    .endpoint { margin-bottom: 20px; }
-                    .method { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; font-family: system-ui; }
-                </style>
-            </head>
-            <body>
-                <h1>${docTitle}</h1>
-                <hr>
-                ${content}
-            </body>
-            </html>`;
-
-        // <p class="title-meta">Generated on ${dateStr}</p>
-        // Create hidden iframe for printing
+        const printHtml = `<!DOCTYPE html><html><head><title>${docTitle}</title><style>@page { margin: 1.5cm; } body { font-family: sans-serif; }</style></head><body><h1>${docTitle}</h1><hr>${content}</body></html>`;
         let iframe = document.getElementById('pdf-print-iframe') as HTMLIFrameElement;
-        if (iframe) {
-            document.body.removeChild(iframe);
-        }
-
+        if (iframe) document.body.removeChild(iframe);
         iframe = document.createElement('iframe');
         iframe.id = 'pdf-print-iframe';
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '800px';
-        iframe.style.height = '600px';
-        iframe.style.border = 'none';
-        iframe.style.visibility = 'hidden';
+        iframe.style.position = 'fixed'; iframe.style.visibility = 'hidden';
         document.body.appendChild(iframe);
 
         const iframeDoc = iframe.contentWindow?.document;
         if (iframeDoc) {
-            iframeDoc.open();
-            iframeDoc.write(printHtml);
-            iframeDoc.close();
-
+            iframeDoc.open(); iframeDoc.write(printHtml); iframeDoc.close();
             setTimeout(() => {
                 iframe.contentWindow?.print();
                 toast.success('Print dialog opened!', { id: 'pdf-loading' });
-                setTimeout(() => {
-                    iframe.remove();
-                }, 1000);
+                setTimeout(() => iframe.remove(), 1000);
             }, 300);
         } else {
             toast.error('Failed to generate PDF', { id: 'pdf-loading' });
@@ -818,16 +715,13 @@ export default function ApiClient() {
 
     const handleDragStart = (idx: number) => setDraggedIdx(idx);
     const handleDragEnd = () => setDraggedIdx(null);
-    const handleDragOver = (e: React.DragEvent, idx: number) => {
-        e.preventDefault();
-    };
+    const handleDragOver = (e: React.DragEvent, idx: number) => e.preventDefault();
 
     if (isLoading) return <div className={`h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-gray-500' : 'bg-gray-50 text-gray-400'}`}>Loading Client...</div>;
     if (error || !doc) return <div className={`h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-red-500' : 'bg-gray-50 text-red-600'}`}>Failed to load</div>;
 
     return (
         <div className={`flex h-[calc(100vh-64px)] overflow-hidden font-sans text-xs relative ${theme === 'dark' ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
-            {/* Sidebar */}
             <Sidebar
                 doc={doc}
                 endpoints={endpoints}
@@ -869,25 +763,10 @@ export default function ApiClient() {
                     const draggedFolder = folders.find(f => f.id === draggedId);
                     const targetFolder = folders.find(f => f.id === targetId);
                     if (!draggedFolder || !targetFolder) return;
-
-                    // If simple reorder within same parent
                     if (draggedFolder.parentId === targetFolder.parentId) {
-                        // Swap orders or insert logic
-                        // Simpler approach: swap orders for now, or intricate reorder
-                        const updates = [
-                            { id: draggedFolder.id, order: targetFolder.order },
-                            { id: targetFolder.id, order: draggedFolder.order }
-                        ];
-                        // If we want detailed "insert between", we need accurate calculation.
-                        // For MVP folder drag, swapping is a good start, or moving to target's position shifting others.
-                        // Let's rely on swapping for immediate feedback.
+                        const updates = [{ id: draggedFolder.id, order: targetFolder.order }, { id: targetFolder.id, order: draggedFolder.order }];
                         await reorderFolders(updates);
                     } else {
-                        // Move to different parent (nesting) - implicitly a "move"
-                        // But current UI is "drop on folder".
-                        // If we drop a folder ON another folder, maybe we mean "make child"?
-                        // The user asked for "reorder", not necessarily nesting, but let's support nesting if logical.
-                        // If target is a folder, make draggedFolder a child of targetFolder
                         await updateFolder(draggedFolder.id, { parentId: targetFolder.id });
                     }
                     queryClient.invalidateQueries({ queryKey: ['doc', id] });
@@ -904,16 +783,12 @@ export default function ApiClient() {
                 }}
             />
 
-            {/* Modals */}
             <EnvModal
                 isOpen={showEnv}
                 onClose={() => setShowEnv(false)}
                 documentationId={id as string}
                 variables={variables}
-                setVariables={(v) => {
-                    setVariables(v);
-                    setIsCollectionDirty(true); // Restoring dirty state for variable changes
-                }}
+                setVariables={(v) => { setVariables(v); setIsCollectionDirty(true); }}
             />
             <CreateFolderModal
                 isOpen={showFolderModal}
@@ -923,15 +798,13 @@ export default function ApiClient() {
                 editingFolder={editingFolder}
             />
 
-            {/* Sidebar Resizer */}
             {!isSidebarCollapsed && (
                 <div
-                    className={`w-1 cursor-col-resize hover:bg-indigo-400 transition-colors z-30 flex-shrink-0 ${isSidebarResizing ? 'bg-indigo-600' : 'bg-transparent'}`}
+                    className={`w-1 cursor-col-resize hover:bg-indigo-400 z-30 flex-shrink-0 ${isSidebarResizing ? 'bg-indigo-600' : 'bg-transparent'}`}
                     onMouseDown={startSidebarResize}
                 />
             )}
 
-            {/* Main Content */}
             <div className="flex-1 flex flex-col h-full min-w-0">
                 {currentReq ? (
                     <>
@@ -952,7 +825,6 @@ export default function ApiClient() {
                         />
 
                         <div className={`flex-1 overflow-hidden flex ${paneLayout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
-                            {/* Request Panel */}
                             <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${mainSplitRatio}%` } : { height: `${verticalSplitRatio}%` }}>
                                 <RequestTabs
                                     currentReq={currentReq}
@@ -971,20 +843,12 @@ export default function ApiClient() {
                                 />
                             </div>
 
-                            {/* Resizer */}
                             {paneLayout === 'horizontal' ? (
-                                <div
-                                    className={`w-1 cursor-col-resize hover:bg-indigo-500 transition-colors z-10 flex-shrink-0 ${isResizingMain ? 'bg-indigo-600' : themeClasses.borderCol}`}
-                                    onMouseDown={startMainResize}
-                                />
+                                <div className={`w-1 cursor-col-resize hover:bg-indigo-500 z-10 flex-shrink-0 ${isResizingMain ? 'bg-indigo-600' : themeClasses.borderCol}`} onMouseDown={startMainResize} />
                             ) : (
-                                <div
-                                    className={`h-1 cursor-row-resize hover:bg-indigo-500 transition-colors z-10 flex-shrink-0 ${isResizingVertical ? 'bg-indigo-600' : themeClasses.borderCol}`}
-                                    onMouseDown={startVerticalResize}
-                                />
+                                <div className={`h-1 cursor-row-resize hover:bg-indigo-500 z-10 flex-shrink-0 ${isResizingVertical ? 'bg-indigo-600' : themeClasses.borderCol}`} onMouseDown={startVerticalResize} />
                             )}
 
-                            {/* Response Panel */}
                             <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${100 - mainSplitRatio}%` } : { height: `${100 - verticalSplitRatio}%` }}>
                                 <ResponsePanel
                                     response={response}
@@ -1009,219 +873,72 @@ export default function ApiClient() {
                 )}
             </div>
 
-            {/* Preview Modal */}
             {showPreview && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={(e) => { if (e.target === e.currentTarget) setShowPreview(false); }}>
                     <div className={`${themeClasses.secondaryBg} border ${themeClasses.borderCol} rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
                         <div className={`px-6 py-4 border-b ${themeClasses.borderCol} flex justify-between items-center`}>
                             <div className="flex items-center gap-3">
                                 <FileText size={20} className="text-indigo-500" />
-                                <div>
-                                    <h3 className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                                        {doc?.title || 'Documentation'}
-                                    </h3>
-                                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                                        {endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} documented
-                                    </p>
-                                </div>
+                                <div><h3 className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{doc?.title || 'Documentation'}</h3><p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} documented</p></div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(previewContent);
-                                        toast.success('Markdown copied!');
-                                    }}
-                                    className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'} rounded-lg transition-all text-xs font-medium`}
-                                >
-                                    <Copy size={14} />
-                                    Copy MD
+                                <button onClick={() => { navigator.clipboard.writeText(previewContent); toast.success('Markdown copied!'); }} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
+                                    <Copy size={14} /> Copy MD
                                 </button>
-                                <button
-                                    onClick={() => handleGenerateMarkdown(true)}
-                                    className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'} rounded-lg transition-all text-xs font-medium`}
-                                >
-                                    <Download size={14} />
-                                    Download MD
+                                <button onClick={() => handleGenerateMarkdown(true)} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
+                                    <Download size={14} /> Download MD
                                 </button>
-                                <button
-                                    onClick={handleDownloadPdf}
-                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all text-xs font-medium shadow-lg"
-                                >
-                                    <Download size={14} />
-                                    Export PDF
+                                <button onClick={handleDownloadPdf} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs">
+                                    <Download size={14} /> Export PDF
                                 </button>
-                                <div className={`w-px h-8 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'} mx-2`} />
-                                <button
-                                    onClick={() => setShowPreview(false)}
-                                    className={`p-2 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'} rounded-lg transition-all`}
-                                >
+                                <button onClick={() => setShowPreview(false)} className={`p-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} rounded-lg`}>
                                     <X size={20} />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Content */}
                         <div className="flex-1 flex overflow-hidden">
-                            {/* Sidebar - Table of Contents */}
-                            <div className={`w-56 flex-shrink-0 border-r no-print ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} overflow-y-auto p-4`}>
-                                <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                                    Contents
-                                </h4>
+                            <div className={`w-56 flex-shrink-0 border-r ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} overflow-y-auto p-4`}>
+                                <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Contents</h4>
                                 <nav className="space-y-1">
                                     {endpoints.map((ep, idx) => (
-                                        <a
-                                            key={idx}
-                                            href={`#endpoint-${idx}`}
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                document.getElementById(`endpoint-${idx}`)?.scrollIntoView({ behavior: 'smooth' });
-                                            }}
-                                            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-gray-100'}`}
-                                        >
-                                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
-                                                ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
-                                                    ep.method === 'PUT' ? 'bg-yellow-600/20 text-yellow-600' :
-                                                        ep.method === 'DELETE' ? 'bg-red-600/20 text-red-500' :
-                                                            'bg-purple-600/20 text-purple-500'
-                                                }`}>
-                                                {ep.method}
-                                            </span>
+                                        <a key={idx} href={`#endpoint-${idx}`} onClick={(e) => { e.preventDefault(); document.getElementById(`endpoint-${idx}`)?.scrollIntoView({ behavior: 'smooth' }); }} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
                                             <span className="truncate">{ep.name || 'Untitled'}</span>
                                         </a>
                                     ))}
                                 </nav>
                             </div>
 
-                            {/* Main Content */}
-                            <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`} id="markdown-preview-content">
-                                <div className="max-w-4xl mx-auto px-8 py-10" id="printable-content">
-                                    {/* Document Header */}
-                                    <div className="mb-6 pb-4 border-b border-gray-700/20">
-                                        <h1 className={`text-4xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                                            {doc?.title || 'API Documentation'}
-                                        </h1>
-                                        {/* <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            Generated on {new Date().toLocaleDateString('en-US', {
-                                                weekday: 'long',
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric'
-                                            })}
-                                        </p> */}
-                                    </div>
-
-                                    {/* Endpoints */}
+                            <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
+                                <div className="max-w-4xl mx-auto px-8 py-10">
+                                    <div className="mb-6 pb-4 border-b border-gray-700/20"><h1 className={`text-4xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{doc?.title || 'API Documentation'}</h1></div>
                                     {endpoints.map((ep, idx) => (
                                         <div key={idx} id={`endpoint-${idx}`} className="mb-6 scroll-mt-6">
                                             <div className="flex items-center gap-3 mb-4">
-                                                <span className={`text-xs font-bold px-2 py-1 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
-                                                    ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
-                                                        ep.method === 'PUT' ? 'bg-yellow-600/20 text-yellow-600' :
-                                                            ep.method === 'DELETE' ? 'bg-red-600/20 text-red-500' :
-                                                                'bg-purple-600/20 text-purple-500'
-                                                    }`}>
-                                                    {ep.method}
-                                                </span>
-                                                <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                                                    {ep.name || 'Untitled'}
-                                                </h2>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
+                                                <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
                                             </div>
-
-                                            <div className={`px-4 py-3 rounded-lg font-mono text-sm mb-6 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                                                {resolveUrl(ep)}
-                                            </div>
-
-                                            {ep.description && (
-                                                <p className={`mb-6 text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                    {resolveAll(ep.description, ep)}
-                                                </p>
-                                            )}
-
-                                            {/* Headers */}
+                                            <div className={`px-4 py-3 rounded-lg font-mono text-sm mb-6 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{resolveUrl(ep)}</div>
+                                            {ep.description && <p className={`mb-6 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{resolveAll(ep.description, ep)}</p>}
                                             {ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key) && (
                                                 <div className="mb-6">
-                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-                                                        Headers
-                                                    </h3>
+                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Headers</h3>
                                                     <div className={`rounded-lg border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} overflow-hidden`}>
                                                         <table className="w-full text-sm">
-                                                            <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}>
-                                                                <tr>
-                                                                    <th className={`px-4 py-2 text-left font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Key</th>
-                                                                    <th className={`px-4 py-2 text-left font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Value</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {ep.headers.filter((h: any) => h.key).map((h: any, hidx: number) => (
-                                                                    <tr key={hidx} className={`border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-                                                                        <td className={`px-4 py-2 font-mono ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{h.key}</td>
-                                                                        <td className={`px-4 py-2 font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{resolveAll(h.value, ep)}</td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
+                                                            <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}><tr><th className="px-4 py-2 text-left">Key</th><th className="px-4 py-2 text-left">Value</th></tr></thead>
+                                                            <tbody>{ep.headers.filter((h: any) => h.key).map((h: any, hi: number) => (<tr key={hi} className="border-t border-gray-700"><td className="px-4 py-2">{h.key}</td><td className="px-4 py-2">{resolveAll(h.value, ep)}</td></tr>))}</tbody>
                                                         </table>
                                                     </div>
                                                 </div>
                                             )}
-
-                                            {/* Request Body */}
                                             {ep.body?.raw && (
                                                 <div className="mb-6">
-                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-                                                        Request Body
-                                                    </h3>
-                                                    <SyntaxHighlighter
-                                                        language="json"
-                                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
-                                                        customStyle={{
-                                                            margin: 0,
-                                                            padding: '12px',
-                                                            fontSize: '13px',
-                                                            lineHeight: '20px',
-                                                            minHeight: '100%',
-                                                            whiteSpace: 'pre-wrap',
-                                                            wordBreak: 'break-all',
-                                                            fontFamily: "Poppins, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
-                                                        }}
-                                                    >
-                                                        {resolveAll(ep.body.raw, ep)}
-                                                    </SyntaxHighlighter>
+                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Request Body</h3>
+                                                    <SyntaxHighlighter language="json" style={vscDarkPlus} customStyle={{ padding: '12px', borderRadius: '8px' }}>{resolveAll(ep.body.raw, ep)}</SyntaxHighlighter>
                                                 </div>
                                             )}
-
-                                            {/* Last Response */}
-                                            {ep.lastResponse && (
-                                                <div className="mb-6">
-                                                    <h3 className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-                                                        Response
-                                                        <span className={`text-xs px-2 py-0.5 rounded ${ep.lastResponse.status >= 200 && ep.lastResponse.status < 300
-                                                            ? 'bg-green-600/20 text-green-500'
-                                                            : 'bg-red-600/20 text-red-500'
-                                                            }`}>
-                                                            {ep.lastResponse.status}
-                                                        </span>
-                                                    </h3>
-                                                    <SyntaxHighlighter
-                                                        language="json"
-                                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
-                                                        customStyle={{
-                                                            margin: 0,
-                                                            borderRadius: '0.5rem',
-                                                            fontSize: '13px',
-                                                            padding: '16px',
-                                                            maxHeight: '400px',
-                                                            overflow: 'auto',
-                                                            fontFamily: "Poppins, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
-                                                        }}
-                                                    >
-                                                        {JSON.stringify(ep.lastResponse.data, null, 2)}
-                                                    </SyntaxHighlighter>
-                                                </div>
-                                            )}
-
-                                            {idx < endpoints.length - 1 && (
-                                                <hr className={`my-6 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`} />
-                                            )}
+                                            {idx < endpoints.length - 1 && <hr className="my-6 border-gray-700" />}
                                         </div>
                                     ))}
                                 </div>
@@ -1231,47 +948,21 @@ export default function ApiClient() {
                 </div>
             )}
 
-            {/* Endpoint Search Modal */}
-            {/* <SearchBar
-                endpoints={endpoints}
-                isOpen={showSearchModal}
-                onClose={() => setShowSearchModal(false)}
-                onSelect={(idx) => {
-                    setSelectedIdx(idx);
-                    setShowSearchModal(false);
-                }}
-            /> */}
-
             <SearchBar isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} endpoints={endpoints} onSelect={(idx: number) => { setSelectedIdx(idx); setShowSearchModal(false); }} />
             <KeyboardShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
 
-            {/* Keyboard Shortcuts Modal */}
-            {/* <KeyboardShortcutsModal
-                isOpen={showShortcutsModal}
-                onClose={() => setShowShortcutsModal(false)}
-            /> */}
-
-            {/* Floating Action Buttons */}
             <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
-                <button
-                    onClick={() => setShowShortcutsModal(true)}
-                    className={`p-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-400 border-gray-700 hover:text-indigo-400' : 'bg-white text-gray-500 border-gray-200 hover:text-indigo-600'} border rounded-lg shadow-lg hover:shadow-xl transition-all`}
-                    title="Keyboard Shortcuts (Ctrl+/)"
-                >
-                    <Keyboard size={16} />
-                </button>
-                <button
-                    onClick={() => setShowSearchModal(true)}
-                    className={`px-3 py-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-300 border-gray-700' : 'bg-white text-gray-600 border-gray-200'} border rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-[11px] font-medium`}
-                    title="Search Endpoints (Ctrl+K)"
-                >
-                    <Search size={14} />
-                    <span>Search</span>
-                    <kbd className={`ml-1 px-1.5 py-0.5 ${theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'} rounded text-[9px]`}>
-                        Ctrl+K
-                    </kbd>
-                </button>
+                <button onClick={() => setShowShortcutsModal(true)} className={`p-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'} border rounded-lg shadow-lg hover:text-indigo-400 transition-all`} title="Keyboard Shortcuts (Ctrl+/)"><Keyboard size={16} /></button>
+                <button onClick={() => setShowSearchModal(true)} className={`px-3 py-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-600'} border rounded-lg shadow-lg flex items-center gap-2 text-[11px] font-medium`} title="Search Endpoints (Ctrl+K)"><Search size={14} /><span>Search</span><kbd className="ml-1 px-1.5 py-0.5 bg-gray-700 rounded text-[9px]">Ctrl+K</kbd></button>
             </div>
         </div>
+    );
+}
+
+export default function ApiClient() {
+    return (
+        <ProtectedRoute>
+            <ApiClientContent />
+        </ProtectedRoute>
     );
 }
