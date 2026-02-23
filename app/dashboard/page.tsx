@@ -10,9 +10,10 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import toast from 'react-hot-toast';
 import { Trash2, ExternalLink, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { createCollectionSchema } from '@/types';
+import { createCollectionSchema } from '../../types';
 import { ZodError } from 'zod';
-import { Documentation } from '@/types';
+import { Documentation } from '../../types';
+import { ProtectedRoute } from '../../components/AuthGuard';
 
 interface FormErrors {
     title?: string;
@@ -60,7 +61,7 @@ function DashboardContent() {
         if (newCollectionTitle && formErrors.title) {
             setFormErrors({});
         }
-    }, [newCollectionTitle]);
+    }, [newCollectionTitle, formErrors.title]);
 
     const handleCreateBlank = () => {
         setNewCollectionTitle('New Collection');
@@ -311,8 +312,12 @@ function DashboardContent() {
 
 export default function Dashboard() {
     return (
-        <ErrorBoundary>
-            <DashboardContent />
-        </ErrorBoundary>
+        <ProtectedRoute>
+            <main className="min-h-screen">
+                <ErrorBoundary>
+                    <DashboardContent />
+                </ErrorBoundary>
+            </main>
+        </ProtectedRoute>
     );
 }
