@@ -4,24 +4,18 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, ClipboardList, LayoutDashboard, Database, Sun, Moon, CheckSquare, StickyNote } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function Header() {
     const pathname = usePathname();
     const router = useRouter();
     const { theme, toggleTheme } = useTheme();
-
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-    useEffect(() => {
-        setIsLoggedIn(!!localStorage.getItem('token'));
-    }, [pathname]);
+    const { isLoggedIn, logout, user } = useAuth();
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
+        logout();
         toast.success('Logged out successfully');
-        router.push('/login');
     };
 
     return (
@@ -30,7 +24,7 @@ export default function Header() {
                 <div className="flex items-center gap-8">
                     <Link href={isLoggedIn ? "/" : "/"} className={`text-xl font-bold transition-all ${theme === 'dark' ? 'text-white' : 'text-gray-900'} flex items-center gap-2 hover:opacity-80`}>
                         <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs">P</div>
-                        PostmanClone
+                        Postman
                     </Link>
                     {isLoggedIn && (
                         <nav className="hidden md:flex gap-6 text-sm font-medium">

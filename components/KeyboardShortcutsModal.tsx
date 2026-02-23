@@ -32,11 +32,11 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
-            <div 
+            <div
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                 onClick={onClose}
             />
-            
+
             {/* Modal */}
             <div className={`relative w-full max-w-lg ${bgColor} rounded-2xl shadow-2xl border ${borderCol} overflow-hidden`}>
                 {/* Header */}
@@ -50,7 +50,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                             <p className={`text-xs ${subTextColor}`}>Quick actions to boost your productivity</p>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={onClose}
                         className={`p-2 rounded-lg ${subTextColor} hover:bg-gray-500/10 transition-colors`}
                     >
@@ -67,7 +67,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                             </h3>
                             <div className="space-y-2">
                                 {shortcuts.map((shortcut, idx) => (
-                                    <div 
+                                    <div
                                         key={idx}
                                         className={`flex items-center justify-between p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}
                                     >
