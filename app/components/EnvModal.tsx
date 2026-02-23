@@ -170,8 +170,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                             setEditingName(env.name);
                                         }}
                                         className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors ${selectedEnvId === env.id
-                                                ? theme === 'dark' ? 'bg-indigo-600/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
-                                                : `${textColor} ${hoverBg}`
+                                            ? theme === 'dark' ? 'bg-indigo-600/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
+                                            : `${textColor} ${hoverBg}`
                                             }`}
                                     >
                                         <span className="flex-1 truncate">{env.name}</span>
@@ -224,8 +224,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                 <button
                                     onClick={() => setIsCreatingNew(true)}
                                     className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${theme === 'dark'
-                                            ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
-                                            : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
+                                        ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
+                                        : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
                                         }`}
                                 >
                                     <Plus size={14} /> New Environment
@@ -257,8 +257,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                             <button
                                                 onClick={() => handleSetActive(selectedEnv.id)}
                                                 className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1 ${theme === 'dark'
-                                                        ? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
-                                                        : 'bg-green-50 text-green-600 hover:bg-green-100'
+                                                    ? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
+                                                    : 'bg-green-50 text-green-600 hover:bg-green-100'
                                                     }`}
                                             >
                                                 <Check size={12} /> Set Active
@@ -325,8 +325,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                     <button
                                         onClick={addVariable}
                                         className={`mt-4 flex items-center gap-2 font-medium text-sm px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
-                                                ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
-                                                : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
+                                            ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
+                                            : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
                                             }`}
                                     >
                                         <Plus size={16} /> Add Variable

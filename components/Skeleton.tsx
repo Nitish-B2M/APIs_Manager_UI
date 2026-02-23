@@ -10,13 +10,13 @@ interface SkeletonProps {
 
 export function Skeleton({ className = '', width, height }: SkeletonProps) {
     const { theme } = useTheme();
-    
+
     const style: React.CSSProperties = {};
     if (width) style.width = typeof width === 'number' ? `${width}px` : width;
     if (height) style.height = typeof height === 'number' ? `${height}px` : height;
 
     return (
-        <div 
+        <div
             className={`animate-pulse rounded ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'} ${className}`}
             style={style}
         />
@@ -60,14 +60,14 @@ export function RequestPaneSkeleton() {
                 <Skeleton className="flex-1" height={36} />
                 <Skeleton width={100} height={36} />
             </div>
-            
+
             {/* Tabs */}
             <div className="flex gap-2">
                 {['Params', 'Headers', 'Body', 'Docs'].map((tab) => (
                     <Skeleton key={tab} width={60} height={32} />
                 ))}
             </div>
-            
+
             {/* Content area */}
             <div className="space-y-2">
                 <Skeleton className="w-full" height={40} />
@@ -96,13 +96,13 @@ export function ResponsePaneSkeleton() {
                     <Skeleton width={32} height={32} />
                 </div>
             </div>
-            
+
             {/* Content */}
             <div className="space-y-2">
                 {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton 
-                        key={i} 
-                        className="w-full" 
+                    <Skeleton
+                        key={i}
+                        className="w-full"
                         height={20}
                         width={`${60 + (i % 4) * 10}%`}
                     />
@@ -144,7 +144,7 @@ export function DashboardSkeleton() {
 
 export function PageLoadingSkeleton() {
     const { theme } = useTheme();
-    
+
     return (
         <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
             <div className="flex flex-col items-center gap-4">

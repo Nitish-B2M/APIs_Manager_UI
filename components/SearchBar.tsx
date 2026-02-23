@@ -98,11 +98,11 @@ export function SearchBar({ endpoints, onSelect, onClose, isOpen }: SearchBarPro
     return (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
             {/* Backdrop */}
-            <div 
+            <div
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                 onClick={onClose}
             />
-            
+
             {/* Search Modal */}
             <div className={`relative w-full max-w-xl ${bgColor} rounded-xl shadow-2xl border ${borderCol} overflow-hidden`}>
                 {/* Search Input */}
@@ -141,11 +141,10 @@ export function SearchBar({ endpoints, onSelect, onClose, isOpen }: SearchBarPro
                                     onSelect(result.index);
                                     onClose();
                                 }}
-                                className={`w-full flex items-center gap-3 p-3 text-left transition-colors ${
-                                    idx === selectedResultIdx 
-                                        ? 'bg-indigo-600/20' 
-                                        : 'hover:bg-gray-700/30'
-                                }`}
+                                className={`w-full flex items-center gap-3 p-3 text-left transition-colors ${idx === selectedResultIdx
+                                    ? 'bg-indigo-600/20'
+                                    : 'hover:bg-gray-700/30'
+                                    }`}
                             >
                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-12 text-center ${getMethodColor(result.endpoint.method)}`}>
                                     {result.endpoint.method}
