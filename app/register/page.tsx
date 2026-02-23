@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { UserPlus, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { registerSchema } from '@/types';
+import { registerSchema } from '../../types';
 import { ZodError } from 'zod';
+import { PublicOnlyRoute } from '../../components/AuthGuard';
+import { useAuth } from '../../context/AuthContext';
 
 interface FormErrors {
     email?: string;
@@ -20,25 +22,27 @@ export default function RegisterPage() {
     const [errors, setErrors] = useState<FormErrors>({});
     const router = useRouter();
     const { theme } = useTheme();
+    const { refreshUser } = useAuth();
 
     // Clear field errors when user types
     useEffect(() => {
         if (email && errors.email) {
             setErrors(prev => ({ ...prev, email: undefined }));
         }
-    }, [email]);
+    }, [email, errors.email]);
 
     useEffect(() => {
         if (password && errors.password) {
             setErrors(prev => ({ ...prev, password: undefined }));
         }
-    }, [password]);
+    }, [password, errors.password]);
 
     const registerMutation = useMutation({
         mutationFn: api.auth.register,
-        onSuccess: (res: { data: { token: string }; message?: string }) => {
+        onSuccess: async (res: { data: { token: string }; message?: string }) => {
             const data = res.data;
             localStorage.setItem('token', data.token);
+            await refreshUser();
             toast.success(res.message || 'Registration successful');
             router.push('/dashboard');
         },
@@ -69,11 +73,7 @@ export default function RegisterPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
-            return;
-        }
-
+        if (!validateForm()) return;
         registerMutation.mutate({ email, password });
     };
 
@@ -85,78 +85,76 @@ export default function RegisterPage() {
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
 
     return (
-        <div className={`flex min-h-[calc(100vh-64px)] items-center justify-center ${mainBg} transition-colors duration-300 p-6`}>
-            <div className={`w-full max-w-md p-10 ${cardBg} rounded-3xl border`}>
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-indigo-500/30">
-                        <UserPlus size={24} />
+        <PublicOnlyRoute>
+            <div className={`flex min-h-[calc(100vh-64px)] items-center justify-center ${mainBg} transition-colors duration-300 p-6`}>
+                <div className={`w-full max-w-md p-10 ${cardBg} rounded-3xl border`}>
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-indigo-500/30">
+                            <UserPlus size={24} />
+                        </div>
+                        <h1 className={`text-3xl font-black ${textColor} tracking-tight`}>Create Account</h1>
+                        <p className={`${subTextColor} text-sm mt-1 font-medium`}>Join us and start generating API docs today</p>
                     </div>
-                    <h1 className={`text-3xl font-black ${textColor} tracking-tight`}>Create Account</h1>
-                    <p className={`${subTextColor} text-sm mt-1 font-medium`}>Join us and start generating API docs today</p>
-                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                    <div className="space-y-1.5">
-                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
-                            Email address
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="name@company.com"
-                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.email ? inputErrorBg : inputBg}`}
-                            aria-invalid={!!errors.email}
-                            aria-describedby={errors.email ? 'email-error' : undefined}
-                        />
-                        {errors.email && (
-                            <div id="email-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
-                                <AlertCircle size={12} />
-                                <span>{errors.email}</span>
-                            </div>
-                        )}
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="min. 6 characters"
-                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.password ? inputErrorBg : inputBg}`}
-                            aria-invalid={!!errors.password}
-                            aria-describedby={errors.password ? 'password-error' : undefined}
-                        />
-                        {errors.password && (
-                            <div id="password-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
-                                <AlertCircle size={12} />
-                                <span>{errors.password}</span>
-                            </div>
-                        )}
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={registerMutation.isPending}
-                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-[0.98]"
-                    >
-                        {registerMutation.isPending ? 'Creating Account...' : 'Register Now'}
-                    </button>
-                </form>
-
-                <div className="mt-8 pt-8 border-t border-gray-500/10 text-center">
-                    <p className={`${subTextColor} text-sm font-medium`}>
-                        Already have an account?{' '}
+                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                        <div className="space-y-1.5">
+                            <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
+                                Email address
+                            </label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="name@company.com"
+                                className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.email ? inputErrorBg : inputBg}`}
+                            />
+                            {errors.email && (
+                                <div className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                                    <AlertCircle size={12} />
+                                    <span>{errors.email}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="min. 6 characters"
+                                className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.password ? inputErrorBg : inputBg}`}
+                            />
+                            {errors.password && (
+                                <div className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                                    <AlertCircle size={12} />
+                                    <span>{errors.password}</span>
+                                </div>
+                            )}
+                        </div>
                         <button
-                            onClick={() => router.push('/login')}
-                            className="text-indigo-600 hover:text-indigo-500 font-bold transition-colors cursor-pointer"
+                            type="submit"
+                            disabled={registerMutation.isPending}
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-[0.98]"
                         >
-                            Log in
+                            {registerMutation.isPending ? 'Creating Account...' : 'Register Now'}
                         </button>
-                    </p>
+                    </form>
+
+                    <div className="mt-8 pt-8 border-t border-gray-500/10 text-center">
+                        <p className={`${subTextColor} text-sm font-medium`}>
+                            Already have an account?{' '}
+                            <button
+                                onClick={() => router.push('/login')}
+                                className="text-indigo-600 hover:text-indigo-500 font-bold transition-colors cursor-pointer"
+                            >
+                                Log in
+                            </button>
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
+        </PublicOnlyRoute>
     );
 }

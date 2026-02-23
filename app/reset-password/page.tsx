@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { KeyRound } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { PublicOnlyRoute } from '../../components/AuthGuard';
 
 function ResetPasswordContent() {
     const [password, setPassword] = useState('');
@@ -125,8 +126,10 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <ResetPasswordContent />
-        </Suspense>
+        <PublicOnlyRoute>
+            <Suspense fallback={<div>Loading...</div>}>
+                <ResetPasswordContent />
+            </Suspense>
+        </PublicOnlyRoute>
     );
 }
