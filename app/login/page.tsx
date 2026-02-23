@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Lock, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { loginSchema, LoginFormData } from '@/types';
+import { loginSchema } from '../../types';
 import { ZodError } from 'zod';
+import { PublicOnlyRoute } from '../../components/AuthGuard';
+import { useAuth } from '../../context/AuthContext';
 
 interface FormErrors {
     email?: string;
@@ -21,6 +23,7 @@ export default function LoginPage() {
     const [errors, setErrors] = useState<FormErrors>({});
     const router = useRouter();
     const { theme } = useTheme();
+    const { refreshUser } = useAuth();
 
     useEffect(() => {
         const stored = localStorage.getItem('redirect_message');
@@ -35,19 +38,20 @@ export default function LoginPage() {
         if (email && errors.email) {
             setErrors(prev => ({ ...prev, email: undefined }));
         }
-    }, [email]);
+    }, [email, errors.email]);
 
     useEffect(() => {
         if (password && errors.password) {
             setErrors(prev => ({ ...prev, password: undefined }));
         }
-    }, [password]);
+    }, [password, errors.password]);
 
     const loginMutation = useMutation({
         mutationFn: api.auth.login,
-        onSuccess: (res: { data: { token: string }; message?: string }) => {
+        onSuccess: async (res: { data: { token: string }; message?: string }) => {
             const data = res.data;
             localStorage.setItem('token', data.token);
+            await refreshUser();
             toast.success(res.message || 'Login successful');
             router.push('/dashboard');
         },
@@ -78,11 +82,7 @@ export default function LoginPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
-
+        if (!validateForm()) return;
         loginMutation.mutate({ email, password });
     };
 
@@ -94,98 +94,96 @@ export default function LoginPage() {
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
 
     return (
-        <div className={`flex min-h-[calc(100vh-64px)] items-center justify-center ${mainBg} transition-colors duration-300 p-6`}>
-            <div className={`w-full max-w-md p-10 ${cardBg} rounded-3xl border`}>
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-indigo-500/30">
-                        <Lock size={24} />
-                    </div>
-                    <h1 className={`text-3xl font-black ${textColor} tracking-tight`}>Welcome Back</h1>
-                    <p className={`${subTextColor} text-sm mt-1 font-medium`}>Sign in to manage your API collections</p>
-                </div>
-
-                {message && (
-                    <div className="mb-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-start gap-3">
-                        <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-500">
-                            <Lock size={16} />
+        <PublicOnlyRoute>
+            <div className={`flex min-h-[calc(100vh-64px)] items-center justify-center ${mainBg} transition-colors duration-300 p-6`}>
+                <div className={`w-full max-w-md p-10 ${cardBg} rounded-3xl border`}>
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-indigo-500/30">
+                            <Lock size={24} />
                         </div>
-                        <p className="text-sm text-indigo-500 leading-relaxed font-bold">
-                            {message}
+                        <h1 className={`text-3xl font-black ${textColor} tracking-tight`}>Welcome Back</h1>
+                        <p className={`${subTextColor} text-sm mt-1 font-medium`}>Sign in to manage your API collections</p>
+                    </div>
+
+                    {message && (
+                        <div className="mb-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-start gap-3">
+                            <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-500">
+                                <Lock size={16} />
+                            </div>
+                            <p className="text-sm text-indigo-500 leading-relaxed font-bold">
+                                {message}
+                            </p>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                        <div className="space-y-1.5">
+                            <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
+                                Email address
+                            </label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="name@company.com"
+                                className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.email ? inputErrorBg : inputBg}`}
+                            />
+                            {errors.email && (
+                                <div className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                                    <AlertCircle size={12} />
+                                    <span>{errors.email}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
+                                    Password
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => router.push('/forgot-password')}
+                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                                >
+                                    Forgot password?
+                                </button>
+                            </div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.password ? inputErrorBg : inputBg}`}
+                            />
+                            {errors.password && (
+                                <div className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                                    <AlertCircle size={12} />
+                                    <span>{errors.password}</span>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={loginMutation.isPending}
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-[0.98]"
+                        >
+                            {loginMutation.isPending ? 'Logging in...' : 'Sign In'}
+                        </button>
+                    </form>
+
+                    <div className="mt-8 pt-8 border-t border-gray-500/10 text-center">
+                        <p className={`${subTextColor} text-sm font-medium`}>
+                            New to PostmanClone?{' '}
+                            <button
+                                onClick={() => router.push('/register')}
+                                className="text-indigo-600 hover:text-indigo-500 font-bold transition-colors cursor-pointer"
+                            >
+                                Create an account
+                            </button>
                         </p>
                     </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                    <div className="space-y-1.5">
-                        <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
-                            Email address
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="name@company.com"
-                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.email ? inputErrorBg : inputBg}`}
-                            aria-invalid={!!errors.email}
-                            aria-describedby={errors.email ? 'email-error' : undefined}
-                        />
-                        {errors.email && (
-                            <div id="email-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
-                                <AlertCircle size={12} />
-                                <span>{errors.email}</span>
-                            </div>
-                        )}
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                            <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>
-                                Password
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => router.push('/forgot-password')}
-                                className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
-                            >
-                                Forgot password?
-                            </button>
-                        </div>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.password ? inputErrorBg : inputBg}`}
-                            aria-invalid={!!errors.password}
-                            aria-describedby={errors.password ? 'password-error' : undefined}
-                        />
-                        {errors.password && (
-                            <div id="password-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
-                                <AlertCircle size={12} />
-                                <span>{errors.password}</span>
-                            </div>
-                        )}
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loginMutation.isPending}
-                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-[0.98]"
-                    >
-                        {loginMutation.isPending ? 'Logging in...' : 'Sign In'}
-                    </button>
-                </form>
-
-                <div className="mt-8 pt-8 border-t border-gray-500/10 text-center">
-                    <p className={`${subTextColor} text-sm font-medium`}>
-                        New to PostmanClone?{' '}
-                        <button
-                            onClick={() => router.push('/register')}
-                            className="text-indigo-600 hover:text-indigo-500 font-bold transition-colors cursor-pointer"
-                        >
-                            Create an account
-                        </button>
-                    </p>
                 </div>
             </div>
-        </div>
+        </PublicOnlyRoute>
     );
 }

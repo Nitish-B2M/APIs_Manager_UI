@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from '../context/ThemeContext';
+import { AuthProvider } from '../context/AuthContext';
 
 export default function RootLayout({
   children,
@@ -24,12 +25,14 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider>
-          <Provider>
-            <Toaster position="bottom-right" />
-            <Header />
-            {children}
-            <SystemResourceWidget />
-          </Provider>
+          <AuthProvider>
+            <Provider>
+              <Toaster position="bottom-right" />
+              <Header />
+              {children}
+              <SystemResourceWidget />
+            </Provider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
