@@ -36,7 +36,7 @@ interface PublicFolder {
 const METHOD_COLORS: Record<string, string> = {
     GET: 'bg-green-500/20 text-green-400 border-green-500/30',
     POST: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    PUT: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    PUT: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
     PATCH: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     DELETE: 'bg-red-500/20 text-red-400 border-red-500/30',
 };
@@ -70,10 +70,10 @@ function CopyButton({ text, label, theme }: { text: string; label?: string; them
         <button
             onClick={handleCopy}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${copied
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                    : theme === 'dark'
-                        ? 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700 border border-gray-700'
-                        : 'bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200 border border-gray-200'
+                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                : theme === 'dark'
+                    ? 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700 border border-gray-700'
+                    : 'bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200 border border-gray-200'
                 }`}
             title={copied ? 'Copied!' : (label || 'Copy')}
         >
@@ -471,8 +471,8 @@ export default function PublicDocsPage() {
                         <button
                             onClick={() => toggleSelectAll(requests)}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${theme === 'dark'
-                                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
                                 }`}
                             title={allSelected ? 'Deselect all' : 'Select all'}
                         >
@@ -488,10 +488,10 @@ export default function PublicDocsPage() {
                             onClick={() => copySelectedMarkdown(requests, doc.title)}
                             disabled={selectedRequests.size === 0}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${selectedRequests.size > 0
-                                    ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm'
-                                    : theme === 'dark'
-                                        ? 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed'
-                                        : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm'
+                                : theme === 'dark'
+                                    ? 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed'
+                                    : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                                 }`}
                             title={selectedRequests.size === 0 ? 'Select requests first' : `Copy ${selectedRequests.size} request(s) as Markdown`}
                         >
