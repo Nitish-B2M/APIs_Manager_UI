@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo } from 'react';
-import { History, Columns2, Rows2, Copy, X, RotateCcw, Clock } from 'lucide-react';
+import { History, Columns2, Rows2, Copy, X, RotateCcw, Clock, WrapText } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '@/context/ThemeContext';
@@ -21,6 +21,8 @@ interface ResponsePaneProps {
     onCopyResponse: () => void;
     onLoadFromHistory: (item: HistoryItem) => void;
     onBackToLatest: () => void;
+    onSelection: () => void;
+    onContextMenu: (e: React.MouseEvent) => void;
 }
 
 function isApiResponse(response: ResponseResult): response is ApiResponse {
@@ -41,8 +43,11 @@ function ResponsePaneComponent({
     onCopyResponse,
     onLoadFromHistory,
     onBackToLatest,
+    onSelection,
+    onContextMenu
 }: ResponsePaneProps) {
     const { theme } = useTheme();
+    const [wrapLines, setWrapLines] = React.useState(false);
 
     const secondaryBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
     const mainBg = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
@@ -90,6 +95,15 @@ function ResponsePaneComponent({
                     >
                         <History size={14} />
                     </button>
+                    {response && isApiResponse(response) && (
+                        <button
+                            onClick={() => setWrapLines(!wrapLines)}
+                            className={`p-1 rounded transition-all ${wrapLines ? 'bg-indigo-600 text-white' : `${subTextColor} hover:bg-gray-600 hover:text-white`}`}
+                            title={wrapLines ? 'Disable Word Wrap' : 'Enable Word Wrap'}
+                        >
+                            <WrapText size={14} />
+                        </button>
+                    )}
                     <button
                         onClick={() => onLayoutChange('horizontal')}
                         className={`p-1 rounded transition-all ${paneLayout === 'horizontal' ? 'bg-indigo-600 text-white' : `${subTextColor} hover:bg-gray-600 hover:text-white`}`}
@@ -108,7 +122,7 @@ function ResponsePaneComponent({
             </div>
 
             {/* Content */}
-            <div className={`flex-1 relative w-full h-full ${inputBg}`}>
+            <div className={`flex-1 relative w-full h-full ${inputBg}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
                 {/* History Panel */}
                 {showHistory && (
                     <div className={`absolute inset-0 z-20 ${secondaryBg} backdrop-blur-sm border-r ${borderCol} p-4 overflow-y-auto animate-in slide-in-from-right duration-200 shadow-2xl`}>
@@ -197,9 +211,19 @@ function ResponsePaneComponent({
                                 borderRadius: 0,
                                 fontSize: '13px',
                                 backgroundColor: theme === 'dark' ? 'transparent' : '#fafafa',
-                                padding: '24px'
+                                padding: '24px',
+                                whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
+                                wordBreak: wrapLines ? 'break-all' : 'normal',
+                                overflowWrap: wrapLines ? 'anywhere' : 'normal',
                             }}
-                            wrapLongLines={false}
+                            codeTagProps={{
+                                style: {
+                                    whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
+                                    wordBreak: wrapLines ? 'break-all' : 'normal',
+                                    overflowWrap: wrapLines ? 'anywhere' : 'normal',
+                                }
+                            }}
+                            wrapLongLines={wrapLines}
                         >
                             {typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
                         </SyntaxHighlighter>

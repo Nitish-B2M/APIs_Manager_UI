@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Settings, Check, ChevronDown, Edit3, Globe } from 'lucide-react';
+import { X, Plus, Trash2, Settings, Check, ChevronDown, Edit3, Globe, Eye, EyeOff, Shield } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useEnvironments } from '../../hooks/useEnvironments';
+import { useGlobalEnvironments } from '../../hooks/useGlobalEnvironments';
 import { Environment } from '../../types';
 
 interface EnvModalProps {
@@ -16,6 +17,21 @@ interface EnvModalProps {
 
 export default function EnvModal({ isOpen, onClose, documentationId, variables: legacyVariables, setVariables: legacySetVariables }: EnvModalProps) {
     const { theme } = useTheme();
+    const [scope, setScope] = useState<'COLLECTION' | 'GLOBAL'>('COLLECTION');
+
+    // Collection environments
+    const collEnv = useEnvironments({
+        documentationId,
+        enabled: isOpen && scope === 'COLLECTION' && !!documentationId
+    });
+
+    // Global environments
+    const globEnv = useGlobalEnvironments({
+        enabled: isOpen && scope === 'GLOBAL'
+    });
+
+    // Current active hook based on scope
+    const currentEnvHook = scope === 'COLLECTION' ? collEnv : globEnv;
     const {
         environments,
         activeEnvironment,
@@ -24,32 +40,40 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
         deleteEnvironment,
         setActiveEnvironment,
         isLoading
-    } = useEnvironments({ documentationId, enabled: isOpen && !!documentationId });
+    } = currentEnvHook;
 
     // Local state for editing
     const [selectedEnvId, setSelectedEnvId] = useState<string | null>(null);
     const [editingVariables, setEditingVariables] = useState<Record<string, string>>({});
+    const [editingSecrets, setEditingSecrets] = useState<string[]>([]);
     const [editingName, setEditingName] = useState('');
     const [showEnvDropdown, setShowEnvDropdown] = useState(false);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [newEnvName, setNewEnvName] = useState('');
+    const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
 
-    // Sync with active environment
+    // Sync with environments when scope changes or initial load
     useEffect(() => {
-        if (activeEnvironment && !selectedEnvId) {
-            setSelectedEnvId(activeEnvironment.id);
-            setEditingVariables(activeEnvironment.variables || {});
-            setEditingName(activeEnvironment.name);
+        if (environments.length > 0) {
+            const active = environments.find(e => e.isActive) || environments[0];
+            setSelectedEnvId(active.id);
+            setEditingVariables(active.variables || {});
+            setEditingSecrets(active.secrets || []);
+            setEditingName(active.name);
+        } else {
+            setSelectedEnvId(null);
+            setEditingVariables({});
+            setEditingSecrets([]);
+            setEditingName('');
         }
-    }, [activeEnvironment, selectedEnvId]);
-
-
+    }, [scope, environments.length]);
 
     const selectedEnv = environments.find(e => e.id === selectedEnvId);
 
     useEffect(() => {
         if (selectedEnv) {
             setEditingVariables(selectedEnv.variables || {});
+            setEditingSecrets(selectedEnv.secrets || []);
             setEditingName(selectedEnv.name);
         }
     }, [selectedEnv]);
@@ -62,6 +86,11 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
         delete newVars[oldKey];
         newVars[sanitizedKey] = value;
         setEditingVariables(newVars);
+
+        // Update secrets array if key changed
+        if (editingSecrets.includes(oldKey)) {
+            setEditingSecrets(editingSecrets.map(k => k === oldKey ? sanitizedKey : k));
+        }
     };
 
     const handleValueChange = (key: string, newValue: string) => {
@@ -69,24 +98,36 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
     };
 
     const addVariable = () => {
-        setEditingVariables({ ...editingVariables, [`new_var_${Object.keys(editingVariables).length}`]: '' });
+        const newKey = `new_var_${Object.keys(editingVariables).length}`;
+        setEditingVariables({ ...editingVariables, [newKey]: '' });
     };
 
     const deleteVariable = (key: string) => {
         const newVars = { ...editingVariables };
         delete newVars[key];
         setEditingVariables(newVars);
+        setEditingSecrets(editingSecrets.filter(k => k !== key));
+    };
+
+    const toggleSecret = (key: string) => {
+        if (editingSecrets.includes(key)) {
+            setEditingSecrets(editingSecrets.filter(k => k !== key));
+        } else {
+            setEditingSecrets([...editingSecrets, key]);
+        }
+    };
+
+    const toggleVisibility = (key: string) => {
+        setVisibleSecrets(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     const handleSaveEnvironment = async () => {
         if (selectedEnvId && selectedEnv) {
             await updateEnvironment(selectedEnvId, {
                 name: editingName,
-                variables: editingVariables
+                variables: editingVariables,
+                secrets: editingSecrets
             });
-            // Note: We don't call legacySetVariables here because the 
-            // page.tsx useEffect will catch the activeEnvironment update 
-            // from the server and sync automatically with isCollectionDirty: false
         }
     };
 
@@ -95,7 +136,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
         const result = await createEnvironment({
             name: newEnvName.trim(),
             variables: {},
-            isActive: environments.length === 0 // Make active if first environment
+            secrets: [],
+            isActive: environments.length === 0
         });
         setNewEnvName('');
         setIsCreatingNew(false);
@@ -111,6 +153,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
         await deleteEnvironment(selectedEnvId);
         setSelectedEnvId(null);
         setEditingVariables({});
+        setEditingSecrets([]);
         setEditingName('');
     };
 
@@ -126,55 +169,77 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
     const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
     const inputBg = theme === 'dark'
-        ? 'bg-gray-900 border-gray-600 text-gray-100 focus:ring-indigo-500 focus:border-indigo-500'
-        : 'bg-white border-gray-300 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500';
+        ? 'bg-gray-900 border-gray-600 text-gray-100 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600'
+        : 'bg-white border-gray-300 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-400';
     const codeStyle = theme === 'dark'
         ? 'bg-gray-900 text-indigo-400 px-1 rounded'
         : 'bg-gray-100 text-indigo-600 px-1 rounded';
     const deleteBtn = theme === 'dark'
         ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/10'
         : 'text-gray-400 hover:text-red-500 hover:bg-red-50';
+    const actionBtn = theme === 'dark'
+        ? 'text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/10'
+        : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50';
     const closeBtn = theme === 'dark'
         ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
         : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200';
-    const dropdownBg = theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200';
     const hoverBg = theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className={`${modalBg} rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className={`${modalBg} rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
                 {/* Header */}
                 <div className={`flex items-center justify-between p-4 border-b ${headerBg}`}>
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}`}>
-                            <Globe size={18} className="text-indigo-500" />
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}`}>
+                                <Globe size={18} className="text-indigo-500" />
+                            </div>
+                            <h2 className={`text-lg font-bold ${textColor}`}>Environments</h2>
                         </div>
-                        <h2 className={`text-lg font-bold ${textColor}`}>Environments</h2>
+
+                        {/* Scope Tabs */}
+                        <div className={`flex p-1 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200/50'}`}>
+                            <button
+                                onClick={() => setScope('COLLECTION')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${scope === 'COLLECTION'
+                                    ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                Collection
+                            </button>
+                            <button
+                                onClick={() => setScope('GLOBAL')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${scope === 'GLOBAL'
+                                    ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                Global (Shared)
+                            </button>
+                        </div>
                     </div>
                     <button onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${closeBtn}`}>
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="flex h-[60vh]">
+                <div className="flex h-[65vh]">
                     {/* Left Sidebar - Environment List */}
-                    <div className={`w-56 border-r ${theme === 'dark' ? 'border-gray-700 bg-gray-850' : 'border-gray-200 bg-gray-50'} flex flex-col`}>
+                    <div className={`w-64 border-r ${theme === 'dark' ? 'border-gray-700 bg-gray-850' : 'border-gray-200 bg-gray-50'} flex flex-col`}>
                         <div className="p-3 flex-1 overflow-y-auto">
                             <div className="space-y-1">
                                 {environments.map((env) => (
                                     <button
                                         key={env.id}
-                                        onClick={() => {
-                                            setSelectedEnvId(env.id);
-                                            setEditingVariables(env.variables || {});
-                                            setEditingName(env.name);
-                                        }}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors ${selectedEnvId === env.id
+                                        onClick={() => setSelectedEnvId(env.id)}
+                                        className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${selectedEnvId === env.id
                                             ? theme === 'dark' ? 'bg-indigo-600/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
                                             : `${textColor} ${hoverBg}`
                                             }`}
                                     >
-                                        <span className="flex-1 truncate">{env.name}</span>
+                                        <span className="flex-1 truncate font-medium">{env.name}</span>
                                         {env.isActive && (
                                             <span className="w-2 h-2 rounded-full bg-green-500" title="Active" />
                                         )}
@@ -182,9 +247,9 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                 ))}
 
                                 {environments.length === 0 && !isLoading && (
-                                    <div className={`text-center py-6 ${subTextColor} text-xs`}>
-                                        <Globe size={24} className="mx-auto mb-2 opacity-30" />
-                                        <p>No environments yet</p>
+                                    <div className={`text-center py-10 ${subTextColor} text-xs`}>
+                                        <Globe size={32} className="mx-auto mb-3 opacity-20" />
+                                        <p>No {scope.toLowerCase()} environments</p>
                                     </div>
                                 )}
                             </div>
@@ -197,7 +262,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                     <input
                                         value={newEnvName}
                                         onChange={(e) => setNewEnvName(e.target.value)}
-                                        placeholder="Environment name..."
+                                        placeholder="Name..."
                                         className={`w-full px-3 py-1.5 text-sm border rounded-lg ${inputBg}`}
                                         autoFocus
                                         onKeyDown={(e) => {
@@ -208,13 +273,13 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                     <div className="flex gap-2">
                                         <button
                                             onClick={handleCreateEnvironment}
-                                            className="flex-1 px-2 py-1 text-xs bg-indigo-600 text-white rounded-lg"
+                                            className="flex-1 px-2 py-1.5 text-xs bg-indigo-600 text-white rounded-lg font-bold"
                                         >
                                             Create
                                         </button>
                                         <button
                                             onClick={() => setIsCreatingNew(false)}
-                                            className={`px-2 py-1 text-xs rounded-lg ${theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}
+                                            className={`px-2 py-1.5 text-xs rounded-lg ${theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}
                                         >
                                             Cancel
                                         </button>
@@ -223,19 +288,19 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                             ) : (
                                 <button
                                     onClick={() => setIsCreatingNew(true)}
-                                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${theme === 'dark'
+                                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${theme === 'dark'
                                         ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
                                         : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
                                         }`}
                                 >
-                                    <Plus size={14} /> New Environment
+                                    <Plus size={14} /> New {scope === 'GLOBAL' ? 'Global' : 'Env'}
                                 </button>
                             )}
                         </div>
                     </div>
 
                     {/* Right Panel - Variables Editor */}
-                    <div className="flex-1 flex flex-col">
+                    <div className="flex-1 flex flex-col bg-transparent">
                         {selectedEnv ? (
                             <>
                                 {/* Environment Header */}
@@ -247,7 +312,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                             className={`text-lg font-bold bg-transparent border-b-2 border-transparent focus:border-indigo-500 outline-none px-1 ${textColor}`}
                                         />
                                         {selectedEnv.isActive && (
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
                                                 Active
                                             </span>
                                         )}
@@ -256,12 +321,12 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                         {!selectedEnv.isActive && (
                                             <button
                                                 onClick={() => handleSetActive(selectedEnv.id)}
-                                                className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1 ${theme === 'dark'
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1.5 ${theme === 'dark'
                                                     ? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
                                                     : 'bg-green-50 text-green-600 hover:bg-green-100'
                                                     }`}
                                             >
-                                                <Check size={12} /> Set Active
+                                                <Check size={14} /> Set Active
                                             </button>
                                         )}
                                         <button
@@ -269,76 +334,113 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                             className={`p-1.5 rounded-lg ${deleteBtn}`}
                                             title="Delete environment"
                                         >
-                                            <Trash2 size={16} />
+                                            <Trash2 size={18} />
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Variables */}
-                                <div className="flex-1 p-4 overflow-y-auto">
-                                    <p className={`text-sm ${subTextColor} mb-4`}>
-                                        Define variables for this environment. Use <code className={codeStyle}>{`{{varName}}`}</code> in your requests.
-                                    </p>
+                                <div className="flex-1 p-6 overflow-y-auto">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div>
+                                            <p className={`text-sm ${textColor} font-semibold mb-1`}>
+                                                Environment Variables
+                                            </p>
+                                            <p className={`text-xs ${subTextColor}`}>
+                                                Use <code className={codeStyle}>{`{{varName}}`}</code> in your requests URL, headers, or body.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Shield size={14} className="text-amber-500" />
+                                            <span className={`text-xs ${subTextColor}`}>Secrets are masked by default</span>
+                                        </div>
+                                    </div>
 
                                     {Object.keys(editingVariables).length > 0 && (
-                                        <div className={`flex gap-2 mb-2 text-[10px] font-bold uppercase tracking-wider ${subTextColor}`}>
-                                            <span className="flex-1 px-3">Variable Key</span>
-                                            <span className="flex-1 px-3">Value</span>
+                                        <div className={`flex gap-3 mb-3 text-[10px] font-bold uppercase tracking-wider ${subTextColor} px-2`}>
+                                            <span className="flex-1">Variable Key</span>
+                                            <span className="flex-1">Value</span>
+                                            <span className="w-24 text-center">Security</span>
                                             <span className="w-10"></span>
                                         </div>
                                     )}
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         {Object.entries(editingVariables).map(([key, value], idx) => (
-                                            <div key={idx} className="flex gap-2 items-center group">
+                                            <div key={idx} className={`flex gap-3 items-center p-2 rounded-xl transition-all ${theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`}>
                                                 <input
                                                     value={key}
                                                     onChange={(e) => handleKeyChange(key, e.target.value, value)}
-                                                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 outline-none text-sm font-mono transition-colors ${inputBg}`}
+                                                    className={`flex-1 px-3 py-2.5 border rounded-lg focus:ring-2 outline-none text-sm font-mono transition-colors ${inputBg}`}
                                                     placeholder="Variable Key"
                                                 />
-                                                <input
-                                                    value={value}
-                                                    onChange={(e) => handleValueChange(key, e.target.value)}
-                                                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 outline-none text-sm transition-colors ${inputBg}`}
-                                                    placeholder="Value"
-                                                />
+                                                <div className="flex-1 relative">
+                                                    <input
+                                                        type={editingSecrets.includes(key) && !visibleSecrets[key] ? 'password' : 'text'}
+                                                        value={value}
+                                                        onChange={(e) => handleValueChange(key, e.target.value)}
+                                                        className={`w-full px-3 py-2.5 border rounded-lg focus:ring-2 outline-none text-sm transition-colors ${editingSecrets.includes(key) ? 'border-amber-500/50 pr-10' : inputBg}`}
+                                                        placeholder="Value"
+                                                    />
+                                                    {editingSecrets.includes(key) && (
+                                                        <button
+                                                            onClick={() => toggleVisibility(key)}
+                                                            className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200`}
+                                                        >
+                                                            {visibleSecrets[key] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="w-24 flex justify-center">
+                                                    <button
+                                                        onClick={() => toggleSecret(key)}
+                                                        className={`p-2 rounded-lg transition-all ${editingSecrets.includes(key)
+                                                            ? 'bg-amber-500/20 text-amber-500'
+                                                            : 'text-gray-400 hover:bg-gray-200'
+                                                            }`}
+                                                        title={editingSecrets.includes(key) ? "Masked as secret" : "Mark as secret"}
+                                                    >
+                                                        <Shield size={18} />
+                                                    </button>
+                                                </div>
                                                 <button
                                                     onClick={() => deleteVariable(key)}
                                                     className={`p-2 rounded-lg transition-colors ${deleteBtn}`}
                                                     title="Delete variable"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
                                         ))}
                                     </div>
 
                                     {Object.keys(editingVariables).length === 0 && (
-                                        <div className={`text-center py-10 ${subTextColor} border-2 border-dashed rounded-xl ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-                                            <Settings size={32} className="mx-auto mb-2 opacity-30" />
-                                            <p className="text-sm">No variables defined yet.</p>
-                                            <p className="text-xs opacity-60 mt-1">Click below to add your first variable</p>
+                                        <div className={`text-center py-12 ${subTextColor} border-2 border-dashed rounded-2xl ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                                            <Settings size={40} className="mx-auto mb-3 opacity-20" />
+                                            <p className="text-sm font-medium">No variables defined</p>
+                                            <p className="text-xs opacity-60 mt-1">Start by adding your first variable below</p>
                                         </div>
                                     )}
 
                                     <button
                                         onClick={addVariable}
-                                        className={`mt-4 flex items-center gap-2 font-medium text-sm px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
+                                        className={`mt-6 flex items-center gap-2 font-bold text-sm px-4 py-2.5 rounded-xl transition-all ${theme === 'dark'
                                             ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
                                             : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
                                             }`}
                                     >
-                                        <Plus size={16} /> Add Variable
+                                        <Plus size={18} /> Add Variable
                                     </button>
                                 </div>
                             </>
                         ) : (
                             <div className={`flex-1 flex items-center justify-center ${subTextColor}`}>
                                 <div className="text-center">
-                                    <Globe size={48} className="mx-auto mb-4 opacity-30" />
-                                    <p className="text-lg font-medium">Select an environment</p>
-                                    <p className="text-sm opacity-60 mt-1">or create a new one to get started</p>
+                                    <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                                        <Globe size={40} className="opacity-20" />
+                                    </div>
+                                    <p className="text-xl font-bold mb-2">Select an environment</p>
+                                    <p className="text-sm opacity-60">Choose from the list or create a new one to manage variables</p>
                                 </div>
                             </div>
                         )}
@@ -346,24 +448,28 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                 </div>
 
                 {/* Footer */}
-                <div className={`p-4 border-t ${footerBg} flex justify-between items-center`}>
-                    <div className={`text-xs ${subTextColor}`}>
-                        {activeEnvironment && (
-                            <span>Active: <strong className={textColor}>{activeEnvironment.name}</strong></span>
-                        )}
+                <div className={`p-4 border-t ${footerBg} flex justify-between items-center px-6`}>
+                    <div className="flex items-center gap-4">
+                        <div className={`text-xs ${subTextColor}`}>
+                            {activeEnvironment ? (
+                                <span>Active: <strong className={textColor}>{activeEnvironment.name}</strong></span>
+                            ) : (
+                                <span>No active environment</span>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                         {selectedEnv && (
                             <button
                                 onClick={handleSaveEnvironment}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-lg transition-colors text-sm"
+                                className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-lg shadow-green-900/20 transition-all text-sm"
                             >
                                 Save Changes
                             </button>
                         )}
                         <button
                             onClick={onClose}
-                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-lg transition-colors text-sm"
+                            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all text-sm"
                         >
                             Done
                         </button>
