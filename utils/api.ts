@@ -1,4 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -63,14 +63,21 @@ export const api = {
     },
     environments: {
         list: (documentationId: string) => apiFetch(`/documentation/${documentationId}/environments`),
-        create: (documentationId: string, data: { name: string; variables?: Record<string, string>; isActive?: boolean }) =>
+        create: (documentationId: string, data: { name: string; variables?: Record<string, string>; isActive?: boolean; secrets?: string[] }) =>
             apiFetch(`/documentation/${documentationId}/environments`, { method: 'POST', body: JSON.stringify(data) }),
-        update: (environmentId: string, data: { name?: string; variables?: Record<string, string>; isActive?: boolean; order?: number }) =>
+        update: (environmentId: string, data: { name?: string; variables?: Record<string, string>; isActive?: boolean; order?: number; secrets?: string[] }) =>
             apiFetch(`/documentation/environments/${environmentId}`, { method: 'PATCH', body: JSON.stringify(data) }),
         delete: (environmentId: string) =>
             apiFetch(`/documentation/environments/${environmentId}`, { method: 'DELETE' }),
         setActive: (documentationId: string, environmentId: string | null) =>
             apiFetch(`/documentation/${documentationId}/environments/set-active`, { method: 'PATCH', body: JSON.stringify({ environmentId }) }),
+
+        // Global Environments
+        listGlobal: () => apiFetch('/documentation/global/list'),
+        createGlobal: (data: { name: string; variables?: Record<string, string>; isActive?: boolean; secrets?: string[] }) =>
+            apiFetch('/documentation/global', { method: 'POST', body: JSON.stringify(data) }),
+        setActiveGlobal: (environmentId: string | null) =>
+            apiFetch('/documentation/global/set-active', { method: 'PATCH', body: JSON.stringify({ environmentId }) }),
     },
     ai: {
         generateDocs: (data: any) => apiFetch('/ai/generate-docs', { method: 'POST', body: JSON.stringify(data) }),
