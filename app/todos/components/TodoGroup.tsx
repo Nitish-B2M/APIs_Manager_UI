@@ -107,14 +107,14 @@ export default function TodoGroup({ title, date, items, onUpdate, hideHeader = f
                     <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity duration-200">
                         <button
                             onClick={handleCopyMarkdown}
-                            className="text-gray-400 hover:text-indigo-500 dark:text-gray-500 dark:hover:text-indigo-400 p-1 cursor-pointer"
+                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 p-1 cursor-pointer"
                             title="Copy as Markdown"
                         >
                             <FileText size={16} />
                         </button>
                         <button
                             onClick={handleCopyScreenshot}
-                            className="text-gray-400 hover:text-indigo-500 dark:text-gray-500 dark:hover:text-indigo-400 p-1 cursor-pointer"
+                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 p-1 cursor-pointer"
                             title="Copy screenshot to clipboard"
                         >
                             <Copy size={16} />
