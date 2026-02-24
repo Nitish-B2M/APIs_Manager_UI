@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../../utils/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { Layout, FileText, Copy, X, Download, Keyboard, Search } from 'lucide-react';
+import { Layout, FileText, Copy, X, Download, Keyboard, Search, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import EnvModal from '../../components/EnvModal';
 import { useTheme } from '../../../context/ThemeContext';
@@ -15,11 +15,18 @@ import { Folder as FolderType } from '../../../types';
 import CreateFolderModal from './components/CreateFolderModal';
 import { useFolders } from '../../../hooks/useFolders';
 import { useEnvironments } from '../../../hooks/useEnvironments';
+import { useGlobalEnvironments } from '../../../hooks/useGlobalEnvironments';
 import { useRequestOrdering } from '../../../hooks/useRequestOrdering';
 import { Sidebar } from './components/Sidebar';
 import { RequestUrlBar } from './components/RequestUrlBar';
 import { RequestTabs } from './components/RequestTabs';
 import { ResponsePanel } from './components/ResponsePanel';
+import { DocumentationView } from './components/DocumentationView';
+import { ChangelogView } from './components/ChangelogView';
+import { RequestTabBar } from './components/RequestTabBar';
+import SaveVariableModal from './components/SaveVariableModal';
+import { CollectionRunner } from './components/CollectionRunner';
+import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { getThemeClasses } from './utils/theme';
 import { useSidebarResize, useHorizontalPanelResize, useVerticalPanelResize } from './hooks/useResizable';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -97,7 +104,8 @@ function ApiClientContent() {
     const [currentReq, setCurrentReq] = useState<any>(null);
     const [response, setResponse] = useState<any>(null);
     const [reqLoading, setReqLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'docs' | 'code'>('params');
+    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'docs' | 'code'>('params');
+    const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog'>('client');
     const [aiCommand, setAiCommand] = useState('Generate a professional name and a simple, clear description explaining what the request does and what the response means.');
 
     // UI State
@@ -109,15 +117,101 @@ function ApiClientContent() {
     const [isCollectionDirty, setIsCollectionDirty] = useState(false);
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
     const [showPreview, setShowPreview] = useState(false);
-    const [previewContent, setPreviewContent] = useState('');
+    const [showRunner, setShowRunner] = useState(false);
+
+    // Environments hooks
+    const { activeEnvironment } = useEnvironments({
+        documentationId: id as string,
+        enabled: !!id
+    });
+
+    const { activeEnvironment: activeGlobalEnvironment } = useGlobalEnvironments({
+        enabled: !!id
+    });
+
+    // Combined variables (collection overrides global)
+    const resolvedVariables = useMemo<Record<string, string>>(() => {
+        const globalVars = activeGlobalEnvironment?.variables || {};
+        const collectionVars = activeEnvironment?.variables || variables; // fallback to local state if no active env
+        return { ...globalVars, ...collectionVars };
+    }, [activeGlobalEnvironment, activeEnvironment, variables]);
+
+    // Combined secrets list
+    const activeSecrets = useMemo<string[]>(() => {
+        const globalSecrets = activeGlobalEnvironment?.secrets || [];
+        const collectionSecrets = activeEnvironment?.secrets || [];
+        return Array.from(new Set([...globalSecrets, ...collectionSecrets]));
+    }, [activeGlobalEnvironment, activeEnvironment]);
+
+    // Helper functions
+    const resolveAll = (text: string, ep?: any, maskSecrets = false) => {
+        let result = text || '';
+        Object.entries(resolvedVariables).forEach(([key, value]) => {
+            const isSecret = activeSecrets.includes(key);
+            const replacementValue = (maskSecrets && isSecret) ? '••••••••' : String(value);
+            result = result.replace(new RegExp(`{{${key.replace(/[{}]/g, '')}}}`, 'g'), replacementValue);
+        });
+        if (ep?.params) {
+            ep.params.forEach((p: any) => {
+                if (p.type === 'path' && p.key) {
+                    result = result.replace(new RegExp(`:${p.key}`, 'g'), p.value || `:${p.key}`);
+                }
+            });
+        }
+        return result;
+    };
+
+    const resolveUrl = (ep: any, maskSecrets = false) => {
+        let finalUrl = resolveAll(ep.url, ep, maskSecrets);
+        const queryParams = (ep.params || []).filter((p: any) => p.type === 'query' && p.key);
+        if (queryParams.length > 0) {
+            try {
+                const [baseUrl, existingQuery = ''] = finalUrl.split('?');
+                const searchParams = new URLSearchParams(existingQuery);
+                queryParams.forEach((p: any) => searchParams.set(p.key, resolveAll(p.value, ep, maskSecrets)));
+                const newQuery = searchParams.toString();
+                finalUrl = newQuery ? `${baseUrl}?${newQuery}` : baseUrl;
+            } catch (e) { }
+        }
+        return finalUrl;
+    };
+
+    const previewContent = useMemo(() => {
+        if (!doc) return '';
+        let md = `# ${doc.title}\n\n`;
+        endpoints.forEach(ep => {
+            const resolvedUrl = resolveUrl(ep, true); // Mask secrets in preview
+            md += `## ${ep.name}\n\n**Method:** \`${ep.method}\`  \n**URL:** \`${resolvedUrl}\`\n\n`;
+            if (ep.description) md += `### Description\n> ${ep.description.split('\n').join('\n> ')}\n\n`;
+            if (ep.headers?.length > 0) {
+                md += `### Headers\n| Key | Value |\n|---|---|\n`;
+                ep.headers.forEach((h: any) => md += `| ${h.key} | ${resolveAll(h.value, ep, true)} |\n`);
+            }
+            if (ep.body?.raw) md += `### Request Body\n\`\`\`json\n${resolveAll(ep.body.raw, ep, true)}\n\`\`\`\n\n`;
+            if (ep.lastResponse) md += `### Last Response (${ep.lastResponse.status})\n\`\`\`json\n${JSON.stringify(ep.lastResponse.data, null, 2)}\n\`\`\`\n\n`;
+            md += `\n---\n\n`;
+        });
+        return md;
+    }, [doc, endpoints, resolvedVariables, activeSecrets]);
     const [showSearchModal, setShowSearchModal] = useState(false);
     const [showShortcutsModal, setShowShortcutsModal] = useState(false);
     const [urlHistory, setUrlHistory] = useState<string[]>([]);
+    const [selectedText, setSelectedText] = useState('');
+    const [showSaveVarModal, setShowSaveVarModal] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
+
+    // Multi-Request Tabs State
+    const [openTabs, setOpenTabs] = useState<any[]>([]);
+    const [activeTabId, setActiveTabId] = useState<string | null>(null);
+    const [showViewSwitcher, setShowViewSwitcher] = useState(false);
 
     // Folder state
     const [showFolderModal, setShowFolderModal] = useState(false);
     const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
     const [parentFolderForNew, setParentFolderForNew] = useState<FolderType | null>(null);
+
+    // Delete confirm modal state
+    const [pendingDelete, setPendingDelete] = useState<{ type: 'request' | 'folder'; idx?: number; folder?: any; name: string } | null>(null);
 
     // Resizable hooks
     const { width: sidebarWidth, isResizing: isSidebarResizing, startResizing: startSidebarResize } = useSidebarResize();
@@ -130,13 +224,7 @@ function ApiClientContent() {
         enabled: !!id
     });
 
-    // Environments hook
-    const { activeEnvironment } = useEnvironments({
-        documentationId: id as string,
-        enabled: !!id
-    });
-
-    // Sync variables with active environment
+    // Sync variables with active environment (historical/local state management)
     useEffect(() => {
         if (activeEnvironment) {
             setVariables(activeEnvironment.variables || {});
@@ -220,19 +308,42 @@ function ApiClientContent() {
         }
     }, [doc, activeEnvironment]);
 
-    // Update currentReq on selection change
+    // Update active tab when selectedIdx changes (for legacy support/initial load)
     useEffect(() => {
-        if (endpoints[selectedIdx]) {
-            const req = { ...endpoints[selectedIdx] };
-            setCurrentReq(req);
-            setResponse(req.lastResponse || null);
-            setIsDirty(false);
+        const ep = endpoints[selectedIdx];
+        if (ep && !openTabs.find(t => t.id === ep.id)) {
+            setOpenTabs(prev => [...prev, ep]);
+            setActiveTabId(ep.id);
+        } else if (ep) {
+            setActiveTabId(ep.id);
         }
-    }, [selectedIdx]);
+    }, [selectedIdx, endpoints.length]);
+
+    // Update currentReq based on activeTabId
+    useEffect(() => {
+        const tab = openTabs.find(t => t.id === activeTabId);
+        if (tab) {
+            setCurrentReq({ ...tab });
+            setResponse(tab.lastResponse || null);
+            setIsDirty(false);
+
+            // Sync selectedIdx for sidebar highlighting
+            const idx = endpoints.findIndex(e => e.id === activeTabId);
+            if (idx !== -1 && idx !== selectedIdx) {
+                setSelectedIdx(idx);
+            }
+        } else if (openTabs.length === 0) {
+            setCurrentReq(null);
+            setResponse(null);
+        }
+    }, [activeTabId, openTabs]);
 
     // Close menus on click
     useEffect(() => {
-        const handleClick = () => setOpenMenuIdx(null);
+        const handleClick = () => {
+            setOpenMenuIdx(null);
+            setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
+        };
         window.addEventListener('click', handleClick);
         return () => window.removeEventListener('click', handleClick);
     }, []);
@@ -270,35 +381,20 @@ function ApiClientContent() {
         }
     }, [currentReq?.url]);
 
-    // Helper functions
-    const resolveAll = (text: string, ep?: any) => {
-        let result = text || '';
-        Object.entries(variables).forEach(([key, value]) => {
-            result = result.replace(new RegExp(`{{${key.replace(/[{}]/g, '')}}}`, 'g'), value);
-        });
-        if (ep?.params) {
-            ep.params.forEach((p: any) => {
-                if (p.type === 'path' && p.key) {
-                    result = result.replace(new RegExp(`:${p.key}`, 'g'), p.value || `:${p.key}`);
-                }
-            });
-        }
-        return result;
-    };
+    const handleTabClose = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const tabIndex = openTabs.findIndex(t => t.id === id);
+        const newTabs = openTabs.filter(t => t.id !== id);
+        setOpenTabs(newTabs);
 
-    const resolveUrl = (ep: any) => {
-        let finalUrl = resolveAll(ep.url, ep);
-        const queryParams = (ep.params || []).filter((p: any) => p.type === 'query' && p.key);
-        if (queryParams.length > 0) {
-            try {
-                const [baseUrl, existingQuery = ''] = finalUrl.split('?');
-                const searchParams = new URLSearchParams(existingQuery);
-                queryParams.forEach((p: any) => searchParams.set(p.key, resolveAll(p.value, ep)));
-                const newQuery = searchParams.toString();
-                finalUrl = newQuery ? `${baseUrl}?${newQuery}` : baseUrl;
-            } catch (e) { }
+        if (activeTabId === id) {
+            if (newTabs.length > 0) {
+                const nextTab = newTabs[Math.max(0, tabIndex - 1)];
+                setActiveTabId(nextTab.id);
+            } else {
+                setActiveTabId(null);
+            }
         }
-        return finalUrl;
     };
 
     // Handlers
@@ -530,14 +626,13 @@ function ApiClientContent() {
         let md = `# ${doc.title}\n\n`;
         endpoints.forEach(ep => md += getMarkdownForEndpoint(ep));
         if (download) {
-            const blob = new Blob([md], { type: 'text/markdown' });
+            const blob = new Blob([previewContent], { type: 'text/markdown' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = `${doc.title.replace(/\s+/g, '_')}_docs.md`;
             a.click();
             toast.success('Markdown generated!');
         } else {
-            setPreviewContent(md);
             setShowPreview(true);
         }
     };
@@ -554,51 +649,59 @@ function ApiClientContent() {
 
     const handleCopyAsCurl = (ep: any = currentReq) => {
         if (!ep) return;
-        let curl = `curl --location '${resolveUrl(ep)}' \\\n--request ${ep.method}`;
+        let curl = `curl --location '${resolveUrl(ep, true)}' \\\n--request ${ep.method}`;
         (ep.headers || []).forEach((h: any) => {
-            if (h.key) curl += ` \\\n--header '${h.key}: ${resolveAll(h.value, ep)}'`;
+            if (h.key) curl += ` \\\n--header '${h.key}: ${resolveAll(h.value, ep, true)}'`;
         });
         if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) {
-            curl += ` \\\n--data '${resolveAll(ep.body.raw, ep)}'`;
+            curl += ` \\\n--data '${resolveAll(ep.body.raw, ep, true)}'`;
         }
         navigator.clipboard.writeText(curl);
-        toast.success('cURL copied');
+        toast.success('cURL copied (secrets masked)');
     };
 
     const handleCopyAsFetch = (ep: any = currentReq) => {
         if (!ep) return;
         const headers: Record<string, string> = {};
-        (ep.headers || []).forEach((h: any) => { if (h.key) headers[h.key] = resolveAll(h.value, ep); });
+        (ep.headers || []).forEach((h: any) => { if (h.key) headers[h.key] = resolveAll(h.value, ep, true); });
         const options: any = { method: ep.method, headers };
-        if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) options.body = resolveAll(ep.body.raw, ep);
-        navigator.clipboard.writeText(`fetch("${resolveUrl(ep)}", ${JSON.stringify(options, null, 2)});`);
-        toast.success('Fetch code copied');
+        if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) options.body = resolveAll(ep.body.raw, ep, true);
+        navigator.clipboard.writeText(`fetch("${resolveUrl(ep, true)}", ${JSON.stringify(options, null, 2)});`);
+        toast.success('Fetch code copied (secrets masked)');
     };
 
-    const deleteRequest = async (idx: number, e: React.MouseEvent) => {
+    const deleteRequest = (idx: number, e: React.MouseEvent) => {
         e.stopPropagation();
         const requestToDelete = endpoints[idx];
-        if (!confirm('Delete this request?')) {
-            setOpenMenuIdx(null);
-            return;
-        }
-        try {
-            if (requestToDelete?.id) {
-                toast.loading('Deleting...', { id: 'delete-loading' });
-                await deleteRequestMutation.mutateAsync(requestToDelete.id);
-                toast.success('Request deleted!', { id: 'delete-loading' });
-            }
-            const newEps = endpoints.filter((_, i) => i !== idx);
-            setEndpoints(newEps);
-            if (selectedIdx === idx) {
-                if (newEps.length > 0) setSelectedIdx(Math.max(0, idx - 1));
-                else setCurrentReq(null);
-            } else if (idx < selectedIdx) setSelectedIdx(selectedIdx - 1);
-            queryClient.invalidateQueries({ queryKey: ['doc', id] });
-        } catch (err: any) {
-            toast.error(err.message || 'Failed to delete request', { id: 'delete-loading' });
-        }
+        setPendingDelete({ type: 'request', idx, name: requestToDelete?.name || 'Untitled Request' });
         setOpenMenuIdx(null);
+    };
+
+    const confirmDelete = async () => {
+        if (!pendingDelete) return;
+        if (pendingDelete.type === 'request' && pendingDelete.idx !== undefined) {
+            const idx = pendingDelete.idx;
+            const requestToDelete = endpoints[idx];
+            try {
+                if (requestToDelete?.id) {
+                    toast.loading('Deleting...', { id: 'delete-loading' });
+                    await deleteRequestMutation.mutateAsync(requestToDelete.id);
+                    toast.success('Request deleted!', { id: 'delete-loading' });
+                }
+                const newEps = endpoints.filter((_, i) => i !== idx);
+                setEndpoints(newEps);
+                if (selectedIdx === idx) {
+                    if (newEps.length > 0) setSelectedIdx(Math.max(0, idx - 1));
+                    else setCurrentReq(null);
+                } else if (idx < selectedIdx) setSelectedIdx(selectedIdx - 1);
+                queryClient.invalidateQueries({ queryKey: ['doc', id] });
+            } catch (err: any) {
+                toast.error(err.message || 'Failed to delete request', { id: 'delete-loading' });
+            }
+        } else if (pendingDelete.type === 'folder' && pendingDelete.folder) {
+            await deleteFolder(pendingDelete.folder.id, true);
+        }
+        setPendingDelete(null);
     };
 
     const duplicateRequest = async (idx: number, e: React.MouseEvent) => {
@@ -628,9 +731,9 @@ function ApiClientContent() {
 
         const resolveUrlForPdf = (url: string, ep: any) => {
             let resolved = url;
-            Object.keys(variables).forEach(key => {
+            Object.keys(resolvedVariables).forEach(key => {
                 const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                resolved = resolved.replace(regex, variables[key] || `[${key}]`);
+                resolved = resolved.replace(regex, resolvedVariables[key] || `[${key}]`);
             });
             resolved = resolved.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, param) => `[${param}]`);
             return resolved;
@@ -664,9 +767,9 @@ function ApiClientContent() {
                 content += `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background: #f9fafb;"><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb;">Key</th><th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb;">Value</th></tr></thead><tbody>`;
                 ep.headers.filter((h: any) => h.key).forEach((h: any) => {
                     let headerValue = h.value || '';
-                    Object.keys(variables).forEach(key => {
+                    Object.keys(resolvedVariables).forEach(key => {
                         const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                        headerValue = headerValue.replace(regex, variables[key] || `[${key}]`);
+                        headerValue = headerValue.replace(regex, resolvedVariables[key] || `[${key}]`);
                     });
                     content += `<tr><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace;">${h.key}</td><td style="padding: 8px; border: 1px solid #e5e7eb; font-family: monospace;">${headerValue}</td></tr>`;
                 });
@@ -676,9 +779,9 @@ function ApiClientContent() {
             if (ep.body?.raw) {
                 content += `<h3 style="font-size: 13px; color: #111827; margin: 14px 0 6px;">Request Body</h3>`;
                 let bodyContent = ep.body.raw;
-                Object.keys(variables).forEach(key => {
+                Object.keys(resolvedVariables).forEach(key => {
                     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                    bodyContent = bodyContent.replace(regex, variables[key] || `[${key}]`);
+                    bodyContent = bodyContent.replace(regex, resolvedVariables[key] || `[${key}]`);
                 });
                 content += `<pre style="background: #1f2937; color: #e5e7eb; padding: 12px; border-radius: 6px; font-size: 11px;">${bodyContent}</pre>`;
             }
@@ -713,6 +816,28 @@ function ApiClientContent() {
         }
     };
 
+    const handleSelection = useCallback(() => {
+        const selection = window.getSelection();
+        const text = selection?.toString().trim();
+        if (text && text.length > 0) {
+            setSelectedText(text);
+        } else {
+            setSelectedText('');
+        }
+    }, []);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        const selection = window.getSelection();
+        const text = selection?.toString().trim();
+        if (text && text.length > 0) {
+            e.preventDefault();
+            setSelectedText(text);
+            setContextMenu({ x: e.clientX, y: e.clientY, visible: true });
+        } else {
+            setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
+        }
+    }, []);
+
     const handleDragStart = (idx: number) => setDraggedIdx(idx);
     const handleDragEnd = () => setDraggedIdx(null);
     const handleDragOver = (e: React.DragEvent, idx: number) => e.preventDefault();
@@ -733,7 +858,10 @@ function ApiClientContent() {
                 canEdit={canEdit}
                 openMenuIdx={openMenuIdx}
                 draggedIdx={draggedIdx}
-                onSelectEndpoint={setSelectedIdx}
+                onSelectEndpoint={(idx) => {
+                    setSelectedIdx(idx);
+                    setActiveView('client');
+                }}
                 onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 onAddRequest={handleAddRequest}
                 onSaveCollection={handleSaveCollection}
@@ -753,7 +881,7 @@ function ApiClientContent() {
                 onReorderRequests={onReorderRequests}
                 onAddFolder={() => { setEditingFolder(null); setParentFolderForNew(null); setShowFolderModal(true); }}
                 onEditFolder={(folder) => { setEditingFolder(folder); setParentFolderForNew(null); setShowFolderModal(true); }}
-                onDeleteFolder={async (folder) => { if (confirm(`Delete folder "${folder.name}"?`)) await deleteFolder(folder.id, true); }}
+                onDeleteFolder={(folder) => { setPendingDelete({ type: 'folder', folder, name: folder.name }); }}
                 onAddSubfolder={(parentId) => { setEditingFolder(null); setParentFolderForNew(folders.find(f => f.id === parentId) || null); setShowFolderModal(true); }}
                 onMoveRequestToFolder={async (requestIdx, folderId) => {
                     const request = endpoints[requestIdx];
@@ -781,6 +909,7 @@ function ApiClientContent() {
                         toast.error(e.message || 'Failed to update slug', { id: 'slug-update' });
                     }
                 }}
+                onRunCollection={() => setShowRunner(true)}
             />
 
             <EnvModal
@@ -806,156 +935,281 @@ function ApiClientContent() {
             )}
 
             <div className="flex-1 flex flex-col h-full min-w-0">
-                {currentReq ? (
-                    <>
-                        <RequestUrlBar
-                            currentReq={currentReq}
-                            canEdit={canEdit}
-                            isDirty={isDirty}
-                            reqLoading={reqLoading}
-                            variables={variables}
-                            urlHistory={urlHistory}
-                            onMethodChange={(method) => handleRequestChange({ method })}
-                            onUrlChange={(url) => handleRequestChange({ url })}
-                            onSend={handleSendRequest}
-                            onSave={handleSaveSingleRequest}
-                            onCopyUrl={() => { navigator.clipboard.writeText(resolveUrl(currentReq)); toast.success('URL copied'); }}
-                            onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
-                            onDownloadMarkdown={() => handleDownloadIndividualMarkdown(currentReq)}
-                        />
-
-                        <div className={`flex-1 overflow-hidden flex ${paneLayout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
-                            <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${mainSplitRatio}%` } : { height: `${verticalSplitRatio}%` }}>
-                                <RequestTabs
-                                    currentReq={currentReq}
-                                    variables={variables}
-                                    activeTab={activeTab}
-                                    canEdit={canEdit}
-                                    aiCommand={aiCommand}
-                                    aiLoading={aiMutation.isPending}
-                                    onTabChange={setActiveTab}
-                                    onRequestChange={handleRequestChange}
-                                    onAiCommandChange={setAiCommand}
-                                    onAiGenerate={handleAiGenerate}
-                                    onFormatJson={handleFormatJson}
-                                    onCopyBody={handleCopyRequest}
-                                    onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
-                                />
-                            </div>
-
-                            {paneLayout === 'horizontal' ? (
-                                <div className={`w-1 cursor-col-resize hover:bg-indigo-500 z-10 flex-shrink-0 ${isResizingMain ? 'bg-indigo-600' : themeClasses.borderCol}`} onMouseDown={startMainResize} />
-                            ) : (
-                                <div className={`h-1 cursor-row-resize hover:bg-indigo-500 z-10 flex-shrink-0 ${isResizingVertical ? 'bg-indigo-600' : themeClasses.borderCol}`} onMouseDown={startVerticalResize} />
-                            )}
-
-                            <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${100 - mainSplitRatio}%` } : { height: `${100 - verticalSplitRatio}%` }}>
-                                <ResponsePanel
-                                    response={response}
-                                    currentReq={currentReq}
-                                    reqLoading={reqLoading}
-                                    paneLayout={paneLayout}
-                                    endpoints={endpoints}
-                                    selectedIdx={selectedIdx}
-                                    onLayoutChange={setPaneLayout}
-                                    onLoadHistory={(item) => { setCurrentReq({ ...item }); setResponse(item.lastResponse); setIsViewingHistory(true); }}
-                                    onBackToLatest={() => { const latest = endpoints[selectedIdx]; setCurrentReq({ ...latest }); setResponse(latest.lastResponse || null); setIsViewingHistory(false); }}
-                                    isViewingHistory={isViewingHistory}
-                                />
+                {/* View Switcher Tabs */}
+                {showViewSwitcher && (
+                    <div className={`flex items-center justify-between py-2 px-4 border-b ${themeClasses.borderCol} ${themeClasses.mainBg}`}>
+                        <div className="flex-1 flex justify-center">
+                            <div className={`flex p-1 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'} shadow-inner`}>
+                                {[
+                                    { id: 'client', label: 'API Client', icon: <Layout size={14} /> },
+                                    { id: 'docs', label: 'Documentation', icon: <FileText size={14} /> },
+                                    { id: 'changelog', label: 'Changelog', icon: <Clock size={14} /> }
+                                ].map((view) => (
+                                    <button
+                                        key={view.id}
+                                        onClick={() => setActiveView(view.id as any)}
+                                        className={`flex items-center gap-2 px-6 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-200 ${activeView === view.id
+                                            ? (theme === 'dark' ? 'bg-gray-700 text-indigo-400 shadow-md transform scale-105' : 'bg-white text-indigo-600 shadow-sm transform scale-105')
+                                            : (theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')
+                                            }`}
+                                    >
+                                        {view.icon}
+                                        {view.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    </>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                        <Layout size={48} className="mb-4 opacity-50" />
-                        <p>Select a request from the sidebar</p>
+                        <button
+                            onClick={() => setShowViewSwitcher(false)}
+                            className={`p-1.5 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-500' : 'hover:bg-gray-100 text-gray-400'} transition-colors`}
+                            title="Hide switcher"
+                        >
+                            <X size={14} />
+                        </button>
                     </div>
+                )}
+
+                {!showViewSwitcher && activeView === 'client' && (
+                    <div className={`flex items-center justify-end px-4 py-1 border-b ${themeClasses.borderCol} ${themeClasses.mainBg}`}>
+                        <button
+                            onClick={() => setShowViewSwitcher(true)}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} transition-colors`}
+                        >
+                            <Layout size={12} /> SHOW VIEWS
+                        </button>
+                    </div>
+                )}
+
+                {activeView === 'client' ? (
+                    <>
+                        <RequestTabBar
+                            openTabs={openTabs}
+                            activeTabId={activeTabId}
+                            onTabSelect={setActiveTabId}
+                            onTabClose={handleTabClose}
+                            theme={theme}
+                        />
+                        {currentReq ? (
+                            <>
+                                <RequestUrlBar
+                                    currentReq={currentReq}
+                                    canEdit={canEdit}
+                                    isDirty={isDirty}
+                                    reqLoading={reqLoading}
+                                    variables={variables}
+                                    urlHistory={urlHistory}
+                                    onMethodChange={(method) => handleRequestChange({ method })}
+                                    onUrlChange={(url) => handleRequestChange({ url })}
+                                    onSend={handleSendRequest}
+                                    onSave={handleSaveSingleRequest}
+                                    onCopyUrl={() => { navigator.clipboard.writeText(resolveUrl(currentReq)); toast.success('URL copied'); }}
+                                    onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
+                                    onDownloadMarkdown={() => handleDownloadIndividualMarkdown(currentReq)}
+                                />
+
+                                <div className={`flex-1 overflow-hidden flex ${paneLayout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
+                                    <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${mainSplitRatio}%` } : { height: `${verticalSplitRatio}%` }}>
+                                        <RequestTabs
+                                            currentReq={currentReq}
+                                            variables={variables}
+                                            activeTab={activeTab}
+                                            canEdit={canEdit}
+                                            aiCommand={aiCommand}
+                                            aiLoading={aiMutation.isPending}
+                                            onTabChange={setActiveTab}
+                                            onRequestChange={handleRequestChange}
+                                            onAiCommandChange={setAiCommand}
+                                            onAiGenerate={handleAiGenerate}
+                                            onFormatJson={handleFormatJson}
+                                            onCopyBody={handleCopyRequest}
+                                            onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
+                                            onSelection={handleSelection}
+                                            onContextMenu={handleContextMenu}
+                                        />
+                                    </div>
+
+                                    {paneLayout === 'horizontal' ? (
+                                        <div className={`w-1 cursor-col-resize hover:bg-indigo-500 z-10 flex-shrink-0 ${isResizingMain ? 'bg-indigo-600' : themeClasses.borderCol}`} onMouseDown={startMainResize} />
+                                    ) : (
+                                        <div className={`h-1 cursor-row-resize hover:bg-indigo-500 z-10 flex-shrink-0 ${isResizingVertical ? 'bg-indigo-600' : themeClasses.borderCol}`} onMouseDown={startVerticalResize} />
+                                    )}
+
+                                    <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${100 - mainSplitRatio}%` } : { height: `${100 - verticalSplitRatio}%` }}>
+                                        <ResponsePanel
+                                            response={response}
+                                            currentReq={currentReq}
+                                            reqLoading={reqLoading}
+                                            paneLayout={paneLayout}
+                                            endpoints={endpoints}
+                                            selectedIdx={selectedIdx}
+                                            onLayoutChange={setPaneLayout}
+                                            onLoadHistory={(item) => { setCurrentReq({ ...item }); setResponse(item.lastResponse); setIsViewingHistory(true); }}
+                                            onBackToLatest={() => { const latest = endpoints[selectedIdx]; setCurrentReq({ ...latest }); setResponse(latest.lastResponse || null); setIsViewingHistory(false); }}
+                                            isViewingHistory={isViewingHistory}
+                                            onSelection={handleSelection}
+                                            onContextMenu={handleContextMenu}
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                                <Layout size={48} className="mb-4 opacity-50" />
+                                <p>Select a request from the sidebar</p>
+                            </div>
+                        )
+                        }
+                    </>
+                ) : activeView === 'docs' ? (
+                    <DocumentationView
+                        doc={doc}
+                        endpoints={endpoints}
+                        theme={theme}
+                        previewContent={previewContent}
+                        onCopyMarkdown={() => { navigator.clipboard.writeText(previewContent); toast.success('Markdown copied!'); }}
+                        onDownloadMarkdown={() => handleGenerateMarkdown(true)}
+                        onDownloadPdf={handleDownloadPdf}
+                        resolveUrl={resolveUrl}
+                        resolveAll={resolveAll}
+                    />
+                ) : (
+                    <ChangelogView
+                        docId={id as string}
+                        theme={theme}
+                        variables={variables}
+                    />
                 )}
             </div>
 
-            {showPreview && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={(e) => { if (e.target === e.currentTarget) setShowPreview(false); }}>
-                    <div className={`${themeClasses.secondaryBg} border ${themeClasses.borderCol} rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
-                        <div className={`px-6 py-4 border-b ${themeClasses.borderCol} flex justify-between items-center`}>
-                            <div className="flex items-center gap-3">
-                                <FileText size={20} className="text-indigo-500" />
-                                <div><h3 className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{doc?.title || 'Documentation'}</h3><p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} documented</p></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => { navigator.clipboard.writeText(previewContent); toast.success('Markdown copied!'); }} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
-                                    <Copy size={14} /> Copy MD
-                                </button>
-                                <button onClick={() => handleGenerateMarkdown(true)} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
-                                    <Download size={14} /> Download MD
-                                </button>
-                                <button onClick={handleDownloadPdf} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs">
-                                    <Download size={14} /> Export PDF
-                                </button>
-                                <button onClick={() => setShowPreview(false)} className={`p-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} rounded-lg`}>
-                                    <X size={20} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 flex overflow-hidden">
-                            <div className={`w-56 flex-shrink-0 border-r ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} overflow-y-auto p-4`}>
-                                <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Contents</h4>
-                                <nav className="space-y-1">
-                                    {endpoints.map((ep, idx) => (
-                                        <a key={idx} href={`#endpoint-${idx}`} onClick={(e) => { e.preventDefault(); document.getElementById(`endpoint-${idx}`)?.scrollIntoView({ behavior: 'smooth' }); }} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-gray-100'}`}>
-                                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
-                                            <span className="truncate">{ep.name || 'Untitled'}</span>
-                                        </a>
-                                    ))}
-                                </nav>
+            {
+                showPreview && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={(e) => { if (e.target === e.currentTarget) setShowPreview(false); }}>
+                        <div className={`${themeClasses.secondaryBg} border ${themeClasses.borderCol} rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
+                            <div className={`px-6 py-4 border-b ${themeClasses.borderCol} flex justify-between items-center`}>
+                                <div className="flex items-center gap-3">
+                                    <FileText size={20} className="text-indigo-500" />
+                                    <div><h3 className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{doc?.title || 'Documentation'}</h3><p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} documented</p></div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => { navigator.clipboard.writeText(previewContent); toast.success('Markdown copied!'); }} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
+                                        <Copy size={14} /> Copy MD
+                                    </button>
+                                    <button onClick={() => handleGenerateMarkdown(true)} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
+                                        <Download size={14} /> Download MD
+                                    </button>
+                                    <button onClick={handleDownloadPdf} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs">
+                                        <Download size={14} /> Export PDF
+                                    </button>
+                                    <button onClick={() => setShowPreview(false)} className={`p-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} rounded-lg`}>
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-                                <div className="max-w-4xl mx-auto px-8 py-10">
-                                    <div className="mb-6 pb-4 border-b border-gray-700/20"><h1 className={`text-4xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{doc?.title || 'API Documentation'}</h1></div>
-                                    {endpoints.map((ep, idx) => (
-                                        <div key={idx} id={`endpoint-${idx}`} className="mb-6 scroll-mt-6">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <span className={`text-xs font-bold px-2 py-1 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
-                                                <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
-                                            </div>
-                                            <div className={`px-4 py-3 rounded-lg font-mono text-sm mb-6 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{resolveUrl(ep)}</div>
-                                            {ep.description && <p className={`mb-6 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{resolveAll(ep.description, ep)}</p>}
-                                            {ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key) && (
-                                                <div className="mb-6">
-                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Headers</h3>
-                                                    <div className={`rounded-lg border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} overflow-hidden`}>
-                                                        <table className="w-full text-sm">
-                                                            <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}><tr><th className="px-4 py-2 text-left">Key</th><th className="px-4 py-2 text-left">Value</th></tr></thead>
-                                                            <tbody>{ep.headers.filter((h: any) => h.key).map((h: any, hi: number) => (<tr key={hi} className="border-t border-gray-700"><td className="px-4 py-2">{h.key}</td><td className="px-4 py-2">{resolveAll(h.value, ep)}</td></tr>))}</tbody>
-                                                        </table>
+                            <div className="flex-1 flex overflow-hidden">
+                                <div className={`w-56 flex-shrink-0 border-r ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} overflow-y-auto p-4`}>
+                                    <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Contents</h4>
+                                    <nav className="space-y-1">
+                                        {endpoints.map((ep, idx) => (
+                                            <a key={idx} href={`#endpoint-${idx}`} onClick={(e) => { e.preventDefault(); document.getElementById(`endpoint-${idx}`)?.scrollIntoView({ behavior: 'smooth' }); }} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
+                                                <span className="truncate">{ep.name || 'Untitled'}</span>
+                                            </a>
+                                        ))}
+                                    </nav>
+                                </div>
+
+                                <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
+                                    <div className="max-w-4xl mx-auto px-8 py-10">
+                                        <div className="mb-6 pb-4 border-b border-gray-700/20"><h1 className={`text-4xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{doc?.title || 'API Documentation'}</h1></div>
+                                        {endpoints.map((ep, idx) => (
+                                            <div key={idx} id={`endpoint-${idx}`} className="mb-6 scroll-mt-6">
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <span className={`text-xs font-bold px-2 py-1 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
+                                                    <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
+                                                </div>
+                                                <div className={`px-4 py-3 rounded-lg font-mono text-sm mb-6 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{resolveUrl(ep)}</div>
+                                                {ep.description && <p className={`mb-6 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{resolveAll(ep.description, ep)}</p>}
+                                                {ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key) && (
+                                                    <div className="mb-6">
+                                                        <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Headers</h3>
+                                                        <div className={`rounded-lg border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} overflow-hidden`}>
+                                                            <table className="w-full text-sm">
+                                                                <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}><tr><th className="px-4 py-2 text-left">Key</th><th className="px-4 py-2 text-left">Value</th></tr></thead>
+                                                                <tbody>{ep.headers.filter((h: any) => h.key).map((h: any, hi: number) => (<tr key={hi} className="border-t border-gray-700"><td className="px-4 py-2">{h.key}</td><td className="px-4 py-2">{resolveAll(h.value, ep)}</td></tr>))}</tbody>
+                                                            </table>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                            {ep.body?.raw && (
-                                                <div className="mb-6">
-                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Request Body</h3>
-                                                    <SyntaxHighlighter language="json" style={vscDarkPlus} customStyle={{ padding: '12px', borderRadius: '8px' }}>{resolveAll(ep.body.raw, ep)}</SyntaxHighlighter>
-                                                </div>
-                                            )}
-                                            {idx < endpoints.length - 1 && <hr className="my-6 border-gray-700" />}
-                                        </div>
-                                    ))}
+                                                )}
+                                                {ep.body?.raw && (
+                                                    <div className="mb-6">
+                                                        <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Request Body</h3>
+                                                        <SyntaxHighlighter language="json" style={vscDarkPlus} customStyle={{ padding: '12px', borderRadius: '8px' }}>{resolveAll(ep.body.raw, ep)}</SyntaxHighlighter>
+                                                    </div>
+                                                )}
+                                                {idx < endpoints.length - 1 && <hr className="my-6 border-gray-700" />}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <SearchBar isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} endpoints={endpoints} onSelect={(idx: number) => { setSelectedIdx(idx); setShowSearchModal(false); }} />
             <KeyboardShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
+
+            <SaveVariableModal
+                isOpen={showSaveVarModal}
+                onClose={() => setShowSaveVarModal(false)}
+                selectedValue={selectedText}
+                documentationId={id as string}
+            />
+
+            {/* Custom Context Menu */}
+            {
+                contextMenu.visible && (
+                    <div
+                        className={`fixed z-[100] ${themeClasses.secondaryBg} border ${themeClasses.borderCol} rounded shadow-lg py-1 min-w-[150px] animate-in fade-in zoom-in duration-100`}
+                        style={{ top: contextMenu.y, left: contextMenu.x }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => {
+                                setShowSaveVarModal(true);
+                                setContextMenu({ ...contextMenu, visible: false });
+                            }}
+                            className={`w-full text-left px-3 py-2 text-[11px] ${themeClasses.textColor} hover:bg-indigo-600 hover:text-white flex items-center gap-2`}
+                        >
+                            <Copy size={12} /> Set as variable
+                        </button>
+                    </div>
+                )
+            }
 
             <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
                 <button onClick={() => setShowShortcutsModal(true)} className={`p-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'} border rounded-lg shadow-lg hover:text-indigo-400 transition-all`} title="Keyboard Shortcuts (Ctrl+/)"><Keyboard size={16} /></button>
                 <button onClick={() => setShowSearchModal(true)} className={`px-3 py-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-600'} border rounded-lg shadow-lg flex items-center gap-2 text-[11px] font-medium`} title="Search Endpoints (Ctrl+K)"><Search size={14} /><span>Search</span><kbd className="ml-1 px-1.5 py-0.5 bg-gray-700 rounded text-[9px]">Ctrl+K</kbd></button>
             </div>
-        </div>
+
+            {showRunner && (
+                <CollectionRunner
+                    endpoints={endpoints}
+                    variables={resolvedVariables}
+                    onClose={() => setShowRunner(false)}
+                />
+            )}
+
+            <DeleteConfirmModal
+                isOpen={!!pendingDelete}
+                itemName={pendingDelete?.name || ''}
+                itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'}
+                onConfirm={confirmDelete}
+                onCancel={() => setPendingDelete(null)}
+            />
+        </div >
     );
 }
 

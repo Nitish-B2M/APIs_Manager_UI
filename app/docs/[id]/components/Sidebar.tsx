@@ -22,7 +22,8 @@ import {
     Edit3,
     Globe,
     ExternalLink,
-    Upload
+    Upload,
+    Play
 } from 'lucide-react';
 import ImportCurlModal from './ImportCurlModal';
 import { useTheme } from '@/context/ThemeContext';
@@ -67,6 +68,7 @@ interface SidebarProps {
     onMoveRequestToFolder?: (requestIdx: number, folderId: string | null) => void;
     onReorderFolders?: (draggedId: string, targetId: string) => void;
     onSlugUpdate?: (slug: string) => void;
+    onRunCollection?: () => void;
 }
 
 const getMethodColor = (method: HttpMethod): string => {
@@ -129,6 +131,7 @@ function DropdownMenu({ buttonRef, isOpen, children, className = '' }: DropdownM
 
 // Request menu dropdown with auto-positioning
 interface RequestMenuProps {
+    theme: 'light' | 'dark';
     isOpen: boolean;
     request: Endpoint;
     globalIdx: number;
@@ -145,6 +148,7 @@ interface RequestMenuProps {
 }
 
 function RequestMenuDropdown({
+    theme,
     isOpen,
     request,
     globalIdx,
@@ -182,6 +186,8 @@ function RequestMenuDropdown({
         ? 'bottom-full mb-1'
         : 'top-full mt-1';
 
+    const secondaryBg2 = theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100';
+
     return (
         <div className="relative">
             <button
@@ -218,7 +224,7 @@ function RequestMenuDropdown({
                     >
                         <Copy size={12} className="text-green-500" /> Copy URL
                     </button>
-                    <div className={`h-px ${borderCol} my-1 opacity-50`} />
+                    <div className={`h-px ${secondaryBg2} my-1`} />
                     <button
                         onClick={(e) => onDuplicate(globalIdx, e)}
                         className={`w-full text-left px-3 py-1.5 ${hoverBg} flex items-center gap-2 ${textColor}`}
@@ -517,6 +523,7 @@ function FolderItemComponent({
                                         <Copy size={10} />
                                     </button> */}
                                     <RequestMenuDropdown
+                                        theme={theme}
                                         isOpen={openMenuIdx === globalIdx}
                                         request={request}
                                         globalIdx={globalIdx}
@@ -584,6 +591,7 @@ function SidebarComponent({
     onMoveRequestToFolder,
     onReorderFolders,
     onSlugUpdate,
+    onRunCollection,
 }: SidebarProps) {
     const { theme } = useTheme();
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -674,6 +682,18 @@ function SidebarComponent({
                                     title="Import cURL"
                                 >
                                     <Upload size={14} />
+                                </button>
+                            )}
+                            {onRunCollection && (
+                                <button
+                                    onClick={onRunCollection}
+                                    className={`p-1.5 rounded flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
+                                        ? 'bg-purple-600/20 text-purple-400 border-purple-500/30 hover:bg-purple-600/30'
+                                        : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100'
+                                        }`}
+                                    title="Run Collection"
+                                >
+                                    <Play size={14} />
                                 </button>
                             )}
                             {canEdit && (
@@ -919,6 +939,7 @@ function SidebarComponent({
 
                                         <div className="flex items-center gap-1">
                                             <RequestMenuDropdown
+                                                theme={theme}
                                                 isOpen={openMenuIdx === globalIdx}
                                                 request={request}
                                                 globalIdx={globalIdx}
