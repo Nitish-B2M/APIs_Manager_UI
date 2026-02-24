@@ -197,7 +197,7 @@ export default function TodoBoard() {
     }, {} as Record<string, Todo[]>);
 
     if (isLoading) {
-        return <div className="flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-indigo-500" /></div>;
+        return <div className="flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div>;
     }
 
     return (
@@ -205,7 +205,7 @@ export default function TodoBoard() {
 
             {/* Input Section - Matches design */}
             <div className="relative">
-                <form onSubmit={handleAddTodo} className="flex bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/50 transition-shadow duration-300 ease-in-out">
+                <form onSubmit={handleAddTodo} className="flex bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-orange-500/50 transition-shadow duration-300 ease-in-out">
                     <input
                         type="text"
                         value={newTaskTitle}
@@ -215,7 +215,7 @@ export default function TodoBoard() {
                     />
                     <button
                         type="submit"
-                        className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-10 py-4 transition-colors duration-200 ease-out uppercase tracking-wide text-sm"
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-10 py-4 transition-colors duration-200 ease-out uppercase tracking-wide text-sm"
                     >
                         Add
                     </button>
@@ -253,7 +253,7 @@ export default function TodoBoard() {
                 <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-xl flex gap-1">
                     <button
                         onClick={() => setShowTimestamp(!showTimestamp)}
-                        className={`p-2 rounded-lg transition-colors duration-200 ${showTimestamp ? 'bg-white dark:bg-gray-600 text-indigo-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-colors duration-200 ${showTimestamp ? 'bg-white dark:bg-gray-600 text-orange-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                         title="Toggle Timestamp"
                     >
                         <Clock size={20} />
@@ -261,14 +261,14 @@ export default function TodoBoard() {
                     <div className="w-px bg-gray-300 dark:bg-gray-600 mx-1 self-stretch"></div>
                     <button
                         onClick={() => setViewMode('list')}
-                        className={`p-2 rounded-lg transition-colors duration-200 ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 text-indigo-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-colors duration-200 ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 text-orange-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                         title="List View"
                     >
                         <LayoutList size={20} />
                     </button>
                     <button
                         onClick={() => setViewMode('split')}
-                        className={`p-2 rounded-lg transition-colors duration-200 ${viewMode === 'split' ? 'bg-white dark:bg-gray-600 text-indigo-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-colors duration-200 ${viewMode === 'split' ? 'bg-white dark:bg-gray-600 text-orange-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                         title="Split View"
                     >
                         <Columns size={20} />
@@ -348,7 +348,7 @@ export default function TodoBoard() {
                                         <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest pb-2">{displayDate}</h3>
                                         <button
                                             onClick={() => handleCopyScreenshot(mainTitle, date)}
-                                            className="text-gray-400 hover:text-indigo-500 dark:text-gray-500 dark:hover:text-indigo-400 opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 p-1"
+                                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 p-1"
                                             title="Copy screenshot to clipboard"
                                         >
                                             <Copy size={14} />
@@ -358,7 +358,7 @@ export default function TodoBoard() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {/* Unfinished Column */}
                                         <div className="flex flex-col gap-2">
-                                            <h4 className="text-xs font-bold text-indigo-500 uppercase tracking-wider px-2">In Progress ({unfinishedItems.length})</h4>
+                                            <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider px-2">In Progress ({unfinishedItems.length})</h4>
                                             <TodoGroup
                                                 title="Unfinished"
                                                 date={date}

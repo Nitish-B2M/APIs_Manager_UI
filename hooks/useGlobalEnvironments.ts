@@ -3,71 +3,70 @@ import { api } from '../utils/api';
 import { toast } from 'react-hot-toast';
 import { Environment } from '../types';
 
-interface UseEnvironmentsOptions {
-    documentationId: string;
+interface UseGlobalEnvironmentsOptions {
     enabled?: boolean;
 }
 
-export function useEnvironments({ documentationId, enabled = true }: UseEnvironmentsOptions) {
+export function useGlobalEnvironments({ enabled = true }: UseGlobalEnvironmentsOptions = {}) {
     const queryClient = useQueryClient();
-    const queryKey = ['environments', documentationId];
+    const queryKey = ['environments', 'global'];
 
-    // Fetch environments
+    // Fetch global environments
     const { data, isLoading, error } = useQuery<{ data: Environment[] }>({
         queryKey,
-        queryFn: () => api.environments.list(documentationId),
-        enabled: enabled && !!documentationId,
+        queryFn: () => api.environments.listGlobal(),
+        enabled: enabled,
     });
 
     const environments = data?.data || [];
     const activeEnvironment = environments.find(e => e.isActive) || null;
 
-    // Create environment
+    // Create global environment
     const createMutation = useMutation({
         mutationFn: (data: { name: string; variables?: Record<string, string>; isActive?: boolean; secrets?: string[] }) =>
-            api.environments.create(documentationId, data),
+            api.environments.createGlobal(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey });
-            toast.success('Environment created');
+            toast.success('Global environment created');
         },
         onError: (error: any) => {
-            toast.error(error.message || 'Failed to create environment');
+            toast.error(error.message || 'Failed to create global environment');
         },
     });
 
-    // Update environment
+    // Update global environment (uses common update route)
     const updateMutation = useMutation({
         mutationFn: ({ environmentId, data }: { environmentId: string; data: { name?: string; variables?: Record<string, string>; isActive?: boolean; secrets?: string[] } }) =>
             api.environments.update(environmentId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey });
-            toast.success('Environment updated');
+            toast.success('Global environment updated');
         },
         onError: (error: any) => {
-            toast.error(error.message || 'Failed to update environment');
+            toast.error(error.message || 'Failed to update global environment');
         },
     });
 
-    // Delete environment
+    // Delete global environment (uses common delete route)
     const deleteMutation = useMutation({
         mutationFn: (environmentId: string) => api.environments.delete(environmentId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey });
-            toast.success('Environment deleted');
+            toast.success('Global environment deleted');
         },
         onError: (error: any) => {
-            toast.error(error.message || 'Failed to delete environment');
+            toast.error(error.message || 'Failed to delete global environment');
         },
     });
 
-    // Set active environment
+    // Set active global environment
     const setActiveMutation = useMutation({
-        mutationFn: (environmentId: string | null) => api.environments.setActive(documentationId, environmentId),
+        mutationFn: (environmentId: string | null) => api.environments.setActiveGlobal(environmentId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey });
         },
         onError: (error: any) => {
-            toast.error(error.message || 'Failed to set active environment');
+            toast.error(error.message || 'Failed to set active global environment');
         },
     });
 
