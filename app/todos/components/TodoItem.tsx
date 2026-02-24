@@ -148,14 +148,14 @@ export default function TodoItem({ todo, onUpdate, showTimestamp = false }: Todo
             {...attributes}
             {...listeners}
             className="group flex items-center justify-between py-4 px-4 rounded-xl transition-all duration-300 ease-in-out cursor-default odd:bg-white even:bg-gray-50/80 dark:odd:bg-gray-800/30 dark:even:bg-gray-800/60
-            hover:bg-indigo-500/20 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
+            hover:bg-orange-500/20 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
         >
             <div className="flex items-center gap-4 flex-1 min-w-0" onClick={() => toggleComplete(todo)}>
                 {/* Custom Checkbox */}
                 <div
                     className={`w-5 h-5 min-w-5 min-h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors duration-200 ${todo.is_completed
-                        ? 'bg-indigo-500 border-indigo-500'
-                        : 'bg-transparent border-gray-300 dark:border-gray-500 group-hover:border-indigo-400'
+                        ? 'bg-orange-500 border-orange-500'
+                        : 'bg-transparent border-gray-300 dark:border-gray-500 group-hover:border-orange-400'
                         }`}
                 >
                     {todo.is_completed && <Check size={12} className="text-white" strokeWidth={4} />}
@@ -171,7 +171,7 @@ export default function TodoItem({ todo, onUpdate, showTimestamp = false }: Todo
                                 onChange={(e) => setEditTitle(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-indigo-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                                className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-orange-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                                 placeholder="Task title"
                                 autoFocus
                             />
@@ -182,14 +182,14 @@ export default function TodoItem({ todo, onUpdate, showTimestamp = false }: Todo
                                     onChange={(e) => setEditDescription(e.target.value)}
                                     onClick={(e) => e.stopPropagation()}
                                     onKeyDown={(e) => e.key === ' ' && e.stopPropagation()}
-                                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-orange-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                                     placeholder="Description (optional)"
                                 />
                                 <select
                                     value={editPriority}
                                     onChange={(e) => setEditPriority(e.target.value as any)}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500 text-gray-900 dark:text-gray-100"
+                                    className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-orange-500 text-gray-900 dark:text-gray-100"
                                 >
                                     <option value="">No priority</option>
                                     <option value="low">🟢 Low</option>
@@ -265,7 +265,7 @@ export default function TodoItem({ todo, onUpdate, showTimestamp = false }: Todo
                         </button>
                         <button
                             onClick={handleCopy}
-                            className="text-gray-400 hover:text-indigo-500 dark:text-gray-500 dark:hover:text-indigo-400 p-2 transition-colors duration-200"
+                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 p-2 transition-colors duration-200"
                             title="Copy task text"
                         >
                             <Copy size={18} />
