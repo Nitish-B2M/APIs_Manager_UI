@@ -17,9 +17,17 @@ export interface RequestHeader {
     value: string;
 }
 
+export interface FormDataField {
+    key: string;
+    value: string;
+    type: 'text' | 'file';
+    file?: File | null;
+}
+
 export interface RequestBody {
     mode: 'raw' | 'formdata' | 'urlencoded';
     raw: string;
+    formdata?: FormDataField[];
 }
 
 export interface ApiResponse {
@@ -53,6 +61,19 @@ export interface HistoryItem {
     timestamp: string;
 }
 
+// ============================================
+// Auth Config Types
+// ============================================
+
+export type AuthType = 'none' | 'bearer' | 'basic' | 'apikey';
+
+export interface AuthNone { type: 'none' }
+export interface AuthBearer { type: 'bearer'; token: string }
+export interface AuthBasic { type: 'basic'; username: string; password: string }
+export interface AuthApiKey { type: 'apikey'; key: string; value: string; addTo: 'header' | 'query' }
+
+export type AuthConfig = AuthNone | AuthBearer | AuthBasic | AuthApiKey;
+
 export interface Endpoint {
     id?: string;
     name: string;
@@ -62,6 +83,7 @@ export interface Endpoint {
     body: RequestBody;
     params: RequestParam[];
     description: string;
+    auth?: AuthConfig;
     lastResponse: ApiResponse | null;
     history: HistoryItem[];
     folderId?: string | null;
@@ -95,9 +117,12 @@ export interface FolderWithChildren extends Folder {
 
 export interface Environment {
     id: string;
-    documentationId: string;
+    documentationId: string | null;
+    userId: string;
     name: string;
     variables: Record<string, string>;
+    secrets: string[];
+    scope: 'COLLECTION' | 'GLOBAL';
     isActive: boolean;
     order: number;
     createdAt: string;
@@ -177,7 +202,7 @@ export interface ApiListResponse<T> {
 // UI State Types
 // ============================================
 
-export type TabType = 'params' | 'headers' | 'body' | 'docs' | 'ai' | 'share' | 'code';
+export type TabType = 'params' | 'headers' | 'auth' | 'body' | 'docs' | 'ai' | 'share' | 'code';
 
 export type PaneLayout = 'horizontal' | 'vertical';
 
