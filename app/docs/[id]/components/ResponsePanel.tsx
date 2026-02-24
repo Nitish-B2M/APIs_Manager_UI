@@ -21,6 +21,8 @@ interface ResponsePanelProps {
     onLoadHistory: (item: any) => void;
     onBackToLatest: () => void;
     isViewingHistory: boolean;
+    onSelection: () => void;
+    onContextMenu: (e: React.MouseEvent) => void;
 }
 
 export function ResponsePanel({
@@ -34,6 +36,8 @@ export function ResponsePanel({
     onLoadHistory,
     onBackToLatest,
     isViewingHistory,
+    onSelection,
+    onContextMenu
 }: ResponsePanelProps) {
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
@@ -240,7 +244,7 @@ export function ResponsePanel({
                     const highlightedText = highlightMatches(responseText);
 
                     return (
-                        <div className="absolute inset-0 overflow-auto scrollbar-thin">
+                        <div className="absolute inset-0 overflow-auto scrollbar-thin" onMouseUp={onSelection} onContextMenu={onContextMenu}>
                             {hasFilter && (
                                 <div className={`sticky top-0 z-10 px-4 py-2 text-[10px] font-bold ${theme === 'dark' ? 'bg-indigo-900/90 text-indigo-200' : 'bg-indigo-100 text-indigo-700'} border-b ${themeClasses.borderCol} flex items-center gap-2`}>
                                     <Search size={12} />
@@ -253,8 +257,12 @@ export function ResponsePanel({
                             )}
                             {hasFilter ? (
                                 <pre
-                                    className={`p-6 font-mono text-[13px] ${wrapLines ? 'whitespace-pre-wrap break-words' : 'whitespace-pre overflow-x-auto'}`}
-                                    style={{ color: theme === 'dark' ? '#d4d4d4' : '#1f2937' }}
+                                    className={`p-6 font-mono text-[13px] ${wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre overflow-x-auto'}`}
+                                    style={{
+                                        color: theme === 'dark' ? '#d4d4d4' : '#1f2937',
+                                        wordBreak: wrapLines ? 'break-all' : 'normal',
+                                        overflowWrap: wrapLines ? 'anywhere' : 'normal'
+                                    }}
                                 >
                                     {highlightedText.split(/<<<HIGHLIGHT>>>|<<<ENDHIGHLIGHT>>>/).map((part, i) =>
                                         i % 2 === 1 ? (
@@ -274,7 +282,17 @@ export function ResponsePanel({
                                         borderRadius: 0,
                                         fontSize: '13px',
                                         backgroundColor: theme === 'dark' ? 'transparent' : '#fafafa',
-                                        padding: '24px'
+                                        padding: '24px',
+                                        whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
+                                        wordBreak: wrapLines ? 'break-all' : 'normal',
+                                        overflowWrap: wrapLines ? 'anywhere' : 'normal',
+                                    }}
+                                    codeTagProps={{
+                                        style: {
+                                            whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
+                                            wordBreak: wrapLines ? 'break-all' : 'normal',
+                                            overflowWrap: wrapLines ? 'anywhere' : 'normal',
+                                        }
                                     }}
                                     wrapLongLines={wrapLines}
                                 >
