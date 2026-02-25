@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { FileText, Copy, Download } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Editor from '@monaco-editor/react';
 import { Endpoint, Documentation } from '@/types';
 import { getThemeClasses } from '../utils/theme';
 
@@ -48,8 +47,8 @@ export function DocumentationView({
                             className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-white'} transition-colors`}
                         >
                             <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
-                                    ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
-                                        'bg-gray-600/20 text-gray-500'
+                                ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
+                                    'bg-gray-600/20 text-gray-500'
                                 }`}>{ep.method}</span>
                             <span className="truncate">{ep.name || 'Untitled'}</span>
                         </a>
@@ -81,8 +80,8 @@ export function DocumentationView({
                         <div key={idx} id={`endpoint-${idx}`} className="mb-12 scroll-mt-6 last:mb-0">
                             <div className="flex items-center gap-3 mb-4">
                                 <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500 border border-green-500/20' :
-                                        ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500 border border-blue-500/20' :
-                                            'bg-gray-600/20 text-gray-500 border border-gray-600/20'
+                                    ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500 border border-blue-500/20' :
+                                        'bg-gray-600/20 text-gray-500 border border-gray-600/20'
                                     }`}>{ep.method}</span>
                                 <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
                             </div>
@@ -127,20 +126,26 @@ export function DocumentationView({
                             {ep.body?.raw && (
                                 <div className="mb-8">
                                     <h3 className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Request Body</h3>
-                                    <div className="rounded-xl overflow-hidden border border-gray-700/20 shadow-lg">
-                                        <SyntaxHighlighter
+                                    <div className="h-60 rounded-xl overflow-hidden border border-gray-700/20 shadow-lg">
+                                        <Editor
+                                            height="100%"
                                             language="json"
-                                            style={vscDarkPlus}
-                                            customStyle={{
-                                                margin: 0,
-                                                padding: '20px',
-                                                fontSize: '13px',
-                                                lineHeight: '1.6',
-                                                backgroundColor: '#0a0a0a'
+                                            value={resolveAll(ep.body.raw, ep)}
+                                            theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                            options={{
+                                                readOnly: true,
+                                                fontSize: 13,
+                                                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                                                minimap: { enabled: false },
+                                                scrollBeyondLastLine: false,
+                                                wordWrap: 'on',
+                                                automaticLayout: true,
+                                                padding: { top: 12, bottom: 12 },
+                                                lineNumbers: 'on',
+                                                folding: true,
+                                                renderLineHighlight: 'none',
                                             }}
-                                        >
-                                            {resolveAll(ep.body.raw, ep)}
-                                        </SyntaxHighlighter>
+                                        />
                                     </div>
                                 </div>
                             )}

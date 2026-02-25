@@ -23,7 +23,10 @@ import {
     Globe,
     ExternalLink,
     Upload,
-    Play
+    Play,
+    Sparkles,
+    Clock,
+    Users
 } from 'lucide-react';
 import ImportCurlModal from './ImportCurlModal';
 import { useTheme } from '@/context/ThemeContext';
@@ -40,6 +43,7 @@ interface SidebarProps {
     width: number;
     isDirty: boolean;
     canEdit: boolean;
+    canAdmin?: boolean;
     openMenuIdx: number | null;
     draggedIdx: number | null;
     onSelectEndpoint: (idx: number) => void;
@@ -69,6 +73,9 @@ interface SidebarProps {
     onReorderFolders?: (draggedId: string, targetId: string) => void;
     onSlugUpdate?: (slug: string) => void;
     onRunCollection?: () => void;
+    onShowSnapshots?: () => void;
+    aiEnabled?: boolean;
+    onAiToggle?: (enabled: boolean) => void;
 }
 
 const getMethodColor = (method: HttpMethod): string => {
@@ -277,6 +284,7 @@ interface FolderItemProps {
     onFolderDragStart?: (id: string) => void;
     draggedFolderId?: string | null;
     onReorderFolders?: (draggedId: string, targetId: string) => void;
+    onReorderRequests?: (oldIndex: number, newIndex: number) => void;
 }
 
 function FolderItemComponent({
@@ -312,6 +320,7 @@ function FolderItemComponent({
     onFolderDragStart,
     draggedFolderId,
     onReorderFolders,
+    onReorderRequests,
 }: FolderItemProps) {
     const [showFolderMenu, setShowFolderMenu] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
@@ -470,6 +479,7 @@ function FolderItemComponent({
                             onFolderDragStart={onFolderDragStart}
                             draggedFolderId={draggedFolderId}
                             onReorderFolders={onReorderFolders}
+                            onReorderRequests={onReorderRequests}
                         />
                     ))}
 
@@ -486,6 +496,13 @@ function FolderItemComponent({
                                 onDragStart={() => canEdit && onDragStart(globalIdx)}
                                 onDragOver={(e) => canEdit && onDragOver(e, globalIdx)}
                                 onDragEnd={() => canEdit && onDragEnd()}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (draggedIdx !== null && draggedIdx !== globalIdx && onReorderRequests) {
+                                        onReorderRequests(draggedIdx, globalIdx);
+                                    }
+                                }}
                                 className={`group flex items-center justify-between p-2 cursor-pointer border-l-2 transition-all relative ${isSelected
                                     ? theme === 'dark'
                                         ? 'bg-indigo-600/20 border-indigo-500'
@@ -564,6 +581,7 @@ function SidebarComponent({
     width,
     isDirty,
     canEdit,
+    canAdmin,
     openMenuIdx,
     draggedIdx,
     onSelectEndpoint,
@@ -584,6 +602,7 @@ function SidebarComponent({
     onDragOver,
     onDragEnd,
     onReorderRequests,
+    onShowSnapshots,
     onAddFolder,
     onEditFolder,
     onDeleteFolder,
@@ -592,6 +611,8 @@ function SidebarComponent({
     onReorderFolders,
     onSlugUpdate,
     onRunCollection,
+    aiEnabled = true,
+    onAiToggle,
 }: SidebarProps) {
     const { theme } = useTheme();
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -696,6 +717,18 @@ function SidebarComponent({
                                     <Play size={14} />
                                 </button>
                             )}
+                            {onShowSnapshots && (
+                                <button
+                                    onClick={onShowSnapshots}
+                                    className={`p-1.5 rounded flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
+                                        ? 'bg-blue-600/20 text-blue-400 border-blue-500/30 hover:bg-blue-600/30'
+                                        : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
+                                        }`}
+                                    title="Collection Snapshots"
+                                >
+                                    <Clock size={14} />
+                                </button>
+                            )}
                             {canEdit && (
                                 <button
                                     onClick={onAddRequest}
@@ -722,6 +755,18 @@ function SidebarComponent({
                             )}
                             {canEdit && (
                                 <>
+                                    {canAdmin && (
+                                        <button
+                                            onClick={onShare}
+                                            className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
+                                                ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
+                                                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                                                }`}
+                                            title="Manage Team & Sharing"
+                                        >
+                                            <Users size={14} />
+                                        </button>
+                                    )}
                                     <button
                                         onClick={onSaveCollection}
                                         disabled={!isDirty}
@@ -737,18 +782,6 @@ function SidebarComponent({
                                         {isDirty && (
                                             <span className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-gray-800 animate-pulse" />
                                         )}
-                                    </button>
-                                    <button
-                                        onClick={onShare}
-                                        className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${doc.isPublic
-                                            ? 'bg-indigo-600 text-white border-indigo-500'
-                                            : theme === 'dark'
-                                                ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
-                                                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                                            }`}
-                                        title={doc.isPublic ? 'Make Private' : 'Make Public'}
-                                    >
-                                        <Share2 size={14} />
                                     </button>
                                 </>
                             )}
@@ -909,6 +942,13 @@ function SidebarComponent({
                                         onDragStart={() => canEdit && onDragStart(globalIdx)}
                                         onDragOver={(e) => canEdit && onDragOver(e, globalIdx)}
                                         onDragEnd={() => canEdit && onDragEnd()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (draggedIdx !== null && draggedIdx !== globalIdx && onReorderRequests) {
+                                                onReorderRequests(draggedIdx, globalIdx);
+                                            }
+                                        }}
                                         className={`group flex items-center justify-between p-2 cursor-pointer border-l-2 transition-all relative ${isSelected
                                             ? theme === 'dark'
                                                 ? 'bg-indigo-600/20 border-indigo-500'
@@ -969,6 +1009,24 @@ function SidebarComponent({
                     </div>
                 )
             }
+            {/* AI Control Toggle */}
+            <div className={`mt-auto border-t ${borderCol} p-3 flex items-center justify-between`}>
+                <div className="flex items-center gap-2">
+                    <Sparkles size={12} className={aiEnabled ? 'text-indigo-400' : subTextColor} />
+                    <span className={`text-[10px] uppercase font-bold tracking-wider ${aiEnabled ? textColor : subTextColor}`}>
+                        AI Assistant
+                    </span>
+                </div>
+                <button
+                    onClick={() => onAiToggle?.(!aiEnabled)}
+                    className={`w-8 h-4 rounded-full transition-all relative ${aiEnabled ? 'bg-indigo-600' : theme === 'dark' ? 'bg-gray-800' : 'bg-gray-300'
+                        }`}
+                >
+                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${aiEnabled ? 'left-4.5' : 'left-0.5'
+                        }`} />
+                </button>
+            </div>
+
             <ImportCurlModal
                 isOpen={isImportOpen}
                 onClose={() => setIsImportOpen(false)}

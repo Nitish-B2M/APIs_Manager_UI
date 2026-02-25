@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Copy, Search, X, History, RotateCcw, Clock, Columns2, Rows2, WrapText } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Copy, Search, X, History, RotateCcw, Clock, Columns2, Rows2, WrapText, FlaskConical, CheckCircle2, XCircle, ChevronDown, ChevronUp, Split, Zap, Sparkles, Loader2, Lightbulb } from 'lucide-react';
+import Editor, { DiffEditor } from '@monaco-editor/react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 import { toast } from 'react-hot-toast';
+import { SocketPanel } from './SocketPanel';
+import { WebsocketMessage, ConnectionStatus } from '@/types';
 
 type PaneLayout = 'horizontal' | 'vertical';
 
@@ -23,6 +24,17 @@ interface ResponsePanelProps {
     isViewingHistory: boolean;
     onSelection: () => void;
     onContextMenu: (e: React.MouseEvent) => void;
+
+    // WS/SSE Props
+    wsMessages?: WebsocketMessage[];
+    wsStatus?: ConnectionStatus;
+    socketMode?: 'ws' | 'sse';
+    onWsConnect?: () => void;
+    onWsDisconnect?: () => void;
+    onWsSendMessage?: (data: string) => void;
+    onWsClearMessages?: () => void;
+    aiEnabled?: boolean;
+    onExplainError?: (error: any) => Promise<string | null>;
 }
 
 export function ResponsePanel({
@@ -37,21 +49,48 @@ export function ResponsePanel({
     onBackToLatest,
     isViewingHistory,
     onSelection,
-    onContextMenu
+    onContextMenu,
+    wsMessages = [],
+    wsStatus = 'disconnected',
+    socketMode = 'ws',
+    onWsConnect,
+    onWsDisconnect,
+    onWsSendMessage,
+    onWsClearMessages,
+    aiEnabled,
+    onExplainError
 }: ResponsePanelProps) {
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
 
     const [showHistory, setShowHistory] = useState(false);
     const [showAbsoluteTime, setShowAbsoluteTime] = useState(false);
-    const [responseFilter, setResponseFilter] = useState('');
-    const [showResponseFilter, setShowResponseFilter] = useState(false);
     const [wrapLines, setWrapLines] = useState(false);
+    const [showTestResults, setShowTestResults] = useState(true);
+    const [showDiff, setShowDiff] = useState(false);
+    const [isExplaining, setIsExplaining] = useState(false);
+    const [explanation, setExplanation] = useState<string | null>(null);
+    const [editorInstance, setEditorInstance] = useState<any>(null);
+
+    const handleEditorDidMount = (editor: any, monaco: any) => {
+        setEditorInstance(editor);
+    };
 
     const handleCopyResponse = () => {
         if (!response?.data) return;
         navigator.clipboard.writeText(JSON.stringify(response.data, null, 2));
         toast.success('Response copied');
+    };
+
+    const handleExplainError = async () => {
+        if (!onExplainError || isExplaining) return;
+        setIsExplaining(true);
+        try {
+            const result = await onExplainError(response);
+            if (result) setExplanation(result);
+        } finally {
+            setIsExplaining(false);
+        }
     };
 
     const handleHistoryClick = (item: any) => {
@@ -60,18 +99,35 @@ export function ResponsePanel({
         toast.success('Loaded from history');
     };
 
+    const formatSize = (bytes: number) => {
+        if (!bytes) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    const detectLanguage = (data: any) => {
+        if (typeof data !== 'string') return 'json';
+        const trimmed = data.trim();
+        if (trimmed.startsWith('<')) return 'html';
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) return 'json';
+        return 'text';
+    };
+
     return (
         <div className={`h-full ${themeClasses.mainBg} flex flex-col border-l ${themeClasses.borderCol} min-w-0 relative ${paneLayout === 'horizontal' ? '' : 'border-t'}`}>
             {/* Header */}
             <div className={`p-2 pl-4 border-b ${themeClasses.borderCol} ${themeClasses.secondaryBg} flex justify-between items-center z-10 relative`}>
                 <div className="flex items-center gap-4">
                     <h3 className={`font-bold ${themeClasses.textColor} opacity-60 text-[10px] uppercase`}>Response</h3>
-                    {response && (
+                    {response && (currentReq.protocol === 'REST' || !currentReq.protocol) && (
                         <div className="flex items-center gap-3 text-[10px] p-1.5">
                             <span className={`font-bold ${response.status >= 200 && response.status < 300 ? 'text-green-500' : 'text-red-500'}`}>
                                 {response.status} {response.statusText}
                             </span>
                             <span className={themeClasses.subTextColor}>{response.time}ms</span>
+                            <span className={themeClasses.subTextColor}>{formatSize(response.size)}</span>
                             <button
                                 onClick={() => setShowAbsoluteTime(!showAbsoluteTime)}
                                 className={`text-[9px] ${themeClasses.subTextColor} hover:text-indigo-500 flex items-center gap-1 ${themeClasses.inputBg} px-1.5 py-0.5 rounded border ${themeClasses.borderCol}`}
@@ -80,41 +136,48 @@ export function ResponsePanel({
                                     ? new Date(response.timestamp || Date.now()).toLocaleTimeString()
                                     : 'JUST NOW'}
                             </button>
+                            {/* Test Results Badge */}
+                            {(response.testResults?.length || 0) > 0 && (() => {
+                                const passed = response.testResults!.filter((r: any) => r.passed).length;
+                                const total = response.testResults!.length;
+                                const allPassed = passed === total;
+                                return (
+                                    <button
+                                        onClick={() => setShowTestResults(p => !p)}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border transition-colors ${allPassed
+                                            ? 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20'
+                                            : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                                            }`}
+                                    >
+                                        <FlaskConical size={9} />
+                                        {passed}/{total} tests
+                                    </button>
+                                );
+                            })()}
+                        </div>
+                    )}
+                    {currentReq.protocol === 'WS' && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 rounded-full border border-amber-500/20">
+                            <Zap size={10} className="text-amber-500" />
+                            <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">WebSocket Mode</span>
                         </div>
                     )}
                 </div>
                 <div className="flex gap-1 items-center">
-                    {response && (
+                    {response && (currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol) && (
                         <>
-                            {showResponseFilter ? (
-                                <div className="flex items-center gap-1 mr-1">
-                                    <div className="relative">
-                                        <Search size={12} className={`absolute left-2 top-1/2 -translate-y-1/2 ${themeClasses.subTextColor}`} />
-                                        <input
-                                            type="text"
-                                            value={responseFilter}
-                                            onChange={(e) => setResponseFilter(e.target.value)}
-                                            placeholder="Filter response..."
-                                            className={`pl-7 pr-2 py-1 text-[10px] ${themeClasses.inputBg} border ${themeClasses.borderCol} rounded focus:ring-1 focus:ring-indigo-500 outline-none w-40 ${themeClasses.textColor}`}
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <button
-                                        onClick={() => { setShowResponseFilter(false); setResponseFilter(''); }}
-                                        className={`p-1 ${themeClasses.subTextColor} hover:text-red-400 rounded`}
-                                    >
-                                        <X size={12} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setShowResponseFilter(true)}
-                                    className={`p-1 rounded transition-all ${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`}
-                                    title="Filter Response (Ctrl+F)"
-                                >
-                                    <Search size={14} />
-                                </button>
-                            )}
+                            <button
+                                onClick={() => {
+                                    if (editorInstance) {
+                                        const action = editorInstance.getAction('actions.find');
+                                        if (action) action.run();
+                                    }
+                                }}
+                                className={`p-1 rounded transition-all ${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`}
+                                title="Find in Response (Ctrl+F)"
+                            >
+                                <Search size={14} />
+                            </button>
                             <button
                                 onClick={handleCopyResponse}
                                 className={`p-1 px-2 text-[9px] ${themeClasses.subTextColor} hover:text-indigo-500 ${themeClasses.inputBg} hover:bg-opacity-50 rounded border ${themeClasses.borderCol} flex items-center gap-1 transition-all mr-1 font-bold`}
@@ -127,6 +190,14 @@ export function ResponsePanel({
                                 title={wrapLines ? 'Disable Word Wrap' : 'Enable Word Wrap'}
                             >
                                 <WrapText size={14} />
+                            </button>
+                            <button
+                                onClick={() => setShowDiff(!showDiff)}
+                                className={`p-1 rounded transition-all ${showDiff ? 'bg-indigo-600 text-white' : `${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`} ${!currentReq?.lastResponse ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                title={showDiff ? 'Current View' : 'Compare with Saved'}
+                                disabled={!currentReq?.lastResponse}
+                            >
+                                <Split size={14} />
                             </button>
                         </>
                     )}
@@ -214,102 +285,175 @@ export function ResponsePanel({
                 )}
 
                 {/* Empty State */}
-                {!response && !reqLoading && (
+                {!response && !reqLoading && (currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol) && (
                     <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-[11px] font-bold">
                         HIT SEND TO SEE RESPONSE
                     </div>
                 )}
 
+                {/* WebSocket Panel */}
+                {(currentReq.protocol === 'WS' || currentReq.protocol === 'SSE') && (
+                    <div className="absolute inset-0 z-10 bg-inherit">
+                        <SocketPanel
+                            messages={wsMessages}
+                            status={wsStatus}
+                            mode={socketMode}
+                            onConnect={onWsConnect || (() => { })}
+                            onDisconnect={onWsDisconnect || (() => { })}
+                            onSendMessage={onWsSendMessage || (() => { })}
+                            onClearMessages={onWsClearMessages || (() => { })}
+                        />
+                    </div>
+                )}
+
                 {/* Loading State */}
                 {reqLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400 z-40 bg-inherit/50">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                     </div>
                 )}
 
-                {/* Response Content */}
-                {response && !response.error && (() => {
-                    const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
-                    const filterLower = responseFilter.toLowerCase().trim();
-                    const hasFilter = filterLower.length > 0;
-                    const matchCount = hasFilter ? (responseText.toLowerCase().match(new RegExp(filterLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length : 0;
-
-                    const highlightMatches = (text: string) => {
-                        if (!hasFilter) return text;
-                        const escapedFilter = filterLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`(${escapedFilter})`, 'gi');
-                        return text.replace(regex, '<<<HIGHLIGHT>>>$1<<<ENDHIGHLIGHT>>>');
-                    };
-
-                    const highlightedText = highlightMatches(responseText);
+                {/* Response Content / Editor */}
+                {(() => {
+                    const responseText = response && !response.error ? (typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)) : '';
+                    const lang = response && !response.error ? detectLanguage(response.data) : 'text';
+                    const isVisible = response && !response.error && !reqLoading && (currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol);
 
                     return (
-                        <div className="absolute inset-0 overflow-auto scrollbar-thin" onMouseUp={onSelection} onContextMenu={onContextMenu}>
-                            {hasFilter && (
-                                <div className={`sticky top-0 z-10 px-4 py-2 text-[10px] font-bold ${theme === 'dark' ? 'bg-indigo-900/90 text-indigo-200' : 'bg-indigo-100 text-indigo-700'} border-b ${themeClasses.borderCol} flex items-center gap-2`}>
-                                    <Search size={12} />
-                                    {matchCount > 0 ? (
-                                        <span>{matchCount} match{matchCount !== 1 ? 'es' : ''} found for "{responseFilter}"</span>
-                                    ) : (
-                                        <span>No matches found for "{responseFilter}"</span>
-                                    )}
-                                </div>
-                            )}
-                            {hasFilter ? (
-                                <pre
-                                    className={`p-6 font-mono text-[13px] ${wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre overflow-x-auto'}`}
-                                    style={{
-                                        color: theme === 'dark' ? '#d4d4d4' : '#1f2937',
-                                        wordBreak: wrapLines ? 'break-all' : 'normal',
-                                        overflowWrap: wrapLines ? 'anywhere' : 'normal'
-                                    }}
-                                >
-                                    {highlightedText.split(/<<<HIGHLIGHT>>>|<<<ENDHIGHLIGHT>>>/).map((part, i) =>
-                                        i % 2 === 1 ? (
-                                            <mark key={i} className="bg-yellow-400 text-black px-0.5 rounded">{part}</mark>
-                                        ) : (
-                                            <span key={i}>{part}</span>
-                                        )
-                                    )}
-                                </pre>
-                            ) : (
-                                <SyntaxHighlighter
-                                    style={theme === 'dark' ? vscDarkPlus : materialLight}
-                                    language="json"
-                                    customStyle={{
-                                        margin: 0,
-                                        minHeight: '100%',
-                                        borderRadius: 0,
-                                        fontSize: '13px',
-                                        backgroundColor: theme === 'dark' ? 'transparent' : '#fafafa',
-                                        padding: '24px',
-                                        whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
-                                        wordBreak: wrapLines ? 'break-all' : 'normal',
-                                        overflowWrap: wrapLines ? 'anywhere' : 'normal',
-                                    }}
-                                    codeTagProps={{
-                                        style: {
-                                            whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
-                                            wordBreak: wrapLines ? 'break-all' : 'normal',
-                                            overflowWrap: wrapLines ? 'anywhere' : 'normal',
-                                        }
-                                    }}
-                                    wrapLongLines={wrapLines}
-                                >
-                                    {responseText}
-                                </SyntaxHighlighter>
-                            )}
+                        <div className={`absolute inset-0 w-full h-full ${isVisible ? 'block' : 'hidden'}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
+                            <div className="w-full h-full overflow-hidden">
+                                {showDiff && currentReq?.lastResponse ? (
+                                    <DiffEditor
+                                        key="diff-editor"
+                                        height="100%"
+                                        language={lang}
+                                        original={typeof currentReq.lastResponse.data === 'string'
+                                            ? currentReq.lastResponse.data
+                                            : JSON.stringify(currentReq.lastResponse.data, null, 2)}
+                                        modified={responseText}
+                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                        options={{
+                                            readOnly: true,
+                                            fontSize: 13,
+                                            renderSideBySide: true,
+                                            minimap: { enabled: false },
+                                            scrollBeyondLastLine: false,
+                                            automaticLayout: true,
+                                            wordWrap: wrapLines ? 'on' : 'off',
+                                            padding: { top: 20, bottom: 20 },
+                                        }}
+                                    />
+                                ) : (
+                                    <Editor
+                                        key="normal-editor"
+                                        height="100%"
+                                        language={lang}
+                                        value={responseText}
+                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                        onMount={handleEditorDidMount}
+                                        options={{
+                                            readOnly: true,
+                                            fontSize: 13,
+                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                                            minimap: { enabled: false },
+                                            scrollBeyondLastLine: false,
+                                            wordWrap: wrapLines ? 'on' : 'off',
+                                            automaticLayout: true,
+                                            padding: { top: 20, bottom: 20 },
+                                            lineNumbers: 'on',
+                                            folding: true,
+                                            renderLineHighlight: 'none',
+                                            find: {
+                                                seedSearchStringFromSelection: 'always',
+                                                autoFindInSelection: 'always',
+                                                addExtraSpaceOnTop: false
+                                            }
+                                        }}
+                                    />
+                                )}
+                            </div>
                         </div>
                     );
                 })()}
 
                 {/* Error State */}
-                {response && response.error && (
-                    <div className="absolute inset-0 p-4 text-red-400 bg-red-950/20 overflow-auto">
-                        <pre className="text-red-400 whitespace-pre-wrap break-all font-mono text-[11px]">Error: {response.message}</pre>
+                {response && response.error && (currentReq.protocol === 'REST' || !currentReq.protocol) && (
+                    <div className="absolute inset-0 p-4 text-red-400 bg-red-950/20 overflow-auto z-30 flex flex-col gap-4">
+                        <div className="flex justify-between items-start">
+                            <pre className="text-red-400 whitespace-pre-wrap break-all font-mono text-[11px] flex-1">Error: {response.message}</pre>
+                            {aiEnabled && (
+                                <button
+                                    onClick={handleExplainError}
+                                    disabled={isExplaining}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap ${isExplaining ? 'bg-indigo-600/50 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40'}`}
+                                >
+                                    {isExplaining ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                    EXPLAIN WITH AI
+                                </button>
+                            )}
+                        </div>
+
+                        {explanation && (
+                            <div className={`mt-2 p-4 rounded-xl border ${theme === 'dark' ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                                <div className="flex items-center gap-2 mb-2 text-indigo-400 font-bold text-[10px] uppercase tracking-wider">
+                                    <Lightbulb size={14} />
+                                    AI Explanation
+                                </div>
+                                <p className={`text-xs ${theme === 'dark' ? 'text-indigo-100' : 'text-indigo-900'} leading-relaxed`}>
+                                    {explanation}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
+
+            {/* Test Results Panel */}
+            {!response?.error && (response?.testResults?.length || 0) > 0 && (currentReq.protocol === 'REST' || !currentReq.protocol) && (
+                <div className={`border-t ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#16162a]' : 'bg-gray-50'}`}>
+                    <button
+                        onClick={() => setShowTestResults(p => !p)}
+                        className={`w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold ${themeClasses.subTextColor} hover:text-indigo-400 transition-colors`}
+                    >
+                        <span className="flex items-center gap-2">
+                            <FlaskConical size={12} />
+                            TEST RESULTS
+                            {(() => {
+                                const passed = response.testResults!.filter((r: any) => r.passed).length;
+                                const total = response.testResults!.length;
+                                return (
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${passed === total ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                        }`}>{passed}/{total} passed</span>
+                                );
+                            })()}
+                        </span>
+                        {showTestResults ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                    </button>
+                    {showTestResults && (
+                        <div className="px-4 pb-3 space-y-1">
+                            {response.testResults!.map((result: any, i: number) => (
+                                <div key={i} className={`flex items-start gap-2.5 py-1.5 px-2 rounded-lg text-xs ${result.passed
+                                    ? theme === 'dark' ? 'bg-green-900/10' : 'bg-green-50'
+                                    : theme === 'dark' ? 'bg-red-900/10' : 'bg-red-50'
+                                    }`}>
+                                    {result.passed
+                                        ? <CheckCircle2 size={13} className="text-green-500 mt-0.5 flex-shrink-0" />
+                                        : <XCircle size={13} className="text-red-500 mt-0.5 flex-shrink-0" />
+                                    }
+                                    <div className="min-w-0">
+                                        <p className={`font-semibold text-[11px] ${result.passed ? 'text-green-400' : 'text-red-400'}`}>
+                                            {result.name}
+                                        </p>
+                                        <p className={`text-[10px] ${themeClasses.subTextColor} truncate`}>
+                                            {result.message}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
