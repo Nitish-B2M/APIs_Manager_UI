@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Check, Copy, Terminal, Code2, FileCode } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Editor from '@monaco-editor/react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { generateAllSnippets } from '../../../../utils/codeGenerator';
 import { resolveAll, resolveHeaders, resolveUrl } from '../../../../utils/variables';
@@ -113,21 +112,26 @@ export default function CodeSnippets({ request, variables }: CodeSnippetsProps) 
                         <><Copy size={12} /> Copy</>
                     )}
                 </button>
-                <div className={`${codeBg} h-full overflow-hidden flex flex-col`}>
-                    <SyntaxHighlighter
+                <div className={`${codeBg} h-full overflow-hidden`}>
+                    <Editor
+                        height="100%"
                         language={activeLanguage === 'curl' ? 'bash' : activeLanguage}
-                        style={theme === 'dark' ? vscDarkPlus : materialLight}
-                        customStyle={{
-                            margin: 0,
-                            padding: '3rem 1rem 1rem 1rem', // Top padding for copy button
-                            height: '100%',
-                            fontSize: '13px',
-                            lineHeight: '1.5',
-                            background: 'transparent'
+                        value={snippets[activeLanguage] || '// No snippet available'}
+                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                        options={{
+                            readOnly: true,
+                            fontSize: 13,
+                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            wordWrap: 'on',
+                            automaticLayout: true,
+                            padding: { top: 50, bottom: 20 },
+                            lineNumbers: 'on',
+                            folding: true,
+                            renderLineHighlight: 'none',
                         }}
-                    >
-                        {snippets[activeLanguage] || '// No snippet available'}
-                    </SyntaxHighlighter>
+                    />
                 </div>
             </div>
         </div>

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../../utils/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { Layout, FileText, Copy, X, Download, Keyboard, Search, Clock } from 'lucide-react';
+import { Layout, FileText, Copy, X, Download, Keyboard, Search, Clock, Activity, Shield, Users } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import EnvModal from '../../components/EnvModal';
 import { useTheme } from '../../../context/ThemeContext';
@@ -27,11 +27,18 @@ import { RequestTabBar } from './components/RequestTabBar';
 import SaveVariableModal from './components/SaveVariableModal';
 import { CollectionRunner } from './components/CollectionRunner';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
+import { SnapshotModal } from './components/SnapshotModal';
+import { MonitorDashboard } from './components/MonitorDashboard';
+import { CollaboratorModal } from './components/CollaboratorModal';
 import { getThemeClasses } from './utils/theme';
 import { useSidebarResize, useHorizontalPanelResize, useVerticalPanelResize } from './hooks/useResizable';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-import { vscDarkPlus, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Editor from '@monaco-editor/react';
 import { ProtectedRoute } from '../../../components/AuthGuard';
+import { useWebSocket } from './hooks/useWebSocket';
+import { useSSE } from './hooks/useSSE';
+import { useOfflineSync } from '../../../hooks/useOfflineSync';
+import { OfflineBanner } from '../../../components/OfflineBanner';
+import { cacheCollection, getCachedCollection } from '../../../utils/offlineCache';
 
 const deduplicateEndpoints = (eps: any[]) => {
     const seen = new Set();
@@ -73,6 +80,9 @@ function ApiClientContent() {
     });
     const me = meRes?.data;
 
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || undefined) : undefined;
+    const { isOnline, queueLength, isSyncing, queueMutation } = useOfflineSync(id as string, token);
+
     const updateMutation = useMutation({
         mutationFn: (data: { id: string, content: any }) => api.documentation.update(data.id, data.content)
     });
@@ -81,6 +91,15 @@ function ApiClientContent() {
     });
     const aiMutation = useMutation({
         mutationFn: (data: any) => api.ai.generateDocs(data)
+    });
+    const aiGenerateTestsMutation = useMutation({
+        mutationFn: (data: { method: string; url: string; response: any }) => api.ai.generateTests(data)
+    });
+    const aiGenerateRequestMutation = useMutation({
+        mutationFn: (prompt: string) => api.ai.generateRequest(prompt)
+    });
+    const aiExplainErrorMutation = useMutation({
+        mutationFn: (data: { method: string; url: string; error: any }) => api.ai.explainError(data)
     });
     const updateRequestMutation = useMutation({
         mutationFn: (data: { requestId: string, content: any }) => api.documentation.updateRequest(data.requestId, data.content)
@@ -93,8 +112,9 @@ function ApiClientContent() {
         mutationFn: (requestId: string) => api.documentation.deleteRequest(requestId)
     });
 
-    const isOwner = me && doc && me.id === (doc as any).userId;
-    const canEdit = isOwner;
+    const userRole = doc?.role || (me && doc && me.id === (doc as any).userId ? 'OWNER' : 'VIEWER');
+    const canEdit = userRole === 'OWNER' || userRole === 'ADMIN' || userRole === 'EDITOR';
+    const canAdmin = userRole === 'OWNER' || userRole === 'ADMIN';
 
     // State
     const [endpoints, setEndpoints] = useState<any[]>([]);
@@ -104,9 +124,20 @@ function ApiClientContent() {
     const [currentReq, setCurrentReq] = useState<any>(null);
     const [response, setResponse] = useState<any>(null);
     const [reqLoading, setReqLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'docs' | 'code'>('params');
-    const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog'>('client');
+    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'docs' | 'code' | 'mocking'>('params');
+    const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog' | 'monitoring'>('client');
     const [aiCommand, setAiCommand] = useState('Generate a professional name and a simple, clear description explaining what the request does and what the response means.');
+    const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ai_enabled');
+            return saved !== null ? JSON.parse(saved) : true;
+        }
+        return true;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('ai_enabled', JSON.stringify(aiEnabled));
+    }, [aiEnabled]);
 
     // UI State
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -118,6 +149,8 @@ function ApiClientContent() {
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const [showRunner, setShowRunner] = useState(false);
+    const [showSnapshots, setShowSnapshots] = useState(false);
+    const [showCollaborators, setShowCollaborators] = useState(false);
 
     // Environments hooks
     const { activeEnvironment } = useEnvironments({
@@ -128,6 +161,95 @@ function ApiClientContent() {
     const { activeEnvironment: activeGlobalEnvironment } = useGlobalEnvironments({
         enabled: !!id
     });
+
+    // --- Deep Link Listener ---
+    useEffect(() => {
+        if (typeof window !== 'undefined' && (window as any).desktopAPI?.onDeepLink) {
+            (window as any).desktopAPI.onDeepLink((url: string) => {
+                try {
+                    const parsedUrl = new URL(url);
+                    const reqId = parsedUrl.searchParams.get('request');
+                    const collId = parsedUrl.searchParams.get('collection');
+
+                    if (collId && collId !== id) {
+                        router.push(`/docs/${collId}?request=${reqId || ''}`);
+                        return;
+                    }
+
+                    if (reqId) {
+                        const epIndex = endpoints.findIndex(e => e.id === reqId);
+                        if (epIndex !== -1) {
+                            setSelectedIdx(epIndex);
+                            const ep = endpoints[epIndex];
+                            setOpenTabs(prev => {
+                                if (!prev.find(t => t.id === ep.id)) {
+                                    return [...prev, ep];
+                                }
+                                return prev;
+                            });
+                            setActiveTabId(ep.id);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to parse deep link', e);
+                }
+            });
+
+            return () => {
+                (window as any).desktopAPI?.offDeepLink?.();
+            };
+        }
+    }, [id, endpoints, router]);
+
+    // --- WebSocket ---
+    const initialWsMessages = useMemo(() => {
+        if (currentReq?.protocol === 'WS' && currentReq?.lastResponse?.messages) {
+            return currentReq.lastResponse.messages;
+        }
+        return [];
+    }, [currentReq?.id]);
+    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect, sendMessage: wsSendMessage, clearMessages: wsClearMessages } = useWebSocket(initialWsMessages);
+
+    // Sync WebSocket messages back to currentReq.lastResponse
+    useEffect(() => {
+        if (currentReq?.protocol === 'WS' && wsMessages.length > 0 && wsMessages !== currentReq?.lastResponse?.messages) {
+            const updatedReq = {
+                ...currentReq,
+                lastResponse: { ...currentReq.lastResponse, messages: wsMessages }
+            };
+            setCurrentReq(updatedReq);
+            // Sync with endpoints
+            const newEps = [...endpoints];
+            newEps[selectedIdx] = updatedReq;
+            setEndpoints(newEps);
+            // Sync with openTabs
+            setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
+        }
+    }, [wsMessages, currentReq?.id]);
+
+    // --- SSE ---
+    const initialSseMessages = useMemo(() => {
+        if (currentReq?.protocol === 'SSE' && currentReq?.lastResponse?.messages) {
+            return currentReq.lastResponse.messages;
+        }
+        return [];
+    }, [currentReq?.id]);
+    const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect, clearMessages: sseClearMessages } = useSSE(initialSseMessages);
+
+    // Sync SSE messages back to currentReq.lastResponse
+    useEffect(() => {
+        if (currentReq?.protocol === 'SSE' && sseMessages.length > 0 && sseMessages !== currentReq?.lastResponse?.messages) {
+            const updatedReq = {
+                ...currentReq,
+                lastResponse: { ...currentReq.lastResponse, messages: sseMessages }
+            };
+            setCurrentReq(updatedReq);
+            const newEps = [...endpoints];
+            newEps[selectedIdx] = updatedReq;
+            setEndpoints(newEps);
+            setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
+        }
+    }, [sseMessages, currentReq?.id]);
 
     // Combined variables (collection overrides global)
     const resolvedVariables = useMemo<Record<string, string>>(() => {
@@ -146,6 +268,22 @@ function ApiClientContent() {
     // Helper functions
     const resolveAll = (text: string, ep?: any, maskSecrets = false) => {
         let result = text || '';
+
+        // Resolve built-in dynamic variables
+        const dynamicVars: Record<string, () => string> = {
+            '$timestamp': () => String(Math.floor(Date.now() / 1000)),
+            '$isoTimestamp': () => new Date().toISOString(),
+            '$randomUUID': () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }),
+            '$randomInt': () => String(Math.floor(Math.random() * 1000)),
+            '$randomBool': () => String(Math.random() > 0.5),
+            '$randomEmail': () => `user${Math.floor(Math.random() * 9999)}@example.com`,
+            '$randomFirstName': () => ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'][Math.floor(Math.random() * 5)],
+            '$randomLastName': () => ['Smith', 'Jones', 'Williams', 'Brown', 'Davis'][Math.floor(Math.random() * 5)],
+        };
+        Object.entries(dynamicVars).forEach(([key, generate]) => {
+            result = result.replace(new RegExp(`{{\\${key}}}`, 'g'), generate);
+        });
+
         Object.entries(resolvedVariables).forEach(([key, value]) => {
             const isSecret = activeSecrets.includes(key);
             const replacementValue = (maskSecrets && isSecret) ? '••••••••' : String(value);
@@ -273,27 +411,40 @@ function ApiClientContent() {
     }, []);
 
     // Initialize from doc
+    const [offlineDoc, setOfflineDoc] = useState<any>(null);
+
     useEffect(() => {
-        if (doc) {
+        if (error && !isOnline) {
+            getCachedCollection(id as string).then(setOfflineDoc);
+        }
+    }, [error, isOnline, id]);
+
+    const activeDoc = doc || offlineDoc;
+
+    useEffect(() => {
+        if (activeDoc) {
             try {
-                let eps = (doc as any).requests || [];
-                if (eps.length === 0 && doc.content) {
+                // Background cache update if it was a real fetch
+                if (doc) cacheCollection(id as string, doc);
+
+                let eps = (activeDoc as any).requests || [];
+                if (eps.length === 0 && activeDoc.content) {
                     let content: any = {};
-                    if (typeof doc.content === 'string' && doc.content.trim().startsWith('{')) {
-                        content = JSON.parse(doc.content);
-                    } else if (typeof doc.content === 'object') {
-                        content = doc.content;
+                    if (typeof activeDoc.content === 'string' && activeDoc.content.trim().startsWith('{')) {
+                        content = JSON.parse(activeDoc.content);
+                    } else if (typeof activeDoc.content === 'object') {
+                        content = activeDoc.content;
                     }
                     eps = content.endpoints || [];
                 }
-                setEndpoints(deduplicateEndpoints(eps).sort((a: any, b: any) => a.id.localeCompare(b.id)));
+                setEndpoints(deduplicateEndpoints(eps).sort((a: any, b: any) => (a.order || 0) - (b.order || 0)));
 
                 if (!activeEnvironment) {
                     let vars = {};
-                    if (doc.content) {
-                        let content: any = typeof doc.content === 'string' && doc.content.trim().startsWith('{')
-                            ? JSON.parse(doc.content)
-                            : doc.content;
+                    if (activeDoc.content) {
+                        let content: any = typeof activeDoc.content === 'string' && activeDoc.content.trim().startsWith('{')
+                            ? JSON.parse(activeDoc.content)
+                            : activeDoc.content;
                         vars = content?.variables || {};
                     }
                     setVariables(vars);
@@ -306,7 +457,7 @@ function ApiClientContent() {
                 }
             } catch (e) { console.warn("Doc content parsing skipped:", e); }
         }
-    }, [doc, activeEnvironment]);
+    }, [doc, activeDoc, activeEnvironment, id]);
 
     // Update active tab when selectedIdx changes (for legacy support/initial load)
     useEffect(() => {
@@ -319,13 +470,20 @@ function ApiClientContent() {
         }
     }, [selectedIdx, endpoints.length]);
 
-    // Update currentReq based on activeTabId
+    // Update currentReq based on activeTabId ONLY when switching tabs
+    const lastActiveTabRef = React.useRef<string | null>(null);
     useEffect(() => {
+        if (activeTabId === lastActiveTabRef.current) {
+            // Did not switch tabs, just an openTabs update (e.g. typing) - do nothing
+            return;
+        }
+
         const tab = openTabs.find(t => t.id === activeTabId);
         if (tab) {
             setCurrentReq({ ...tab });
             setResponse(tab.lastResponse || null);
             setIsDirty(false);
+            lastActiveTabRef.current = activeTabId;
 
             // Sync selectedIdx for sidebar highlighting
             const idx = endpoints.findIndex(e => e.id === activeTabId);
@@ -335,8 +493,20 @@ function ApiClientContent() {
         } else if (openTabs.length === 0) {
             setCurrentReq(null);
             setResponse(null);
+            lastActiveTabRef.current = null;
         }
-    }, [activeTabId, openTabs]);
+    }, [activeTabId, openTabs, endpoints, selectedIdx]);
+
+    // Auto-save logic for requests
+    // useEffect(() => {
+    //     if (!isDirty || !currentReq?.id || !canEdit) return;
+
+    //     const timer = setTimeout(() => {
+    //         handleSaveSingleRequest();
+    //     }, 5000); // 5 seconds debounce
+
+    //     return () => clearTimeout(timer);
+    // }, [isDirty, currentReq?.id, canEdit]);
 
     // Close menus on click
     useEffect(() => {
@@ -410,6 +580,7 @@ function ApiClientContent() {
                     url: initialData.url || '',
                     headers: initialData.headers || [],
                     body: initialData.body || { mode: 'raw', raw: '' },
+                    protocol: initialData.protocol || 'REST',
                     name: name
                 };
 
@@ -435,25 +606,38 @@ function ApiClientContent() {
             toast.error('Cannot save: Request not yet created on server');
             return;
         }
+
+        const payloadContent = {
+            name: currentReq.name,
+            method: currentReq.method,
+            url: currentReq.url,
+            protocol: currentReq.protocol || 'REST',
+            description: currentReq.description || '',
+            body: currentReq.body,
+            headers: currentReq.headers,
+            params: currentReq.params,
+            lastResponse: currentReq.lastResponse,
+            history: currentReq.history || [],
+            assertions: currentReq.assertions || []
+        };
+
         try {
             toast.loading('Saving request...', { id: 'save-req' });
-            const res = await updateRequestMutation.mutateAsync({
-                requestId: currentReq.id,
-                content: {
-                    name: currentReq.name,
-                    method: currentReq.method,
-                    url: currentReq.url,
-                    description: currentReq.description || '',
-                    body: currentReq.body,
-                    headers: currentReq.headers,
-                    params: currentReq.params,
-                    lastResponse: currentReq.lastResponse,
-                    history: currentReq.history || []
-                }
-            });
-            toast.success(res.message || 'Request saved!', { id: 'save-req' });
-            setIsDirty(false);
-            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+
+            const wasQueued = await queueMutation('saveRequest', { ...payloadContent, id: currentReq.id });
+
+            if (wasQueued) {
+                toast.success('Offline: Request queued for sync!', { id: 'save-req' });
+                setIsDirty(false);
+            } else {
+                const res = await updateRequestMutation.mutateAsync({
+                    requestId: currentReq.id,
+                    content: payloadContent
+                });
+                toast.success(res.message || 'Request saved!', { id: 'save-req' });
+                setIsDirty(false);
+                queryClient.invalidateQueries({ queryKey: ['doc', id] });
+            }
         } catch (e: any) {
             toast.error(e.message || 'Failed to save request', { id: 'save-req' });
         }
@@ -526,18 +710,132 @@ function ApiClientContent() {
         }
     };
 
+    const handleAiGenerateTests = async () => {
+        if (!currentReq || !currentReq.lastResponse || !currentReq.lastResponse.data) {
+            toast.error('No response data found to generate tests from');
+            return;
+        }
+
+        try {
+            toast.loading('AI is generating tests...', { id: 'ai-tests' });
+            const result = await aiGenerateTestsMutation.mutateAsync({
+                method: currentReq.method,
+                url: currentReq.url,
+                response: currentReq.lastResponse.data
+            });
+
+            if (result.status && Array.isArray(result.data)) {
+                const newAssertions = [...(currentReq.assertions || []), ...result.data];
+                handleRequestChange({ assertions: newAssertions });
+                toast.success(`Generated ${result.data.length} tests`, { id: 'ai-tests' });
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to generate tests', { id: 'ai-tests' });
+        }
+    };
+
+    const handleAiGenerateRequest = async (prompt: string) => {
+        try {
+            toast.loading('AI is building request...', { id: 'ai-request' });
+            const result = await aiGenerateRequestMutation.mutateAsync(prompt);
+
+            if (result.status && result.data) {
+                const updates: any = {};
+                if (result.data.method) updates.method = result.data.method;
+                if (result.data.url) updates.url = result.data.url;
+                if (result.data.name) updates.name = result.data.name;
+                if (result.data.headers) updates.headers = result.data.headers;
+                if (result.data.body) updates.body = result.data.body;
+
+                handleRequestChange(updates);
+                toast.success('AI Request Generated', { id: 'ai-request' });
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to generate request', { id: 'ai-request' });
+        }
+    };
+
+    const handleAiExplainError = async (error: any) => {
+        if (!currentReq) return null;
+        try {
+            const result = await aiExplainErrorMutation.mutateAsync({
+                method: currentReq.method,
+                url: currentReq.url,
+                error: error
+            });
+            return result.status ? result.data : null;
+        } catch (error: any) {
+            toast.error('Failed to explain error');
+            return null;
+        }
+    };
+
     const handleRequestChange = (updates: Partial<any>) => {
+        const protocolChanged = updates.protocol && updates.protocol !== currentReq?.protocol;
         const updatedReq = { ...currentReq, ...updates };
         setCurrentReq(updatedReq);
+
+        // Sync with endpoints
         const newEps = [...endpoints];
         newEps[selectedIdx] = updatedReq;
         setEndpoints(newEps);
+
+        // Sync with openTabs
+        setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
+
         setIsDirty(true);
         setIsCollectionDirty(true);
+
+        if (protocolChanged) {
+            setResponse(null);
+            if (wsStatus !== 'disconnected') {
+                wsDisconnect();
+            }
+            if (sseStatus !== 'disconnected') {
+                sseDisconnect();
+            }
+
+            // GraphQL defaults
+            if (updates.protocol === 'GRAPHQL') {
+                updatedReq.method = 'POST';
+                updatedReq.body = {
+                    ...updatedReq.body,
+                    mode: 'graphql',
+                    graphql: updatedReq.body?.graphql || { query: '', variables: '' }
+                };
+                setCurrentReq(updatedReq);
+                newEps[selectedIdx] = updatedReq;
+                setEndpoints(newEps);
+                setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
+            }
+        }
     };
 
     const handleSendRequest = async () => {
+        if (!currentReq) return;
+
+        if (currentReq.protocol === 'WS') {
+            if (wsStatus === 'connected' || wsStatus === 'connecting') {
+                wsDisconnect();
+            } else {
+                const finalUrl = resolveAll(currentReq.url, currentReq);
+                wsConnect(finalUrl);
+            }
+            return;
+        }
+
+        if (currentReq.protocol === 'SSE') {
+            if (sseStatus === 'connected' || sseStatus === 'connecting') {
+                sseDisconnect();
+            } else {
+                const finalUrl = resolveAll(currentReq.url, currentReq);
+                sseConnect(finalUrl);
+            }
+            return;
+        }
+
         setReqLoading(true);
+
         setResponse(null);
         try {
             const processContent = (text: string) => resolveAll(text, currentReq);
@@ -556,8 +854,32 @@ function ApiClientContent() {
             }, {});
 
             const rawBody = currentReq.body?.raw || '';
-            const finalBody = rawBody ? processContent(rawBody) : undefined;
-            if (finalBody && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+            let finalBody: any = rawBody ? processContent(rawBody) : undefined;
+
+            if (currentReq.body?.mode === 'graphql' && currentReq.body.graphql) {
+                const gqlQuery = processContent(currentReq.body.graphql.query);
+                const gqlVarsStr = currentReq.body.graphql.variables ? processContent(currentReq.body.graphql.variables) : '{}';
+
+                let gqlVars = {};
+                try {
+                    gqlVars = JSON.parse(gqlVarsStr);
+                } catch (e) {
+                    console.error('Invalid JSON for GraphQL variables');
+                }
+
+                finalBody = JSON.stringify({
+                    query: gqlQuery,
+                    variables: gqlVars
+                });
+
+                if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+                // Most GraphQL APIs expect POST
+                if (currentReq.method === 'GET') {
+                    // We don't force it here, but typically it should be POST.
+                }
+            } else if (finalBody && !headers['Content-Type']) {
+                headers['Content-Type'] = 'application/json';
+            }
 
             const startTime = Date.now();
             const res = await fetch(finalUrl, {
@@ -578,7 +900,45 @@ function ApiClientContent() {
                 timestamp: new Date().toISOString()
             };
 
-            setResponse(responseObj);
+            // Run assertions against the response
+            const assertions = currentReq.assertions || [];
+            const testResults = assertions.map((assertion: any) => {
+                try {
+                    switch (assertion.type) {
+                        case 'status_code': {
+                            const expected = parseInt(assertion.expected, 10);
+                            const passed = responseObj.status === expected;
+                            return { assertionId: assertion.id, name: `Status code is ${assertion.expected}`, passed, message: passed ? `Status code is ${responseObj.status} ✓` : `Expected ${assertion.expected}, got ${responseObj.status}` };
+                        }
+                        case 'response_time': {
+                            const limit = parseInt(assertion.expected, 10);
+                            const passed = responseObj.time < limit;
+                            return { assertionId: assertion.id, name: `Response time < ${assertion.expected}ms`, passed, message: passed ? `Response time ${responseObj.time}ms is within ${limit}ms ✓` : `Response time ${responseObj.time}ms exceeded ${limit}ms` };
+                        }
+                        case 'body_contains': {
+                            const bodyStr = typeof responseObj.data === 'string' ? responseObj.data : JSON.stringify(responseObj.data);
+                            const passed = bodyStr.includes(assertion.expected);
+                            return { assertionId: assertion.id, name: `Body contains "${assertion.expected}"`, passed, message: passed ? `Body contains "${assertion.expected}" ✓` : `Body does not contain "${assertion.expected}"` };
+                        }
+                        case 'json_value': {
+                            const path = assertion.property || '';
+                            const keys = path.split('.').filter(Boolean);
+                            let actual: unknown = responseObj.data;
+                            for (const key of keys) {
+                                if (actual === null || typeof actual !== 'object') { actual = undefined; break; }
+                                actual = (actual as Record<string, unknown>)[key];
+                            }
+                            const actualStr = String(actual ?? '');
+                            const passed = actualStr === assertion.expected;
+                            return { assertionId: assertion.id, name: `${path || 'JSON'} equals "${assertion.expected}"`, passed, message: passed ? `${path} is "${actualStr}" ✓` : `Expected "${assertion.expected}", got "${actualStr}"` };
+                        }
+                        default: return { assertionId: assertion.id, name: 'Unknown', passed: false, message: 'Unknown assertion type' };
+                    }
+                } catch { return { assertionId: assertion.id, name: assertion.type, passed: false, message: 'Error evaluating assertion' }; }
+            });
+
+            const responseWithTests = { ...responseObj, testResults };
+            setResponse(responseWithTests);
             addToUrlHistory(finalUrl);
 
             const historyItem = { ...currentReq, lastResponse: responseObj, timestamp: responseObj.timestamp };
@@ -847,6 +1207,7 @@ function ApiClientContent() {
 
     return (
         <div className={`flex h-[calc(100vh-64px)] overflow-hidden font-sans text-xs relative ${theme === 'dark' ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
+            <OfflineBanner isOnline={isOnline} queueLength={queueLength} isSyncing={isSyncing} />
             <Sidebar
                 doc={doc}
                 endpoints={endpoints}
@@ -856,6 +1217,7 @@ function ApiClientContent() {
                 width={sidebarWidth}
                 isDirty={isCollectionDirty}
                 canEdit={canEdit}
+                canAdmin={canAdmin}
                 openMenuIdx={openMenuIdx}
                 draggedIdx={draggedIdx}
                 onSelectEndpoint={(idx) => {
@@ -865,7 +1227,7 @@ function ApiClientContent() {
                 onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 onAddRequest={handleAddRequest}
                 onSaveCollection={handleSaveCollection}
-                onShare={handleShare}
+                onShare={() => setShowCollaborators(true)}
                 onDownloadMarkdown={() => handleGenerateMarkdown(false)}
                 onOpenEnvModal={() => setShowEnv(true)}
                 onCopyMarkdown={handleCopyMarkdown}
@@ -879,6 +1241,8 @@ function ApiClientContent() {
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
                 onReorderRequests={onReorderRequests}
+                aiEnabled={aiEnabled}
+                onAiToggle={setAiEnabled}
                 onAddFolder={() => { setEditingFolder(null); setParentFolderForNew(null); setShowFolderModal(true); }}
                 onEditFolder={(folder) => { setEditingFolder(folder); setParentFolderForNew(null); setShowFolderModal(true); }}
                 onDeleteFolder={(folder) => { setPendingDelete({ type: 'folder', folder, name: folder.name }); }}
@@ -910,6 +1274,7 @@ function ApiClientContent() {
                     }
                 }}
                 onRunCollection={() => setShowRunner(true)}
+                onShowSnapshots={() => setShowSnapshots(true)}
             />
 
             <EnvModal
@@ -943,7 +1308,8 @@ function ApiClientContent() {
                                 {[
                                     { id: 'client', label: 'API Client', icon: <Layout size={14} /> },
                                     { id: 'docs', label: 'Documentation', icon: <FileText size={14} /> },
-                                    { id: 'changelog', label: 'Changelog', icon: <Clock size={14} /> }
+                                    { id: 'changelog', label: 'Changelog', icon: <Clock size={14} /> },
+                                    { id: 'monitoring', label: 'Monitoring', icon: <Activity size={14} /> }
                                 ].map((view) => (
                                     <button
                                         key={view.id}
@@ -959,18 +1325,28 @@ function ApiClientContent() {
                                 ))}
                             </div>
                         </div>
-                        <button
-                            onClick={() => setShowViewSwitcher(false)}
-                            className={`p-1.5 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-500' : 'hover:bg-gray-100 text-gray-400'} transition-colors`}
-                            title="Hide switcher"
-                        >
-                            <X size={14} />
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5 ${theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'} border ${theme === 'dark' ? 'border-indigo-500/30' : 'border-indigo-100'}`}>
+                                <Shield size={10} /> {userRole}
+                            </span>
+                            <button
+                                onClick={() => setShowViewSwitcher(false)}
+                                className={`p-1.5 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-500' : 'hover:bg-gray-100 text-gray-400'} transition-colors`}
+                                title="Hide switcher"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
                     </div>
                 )}
 
                 {!showViewSwitcher && activeView === 'client' && (
-                    <div className={`flex items-center justify-end px-4 py-1 border-b ${themeClasses.borderCol} ${themeClasses.mainBg}`}>
+                    <div className={`flex items-center justify-between px-4 py-1 border-b ${themeClasses.borderCol} ${themeClasses.mainBg}`}>
+                        <div className="flex items-center gap-2">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5 ${theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'} border ${theme === 'dark' ? 'border-indigo-500/30' : 'border-indigo-100'}`}>
+                                <Shield size={10} /> {userRole}
+                            </span>
+                        </div>
                         <button
                             onClick={() => setShowViewSwitcher(true)}
                             className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} transition-colors`}
@@ -999,12 +1375,15 @@ function ApiClientContent() {
                                     variables={variables}
                                     urlHistory={urlHistory}
                                     onMethodChange={(method) => handleRequestChange({ method })}
+                                    onProtocolChange={(protocol) => handleRequestChange({ protocol })}
                                     onUrlChange={(url) => handleRequestChange({ url })}
                                     onSend={handleSendRequest}
                                     onSave={handleSaveSingleRequest}
                                     onCopyUrl={() => { navigator.clipboard.writeText(resolveUrl(currentReq)); toast.success('URL copied'); }}
                                     onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
                                     onDownloadMarkdown={() => handleDownloadIndividualMarkdown(currentReq)}
+                                    aiEnabled={aiEnabled}
+                                    onAiGenerateRequest={handleAiGenerateRequest}
                                 />
 
                                 <div className={`flex-1 overflow-hidden flex ${paneLayout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
@@ -1016,10 +1395,12 @@ function ApiClientContent() {
                                             canEdit={canEdit}
                                             aiCommand={aiCommand}
                                             aiLoading={aiMutation.isPending}
+                                            aiEnabled={aiEnabled}
                                             onTabChange={setActiveTab}
                                             onRequestChange={handleRequestChange}
                                             onAiCommandChange={setAiCommand}
                                             onAiGenerate={handleAiGenerate}
+                                            onAiGenerateTests={handleAiGenerateTests}
                                             onFormatJson={handleFormatJson}
                                             onCopyBody={handleCopyRequest}
                                             onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
@@ -1048,6 +1429,18 @@ function ApiClientContent() {
                                             isViewingHistory={isViewingHistory}
                                             onSelection={handleSelection}
                                             onContextMenu={handleContextMenu}
+                                            aiEnabled={aiEnabled}
+                                            onExplainError={handleAiExplainError}
+                                            wsMessages={currentReq.protocol === 'SSE' ? sseMessages : wsMessages}
+                                            wsStatus={currentReq.protocol === 'SSE' ? sseStatus : wsStatus}
+                                            socketMode={currentReq.protocol === 'SSE' ? 'sse' : 'ws'}
+                                            onWsConnect={() => {
+                                                const finalUrl = resolveAll(currentReq.url, currentReq);
+                                                currentReq.protocol === 'SSE' ? sseConnect(finalUrl) : wsConnect(finalUrl);
+                                            }}
+                                            onWsDisconnect={currentReq.protocol === 'SSE' ? sseDisconnect : wsDisconnect}
+                                            onWsSendMessage={wsSendMessage}
+                                            onWsClearMessages={currentReq.protocol === 'SSE' ? sseClearMessages : wsClearMessages}
                                         />
                                     </div>
                                 </div>
@@ -1072,6 +1465,8 @@ function ApiClientContent() {
                         resolveUrl={resolveUrl}
                         resolveAll={resolveAll}
                     />
+                ) : activeView === 'monitoring' ? (
+                    <MonitorDashboard documentationId={id as string} />
                 ) : (
                     <ChangelogView
                         docId={id as string}
@@ -1144,7 +1539,26 @@ function ApiClientContent() {
                                                 {ep.body?.raw && (
                                                     <div className="mb-6">
                                                         <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Request Body</h3>
-                                                        <SyntaxHighlighter language="json" style={vscDarkPlus} customStyle={{ padding: '12px', borderRadius: '8px' }}>{resolveAll(ep.body.raw, ep)}</SyntaxHighlighter>
+                                                        <div className="h-60 rounded-lg overflow-hidden border border-gray-700/20 shadow-lg">
+                                                            <Editor
+                                                                height="100%"
+                                                                language="json"
+                                                                value={resolveAll(ep.body.raw, ep)}
+                                                                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                                                options={{
+                                                                    readOnly: true,
+                                                                    fontSize: 13,
+                                                                    minimap: { enabled: false },
+                                                                    scrollBeyondLastLine: false,
+                                                                    wordWrap: 'on',
+                                                                    automaticLayout: true,
+                                                                    padding: { top: 12, bottom: 12 },
+                                                                    lineNumbers: 'on',
+                                                                    folding: true,
+                                                                    renderLineHighlight: 'none',
+                                                                }}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 )}
                                                 {idx < endpoints.length - 1 && <hr className="my-6 border-gray-700" />}
@@ -1191,7 +1605,7 @@ function ApiClientContent() {
 
             <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
                 <button onClick={() => setShowShortcutsModal(true)} className={`p-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'} border rounded-lg shadow-lg hover:text-indigo-400 transition-all`} title="Keyboard Shortcuts (Ctrl+/)"><Keyboard size={16} /></button>
-                <button onClick={() => setShowSearchModal(true)} className={`px-3 py-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-600'} border rounded-lg shadow-lg flex items-center gap-2 text-[11px] font-medium`} title="Search Endpoints (Ctrl+K)"><Search size={14} /><span>Search</span><kbd className="ml-1 px-1.5 py-0.5 bg-gray-700 rounded text-[9px]">Ctrl+K</kbd></button>
+                {/* <button onClick={() => setShowSearchModal(true)} className={`px-3 py-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-600'} border rounded-lg shadow-lg flex items-center gap-2 text-[11px] font-medium`} title="Search Endpoints (Ctrl+K)"><Search size={14} /><span>Search</span><kbd className="ml-1 px-1.5 py-0.5 bg-gray-700 rounded text-[9px]">Ctrl+K</kbd></button> */}
             </div>
 
             {showRunner && (
@@ -1208,6 +1622,18 @@ function ApiClientContent() {
                 itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'}
                 onConfirm={confirmDelete}
                 onCancel={() => setPendingDelete(null)}
+            />
+
+            <SnapshotModal
+                isOpen={showSnapshots}
+                onClose={() => setShowSnapshots(false)}
+                documentationId={id as string}
+            />
+
+            <CollaboratorModal
+                isOpen={showCollaborators}
+                onClose={() => setShowCollaborators(false)}
+                documentationId={id as string}
             />
         </div >
     );

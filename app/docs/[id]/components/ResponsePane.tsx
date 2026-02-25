@@ -48,6 +48,8 @@ function ResponsePaneComponent({
 }: ResponsePaneProps) {
     const { theme } = useTheme();
     const [wrapLines, setWrapLines] = React.useState(false);
+    const [filter, setFilter] = React.useState('');
+    const [showFilter, setShowFilter] = React.useState(false);
 
     const secondaryBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
     const mainBg = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
@@ -81,12 +83,41 @@ function ResponsePaneComponent({
                 </div>
                 <div className="flex gap-1 items-center">
                     {response && isApiResponse(response) && (
-                        <button
-                            onClick={onCopyResponse}
-                            className={`p-1 px-2 text-[9px] ${subTextColor} hover:text-indigo-500 ${inputBg} hover:bg-opacity-50 rounded border ${borderCol} flex items-center gap-1 transition-all mr-1 font-bold`}
-                        >
-                            <Copy size={10} /> COPY
-                        </button>
+                        <>
+                            {showFilter ? (
+                                <div className="flex items-center gap-1 mr-1">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={filter}
+                                            onChange={(e) => setFilter(e.target.value)}
+                                            placeholder="Highlight text..."
+                                            className={`px-2 py-1 text-[10px] ${inputBg} border ${borderCol} rounded focus:ring-1 focus:ring-indigo-500 outline-none w-32 ${textColor}`}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => { setShowFilter(false); setFilter(''); }}
+                                        className={`p-1 ${subTextColor} hover:text-red-400 rounded`}
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowFilter(true)}
+                                    className={`p-1 px-2 text-[9px] ${subTextColor} hover:text-indigo-500 ${inputBg} hover:bg-opacity-50 rounded border ${borderCol} flex items-center gap-1 transition-all mr-1 font-bold`}
+                                >
+                                    SEARCH
+                                </button>
+                            )}
+                            <button
+                                onClick={onCopyResponse}
+                                className={`p-1 px-2 text-[9px] ${subTextColor} hover:text-indigo-500 ${inputBg} hover:bg-opacity-50 rounded border ${borderCol} flex items-center gap-1 transition-all mr-1 font-bold`}
+                            >
+                                <Copy size={10} /> COPY
+                            </button>
+                        </>
                     )}
                     <button
                         onClick={onToggleHistory}
@@ -224,6 +255,26 @@ function ResponsePaneComponent({
                                 }
                             }}
                             wrapLongLines={wrapLines}
+                            lineProps={(lineNumber) => {
+                                const responseString = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
+                                const lines = responseString.split('\n');
+                                const line = lines[lineNumber - 1];
+
+                                if (filter && line && line.toLowerCase().includes(filter.toLowerCase())) {
+                                    return {
+                                        style: {
+                                            display: 'block',
+                                            backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+                                            borderLeft: '2px solid #6366f1',
+                                            paddingLeft: '4px',
+                                            marginLeft: '-6px'
+                                        }
+                                    };
+                                }
+                                return {
+                                    style: { display: 'block' }
+                                };
+                            }}
                         >
                             {typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
                         </SyntaxHighlighter>

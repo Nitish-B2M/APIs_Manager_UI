@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Endpoint, ApiResponse, ApiErrorResponse, ResponseResult, AuthConfig } from '@/types';
+import { Endpoint, ApiResponse, ApiErrorResponse, ResponseResult, AuthConfig, RequestAssertion, TestResult } from '@/types';
 
 interface UseRequestExecutorProps {
     variables: Record<string, string>;
@@ -23,6 +23,21 @@ export function useRequestExecutor({
 
     const resolveVariables = useCallback((text: string, endpoint: Endpoint): string => {
         let result = text || '';
+
+        // Built-in dynamic variables
+        const dynamicVars: Record<string, () => string> = {
+            '$timestamp': () => String(Math.floor(Date.now() / 1000)),
+            '$isoTimestamp': () => new Date().toISOString(),
+            '$randomUUID': () => (crypto as any).randomUUID ? (crypto as any).randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }),
+            '$randomInt': () => String(Math.floor(Math.random() * 1000)),
+            '$randomBool': () => String(Math.random() > 0.5),
+            '$randomEmail': () => `user${Math.floor(Math.random() * 9999)}@example.com`,
+            '$randomFirstName': () => ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'][Math.floor(Math.random() * 5)],
+            '$randomLastName': () => ['Smith', 'Jones', 'Williams', 'Brown', 'Davis'][Math.floor(Math.random() * 5)],
+        };
+        Object.entries(dynamicVars).forEach(([key, generate]) => {
+            result = result.replace(new RegExp(`{{\\${key}}}`, 'g'), generate);
+        });
 
         // Replace environment variables {{var}}
         Object.entries(variables).forEach(([key, value]) => {
@@ -114,6 +129,76 @@ export function useRequestExecutor({
         return obj;
     };
 
+    const runAssertions = (response: ApiResponse, assertions: RequestAssertion[]): TestResult[] => {
+        return (assertions || []).map(assertion => {
+            try {
+                switch (assertion.type) {
+                    case 'status_code': {
+                        const expected = parseInt(assertion.expected, 10);
+                        const passed = response.status === expected;
+                        return {
+                            assertionId: assertion.id,
+                            name: `Status code is ${assertion.expected}`,
+                            passed,
+                            message: passed
+                                ? `Status code is ${response.status} ✓`
+                                : `Expected ${assertion.expected}, got ${response.status}`
+                        };
+                    }
+                    case 'response_time': {
+                        const limit = parseInt(assertion.expected, 10);
+                        const passed = response.time < limit;
+                        return {
+                            assertionId: assertion.id,
+                            name: `Response time < ${assertion.expected}ms`,
+                            passed,
+                            message: passed
+                                ? `Response time ${response.time}ms is within ${limit}ms ✓`
+                                : `Response time ${response.time}ms exceeded ${limit}ms`
+                        };
+                    }
+                    case 'body_contains': {
+                        const bodyStr = typeof response.data === 'string'
+                            ? response.data
+                            : JSON.stringify(response.data);
+                        const passed = bodyStr.includes(assertion.expected);
+                        return {
+                            assertionId: assertion.id,
+                            name: `Body contains "${assertion.expected}"`,
+                            passed,
+                            message: passed
+                                ? `Body contains "${assertion.expected}" ✓`
+                                : `Body does not contain "${assertion.expected}"`
+                        };
+                    }
+                    case 'json_value': {
+                        const path = assertion.property || '';
+                        const keys = path.split('.').filter(Boolean);
+                        let actual: unknown = response.data;
+                        for (const key of keys) {
+                            if (actual === null || typeof actual !== 'object') { actual = undefined; break; }
+                            actual = (actual as Record<string, unknown>)[key];
+                        }
+                        const actualStr = String(actual ?? '');
+                        const passed = actualStr === assertion.expected;
+                        return {
+                            assertionId: assertion.id,
+                            name: `${path || 'JSON'} equals "${assertion.expected}"`,
+                            passed,
+                            message: passed
+                                ? `${path} is "${actualStr}" ✓`
+                                : `Expected "${assertion.expected}", got "${actualStr}"`
+                        };
+                    }
+                    default:
+                        return { assertionId: assertion.id, name: 'Unknown', passed: false, message: 'Unknown assertion type' };
+                }
+            } catch {
+                return { assertionId: assertion.id, name: assertion.type, passed: false, message: 'Error evaluating assertion' };
+            }
+        });
+    };
+
     const executeRequest = useCallback(async (endpoint: Endpoint): Promise<ApiResponse | null> => {
         setIsLoading(true);
         setResponse(null);
@@ -201,6 +286,10 @@ export function useRequestExecutor({
 
             const textData = await res.text();
 
+            // Calculate size in bytes
+            const contentLength = res.headers.get('Content-Length');
+            const responseSize = contentLength ? parseInt(contentLength, 10) : new Blob([textData]).size;
+
             let responseData: unknown;
             try {
                 const initialParse = JSON.parse(textData);
@@ -213,9 +302,14 @@ export function useRequestExecutor({
                 status: res.status,
                 statusText: res.statusText,
                 time: endTime - startTime,
+                size: responseSize,
                 data: responseData,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                testResults: [] // Will be populated next
             };
+
+            // Now run assertions with the full object
+            apiResponse.testResults = runAssertions(apiResponse, endpoint.assertions || []);
 
             setResponse(apiResponse);
             onResponseReceived?.(apiResponse, endpoint);
