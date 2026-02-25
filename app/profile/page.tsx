@@ -7,6 +7,7 @@ import { User as UserIcon, Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { ProtectedRoute } from '../../components/AuthGuard';
+import { ProxySettings } from '../modules/ProxySettings';
 
 export default function ProfilePage() {
     const { theme } = useTheme();
@@ -81,7 +82,7 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className={`${cardBg} border rounded-xl p-8`}>
+                    <div className={`${cardBg} border rounded-xl p-8 mb-8`}>
                         {/* Avatar preview */}
                         <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-200 dark:border-gray-700">
                             <div className="relative">
@@ -159,6 +160,8 @@ export default function ProfilePage() {
                             </div>
                         </form>
                     </div>
+
+                    <ProxySettings />
                 </div>
             </div>
         </ProtectedRoute>

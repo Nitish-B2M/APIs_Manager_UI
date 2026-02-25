@@ -81,5 +81,42 @@ export const api = {
     },
     ai: {
         generateDocs: (data: any) => apiFetch('/ai/generate-docs', { method: 'POST', body: JSON.stringify(data) }),
+        generateTests: (data: { method: string; url: string; response: any }) => apiFetch('/ai/generate-tests', { method: 'POST', body: JSON.stringify(data) }),
+        generateRequest: (prompt: string) => apiFetch('/ai/generate-request', { method: 'POST', body: JSON.stringify({ prompt }) }),
+        explainError: (data: { method: string; url: string; error: any }) => apiFetch('/ai/explain-error', { method: 'POST', body: JSON.stringify(data) }),
+    },
+    mock: {
+        getConfig: (requestId: string) => apiFetch(`/mock/config/${requestId}`),
+        updateConfig: (data: any) => apiFetch('/mock/config', { method: 'POST', body: JSON.stringify(data) }),
+    },
+    snapshot: {
+        create: (data: { documentationId: string, name: string }) => apiFetch('/snapshot/create', { method: 'POST', body: JSON.stringify(data) }),
+        list: (documentationId: string) => apiFetch(`/snapshot/list/${documentationId}`),
+        restore: (snapshotId: string) => apiFetch(`/snapshot/restore/${snapshotId}`, { method: 'POST' }),
+        delete: (snapshotId: string) => apiFetch(`/snapshot/delete/${snapshotId}`, { method: 'DELETE' }),
+    },
+    monitor: {
+        create: (data: any) => apiFetch('/monitor', { method: 'POST', body: JSON.stringify(data) }),
+        list: (documentationId: string) => apiFetch(`/monitor/list/${documentationId}`),
+        history: (monitorId: string, limit = 100) => apiFetch(`/monitor/${monitorId}/history?limit=${limit}`),
+        check: (monitorId: string) => apiFetch(`/monitor/${monitorId}/check`, { method: 'POST' }),
+        update: (monitorId: string, data: any) => apiFetch(`/monitor/${monitorId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (monitorId: string) => apiFetch(`/monitor/${monitorId}`, { method: 'DELETE' }),
+    },
+    collaboration: {
+        invite: (data: { email: string; documentationId: string; role: string }) =>
+            apiFetch('/collaboration/invite', { method: 'POST', body: JSON.stringify(data) }),
+        listCollaborators: (documentationId: string) =>
+            apiFetch(`/collaboration/${documentationId}/collaborators`),
+        listMyInvitations: () =>
+            apiFetch('/collaboration/my-invitations'),
+        acceptInvite: (token: string) =>
+            apiFetch('/collaboration/accept', { method: 'POST', body: JSON.stringify({ token }) }),
+        removeCollaborator: (id: string) =>
+            apiFetch(`/collaboration/collaborators/${id}`, { method: 'DELETE' }),
+        updateRole: (id: string, role: string) =>
+            apiFetch(`/collaboration/collaborators/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+        cancelInvite: (id: string) =>
+            apiFetch(`/collaboration/invitations/${id}`, { method: 'DELETE' }),
     }
 };

@@ -3,6 +3,8 @@
 // ============================================
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type ProtocolType = 'REST' | 'WS' | 'SSE' | 'GRAPHQL';
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export type ParamType = 'path' | 'query';
 
@@ -25,17 +27,23 @@ export interface FormDataField {
 }
 
 export interface RequestBody {
-    mode: 'raw' | 'formdata' | 'urlencoded';
+    mode: 'raw' | 'formdata' | 'urlencoded' | 'graphql';
     raw: string;
     formdata?: FormDataField[];
+    graphql?: {
+        query: string;
+        variables: string;
+    };
 }
 
 export interface ApiResponse {
     status: number;
     statusText: string;
     time: number;
+    size: number;
     data: unknown;
     timestamp: string;
+    testResults?: TestResult[];
 }
 
 export interface ApiErrorResponse {
@@ -44,6 +52,44 @@ export interface ApiErrorResponse {
 }
 
 export type ResponseResult = ApiResponse | ApiErrorResponse;
+
+// ============================================
+// Assertion / Test Types
+// ============================================
+
+export type AssertionType = 'status_code' | 'response_time' | 'body_contains' | 'json_value';
+
+export interface RequestAssertion {
+    id: string;
+    type: AssertionType;
+    expected: string;
+    property?: string; // dot-path for json_value, e.g. "data.user.id"
+}
+
+export interface TestResult {
+    assertionId: string;
+    name: string;
+    passed: boolean;
+    message: string;
+}
+
+// ============================================
+// Protocol-Specific Types
+// ============================================
+
+export interface WebsocketMessage {
+    id: string;
+    type: 'sent' | 'received';
+    data: string;
+    timestamp: string;
+}
+
+export interface SSEEvent {
+    id: string;
+    event?: string;
+    data: string;
+    timestamp: string;
+}
 
 // ============================================
 // Endpoint / Request Types
@@ -78,15 +124,18 @@ export interface Endpoint {
     id?: string;
     name: string;
     method: HttpMethod;
+    protocol?: ProtocolType;
     url: string;
     headers: RequestHeader[];
     body: RequestBody;
     params: RequestParam[];
     description: string;
     auth?: AuthConfig;
+    assertions?: RequestAssertion[];
     lastResponse: ApiResponse | null;
     history: HistoryItem[];
     folderId?: string | null;
+    order?: number;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -151,6 +200,31 @@ export interface Documentation {
     createdAt: string;
     updatedAt: string;
     requests?: Endpoint[];
+    role?: UserRole; // Current user's role in this documentation
+    collaborators?: Collaborator[];
+}
+
+// ============================================
+// Collaboration & RBAC Types
+// ============================================
+
+export type UserRole = 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER';
+
+export interface Collaborator {
+    id: string;
+    role: UserRole;
+    createdAt: string;
+    email: string;
+    name?: string;
+    avatarUrl?: string;
+}
+
+export interface Invitation {
+    id: string;
+    email: string;
+    role: UserRole;
+    createdAt: string;
+    expiresAt: string;
 }
 
 // ============================================

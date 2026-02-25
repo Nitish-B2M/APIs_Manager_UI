@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { Trash2, Plus, Copy, CheckCircle2, Sparkles, WrapText } from 'lucide-react';
+import { Trash2, Plus, Copy, CheckCircle2, Sparkles, WrapText, Search } from 'lucide-react';
 import CodeSnippets from './CodeSnippets';
 import { AuthTab } from './AuthTab';
 import { FormDataEditor } from './FormDataEditor';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { TestsTab } from './TestsTab';
+import { MockTab } from './MockTab';
+import Editor from '@monaco-editor/react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 
-type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'code';
+type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'code' | 'mocking';
 
 interface RequestTabsProps {
     currentReq: any;
@@ -28,6 +29,8 @@ interface RequestTabsProps {
     onCopyMarkdown: () => void;
     onSelection: () => void;
     onContextMenu: (e: React.MouseEvent) => void;
+    aiEnabled?: boolean;
+    onAiGenerateTests?: () => void;
 }
 
 export function RequestTabs({
@@ -45,14 +48,35 @@ export function RequestTabs({
     onCopyBody,
     onCopyMarkdown,
     onSelection,
-    onContextMenu
+    onContextMenu,
+    aiEnabled,
+    onAiGenerateTests,
 }: RequestTabsProps) {
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
-    const bodyEditorRef = useRef<HTMLDivElement>(null);
     const [wrapLines, setWrapLines] = React.useState(false);
 
-    const tabs: TabType[] = ['params', 'headers', 'auth', 'body', 'docs', 'code'];
+    const allTabs: TabType[] = ['params', 'headers', 'auth', 'body', 'tests', 'mocking', 'docs', 'code'];
+    const tabs = React.useMemo(() => {
+        const protocol = currentReq?.protocol || 'REST';
+        switch (protocol) {
+            case 'WS':
+                return allTabs.filter(t => ['headers', 'body', 'docs', 'code'].includes(t));
+            case 'SSE':
+                return allTabs.filter(t => ['params', 'headers', 'auth', 'docs', 'code'].includes(t));
+            case 'GRAPHQL':
+                return allTabs.filter(t => ['headers', 'auth', 'body', 'docs', 'code'].includes(t));
+            case 'REST':
+            default:
+                return allTabs;
+        }
+    }, [currentReq?.protocol, allTabs]);
+
+    React.useEffect(() => {
+        if (!tabs.includes(activeTab)) {
+            onTabChange('docs');
+        }
+    }, [tabs, activeTab, onTabChange]);
 
     const handleHeaderChange = (index: number, field: 'key' | 'value', value: string) => {
         const newHeaders = [...(currentReq.headers || [])];
@@ -94,12 +118,20 @@ export function RequestTabs({
                     <button
                         key={tab}
                         onClick={() => onTabChange(tab)}
-                        className={`px-4 py-2 font-bold text-[10px] border-b-2 transition-colors capitalize ${activeTab === tab
+                        className={`px-4 py-2 font-bold text-[10px] border-b-2 transition-colors capitalize flex items-center gap-1.5 ${activeTab === tab
                             ? 'border-indigo-500 text-indigo-500 bg-indigo-500/5'
                             : 'border-transparent text-gray-500 hover:text-gray-300'
                             }`}
                     >
-                        {tab}
+                        {tab === 'body' && currentReq?.protocol === 'WS' ? 'Messages' : tab}
+                        {tab === 'tests' && (currentReq?.assertions?.length || 0) > 0 && (
+                            <span className={`text-[9px] rounded-full px-1.5 py-0.5 font-bold ${activeTab === 'tests'
+                                ? 'bg-indigo-500 text-white'
+                                : 'bg-gray-600 text-gray-300'
+                                }`}>
+                                {currentReq.assertions.length}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -163,8 +195,8 @@ export function RequestTabs({
                         <div className="mb-2 flex justify-between items-center text-[10px] text-gray-500 font-bold h-5">
                             <div className="flex items-center gap-3">
                                 <label
-                                    className={`flex items-center gap-1.5 cursor-pointer group ${(currentReq?.body?.mode || 'raw') === 'raw' ? 'text-indigo-400' : themeClasses.subTextColor}`}
-                                    onClick={() => onRequestChange({ body: { ...currentReq.body, mode: 'raw' } })}
+                                    className={`flex items-center gap-1.5 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group ${(currentReq?.body?.mode || 'raw') === 'raw' ? 'text-indigo-400' : themeClasses.subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
+                                    onClick={() => canEdit && onRequestChange({ body: { ...currentReq.body, mode: 'raw' } })}
                                 >
                                     <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${(currentReq?.body?.mode || 'raw') === 'raw'
                                         ? theme === 'dark' ? 'border-indigo-500 bg-indigo-500/20' : 'border-indigo-400 bg-indigo-50'
@@ -175,8 +207,8 @@ export function RequestTabs({
                                     RAW (JSON)
                                 </label>
                                 <label
-                                    className={`flex items-center gap-1.5 cursor-pointer group ${currentReq?.body?.mode === 'formdata' ? 'text-indigo-400' : themeClasses.subTextColor}`}
-                                    onClick={() => onRequestChange({ body: { ...currentReq.body, mode: 'formdata', formdata: currentReq.body?.formdata || [] } })}
+                                    className={`flex items-center gap-1.5 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group ${currentReq?.body?.mode === 'formdata' ? 'text-indigo-400' : themeClasses.subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
+                                    onClick={() => canEdit && onRequestChange({ body: { ...currentReq.body, mode: 'formdata', formdata: currentReq.body?.formdata || [] } })}
                                 >
                                     <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${currentReq?.body?.mode === 'formdata'
                                         ? theme === 'dark' ? 'border-indigo-500 bg-indigo-500/20' : 'border-indigo-400 bg-indigo-50'
@@ -185,6 +217,24 @@ export function RequestTabs({
                                         {currentReq?.body?.mode === 'formdata' && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
                                     </div>
                                     FORM DATA
+                                </label>
+                                <label
+                                    className={`flex items-center gap-1.5 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group ${currentReq?.body?.mode === 'graphql' ? 'text-indigo-400' : themeClasses.subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
+                                    onClick={() => canEdit && onRequestChange({
+                                        body: {
+                                            ...currentReq.body,
+                                            mode: 'graphql',
+                                            graphql: currentReq.body?.graphql || { query: '', variables: '' }
+                                        }
+                                    })}
+                                >
+                                    <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${currentReq?.body?.mode === 'graphql'
+                                        ? theme === 'dark' ? 'border-indigo-500 bg-indigo-500/20' : 'border-indigo-400 bg-indigo-50'
+                                        : theme === 'dark' ? 'border-gray-600' : 'border-gray-400'
+                                        }`}>
+                                        {currentReq?.body?.mode === 'graphql' && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                                    </div>
+                                    GRAPHQL
                                 </label>
                                 {(currentReq?.body?.mode || 'raw') === 'raw' && (
                                     <button onClick={onCopyBody} className="text-gray-500 hover:text-indigo-400 flex items-center gap-1 transition-colors">
@@ -213,68 +263,45 @@ export function RequestTabs({
 
                         {(currentReq?.body?.mode || 'raw') === 'raw' ? (
                             <div className={`relative flex-1 rounded-xl border ${themeClasses.borderCol} overflow-hidden ${theme === 'dark' ? 'bg-[#1e1e1e]' : 'bg-[#fafafa]'}`}>
-                                <div
-                                    ref={bodyEditorRef}
-                                    className="absolute inset-0 z-0 pointer-events-none overflow-auto"
-                                >
-                                    <SyntaxHighlighter
-                                        language="json"
-                                        style={theme === 'dark' ? vscDarkPlus : materialLight}
-                                        codeTagProps={{
-                                            style: {
-                                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                                                fontSize: '13px',
-                                                lineHeight: '20px',
-                                                padding: 0,
-                                                whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
-                                                wordBreak: wrapLines ? 'break-all' : 'normal',
-                                                overflowWrap: wrapLines ? 'anywhere' : 'normal',
-                                            }
-                                        }}
-                                        customStyle={{
-                                            margin: 0,
-                                            background: 'transparent',
-                                            padding: '12px',
-                                            fontSize: '13px',
-                                            lineHeight: '20px',
-                                            minHeight: '100%',
-                                            minWidth: 'max-content',
-                                            whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
-                                            wordBreak: wrapLines ? 'break-all' : 'normal',
-                                            overflowWrap: wrapLines ? 'anywhere' : 'normal',
-                                            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
-                                        }}
-                                        wrapLongLines={wrapLines}
-                                    >
-                                        {(currentReq?.body?.raw || '') + ((currentReq?.body?.raw || '').endsWith('\n') ? ' ' : '')}
-                                    </SyntaxHighlighter>
-                                </div>
-                                <textarea
-                                    value={currentReq?.body?.raw || ''}
-                                    readOnly={!canEdit}
-                                    spellCheck={false}
-                                    onScroll={(e) => {
-                                        if (bodyEditorRef.current) {
-                                            bodyEditorRef.current.scrollTop = e.currentTarget.scrollTop;
-                                            bodyEditorRef.current.scrollLeft = e.currentTarget.scrollLeft;
-                                        }
-                                    }}
-                                    onChange={(e) => onRequestChange({ body: { ...currentReq.body, raw: e.target.value } })}
-                                    className="absolute inset-0 w-full h-full bg-transparent text-transparent outline-none resize-none overflow-auto selection:bg-indigo-500/30 z-10"
-                                    placeholder='{ "key": "value" }'
-                                    style={{
-                                        padding: '12px',
-                                        fontSize: '13px',
-                                        lineHeight: '20px',
-                                        whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
-                                        wordBreak: wrapLines ? 'break-all' : 'normal',
-                                        overflowWrap: wrapLines ? 'anywhere' : 'normal',
-                                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                                        caretColor: theme === 'dark' ? '#fff' : '#6366f1'
-                                    }}
-                                />
+                                {(() => {
+                                    const responseText = currentReq?.body?.raw || '';
+                                    const isVisible = (currentReq?.body?.mode || 'raw') === 'raw';
+
+                                    const detectLanguage = (data: string) => {
+                                        const trimmed = data.trim();
+                                        if (trimmed.startsWith('<')) return 'html';
+                                        if (trimmed.startsWith('{') || trimmed.startsWith('[')) return 'json';
+                                        return 'json'; // Default to JSON for request body
+                                    };
+
+                                    return (
+                                        <div className={`absolute inset-0 w-full h-full ${isVisible ? 'block' : 'hidden'}`}>
+                                            <Editor
+                                                key="request-body-editor"
+                                                height="100%"
+                                                language={detectLanguage(responseText)}
+                                                value={responseText}
+                                                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                                onChange={(value) => onRequestChange({ body: { ...currentReq.body, raw: value || '' } })}
+                                                options={{
+                                                    readOnly: !canEdit,
+                                                    fontSize: 13,
+                                                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                                                    minimap: { enabled: false },
+                                                    scrollBeyondLastLine: false,
+                                                    wordWrap: wrapLines ? 'on' : 'off',
+                                                    automaticLayout: true,
+                                                    padding: { top: 12, bottom: 12 },
+                                                    lineNumbers: 'on',
+                                                    folding: true,
+                                                    renderLineHighlight: 'none',
+                                                }}
+                                            />
+                                        </div>
+                                    );
+                                })()}
                             </div>
-                        ) : (
+                        ) : currentReq?.body?.mode === 'formdata' ? (
                             <div className={`relative flex-1 rounded-xl border ${themeClasses.borderCol} overflow-hidden ${theme === 'dark' ? 'bg-[#1e1e1e]' : 'bg-[#fafafa]'}`}>
                                 <div className="h-full overflow-y-auto">
                                     <FormDataEditor
@@ -284,8 +311,90 @@ export function RequestTabs({
                                     />
                                 </div>
                             </div>
+                        ) : (
+                            <div className={`relative flex-1 flex flex-col gap-2`}>
+                                <div className={`flex-1 rounded-xl border ${themeClasses.borderCol} overflow-hidden ${theme === 'dark' ? 'bg-[#1e1e1e]' : 'bg-[#fafafa]'}`}>
+                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-bold text-gray-500 pointer-events-none">QUERY</div>
+                                    <Editor
+                                        key="gql-query-editor"
+                                        height="100%"
+                                        language="graphql"
+                                        value={currentReq?.body?.graphql?.query || ''}
+                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                        onChange={(query) => onRequestChange({
+                                            body: {
+                                                ...currentReq.body,
+                                                graphql: { ...currentReq.body?.graphql, query: query || '' }
+                                            }
+                                        })}
+                                        options={{
+                                            readOnly: !canEdit,
+                                            fontSize: 13,
+                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                                            minimap: { enabled: false },
+                                            scrollBeyondLastLine: false,
+                                            automaticLayout: true,
+                                            padding: { top: 12, bottom: 12 },
+                                            lineNumbers: 'on',
+                                            renderLineHighlight: 'none',
+                                        }}
+                                    />
+                                </div>
+                                <div className={`relative h-[150px] rounded-xl border ${themeClasses.borderCol} overflow-hidden ${theme === 'dark' ? 'bg-[#1e1e1e]' : 'bg-[#fafafa]'}`}>
+                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-bold text-gray-500 pointer-events-none">VARIABLES</div>
+                                    <Editor
+                                        key="gql-vars-editor"
+                                        height="100%"
+                                        language="json"
+                                        value={currentReq?.body?.graphql?.variables || ''}
+                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                        onChange={(variables) => onRequestChange({
+                                            body: {
+                                                ...currentReq.body,
+                                                graphql: { ...currentReq.body?.graphql, variables: variables || '' }
+                                            }
+                                        })}
+                                        options={{
+                                            readOnly: !canEdit,
+                                            fontSize: 12,
+                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                                            minimap: { enabled: false },
+                                            scrollBeyondLastLine: false,
+                                            automaticLayout: true,
+                                            padding: { top: 12, bottom: 12 },
+                                            lineNumbers: 'off',
+                                            renderLineHighlight: 'none',
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         )}
                     </div>
+                )}
+
+                {/* Tests Tab */}
+                {activeTab === 'tests' && (
+                    <div className={`flex-1 rounded-xl border ${themeClasses.borderCol} overflow-hidden ${theme === 'dark' ? 'bg-[#1e1e1e]' : 'bg-[#fafafa]'
+                        }`}>
+                        <TestsTab
+                            assertions={currentReq?.assertions || []}
+                            canEdit={canEdit}
+                            onChange={(assertions) => onRequestChange({ assertions })}
+                            aiEnabled={aiEnabled}
+                            method={currentReq?.method || 'GET'}
+                            url={currentReq?.url || ''}
+                            lastResponse={currentReq?.lastResponse?.data}
+                            onAiGenerateTests={onAiGenerateTests}
+                        />
+                    </div>
+                )}
+
+                {/* Mocking Tab */}
+                {activeTab === 'mocking' && (
+                    <MockTab
+                        requestId={currentReq.id}
+                        canEdit={canEdit}
+                    />
                 )}
 
                 {/* Docs Tab */}
