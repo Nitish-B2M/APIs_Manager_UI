@@ -444,6 +444,12 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
                         <p className={`text-xs font-bold ${themeClasses.textColor}`}>{FREQUENCIES.find(f => f.value === monitor.frequency)?.label || monitor.frequency}</p>
                         <p className={`text-[10px] ${themeClasses.subTextColor}`}>Interval</p>
                     </div>
+                    {monitor.webhookUrl && (
+                        <div className="text-center" title={`${monitor.webhookType} webhook configured`}>
+                            <Bell size={14} className="text-indigo-400 mx-auto" />
+                            <p className={`text-[10px] ${themeClasses.subTextColor}`}>Alerts</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -519,7 +525,15 @@ export function MonitorDashboard({ documentationId }: MonitorDashboardProps) {
     const queryClient = useQueryClient();
 
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ name: '', url: '', method: 'GET', frequency: '5min', notifyEmail: '' });
+    const [form, setForm] = useState({
+        name: '',
+        url: '',
+        method: 'GET',
+        frequency: '5min',
+        notifyEmail: '',
+        webhookUrl: '',
+        webhookType: 'generic'
+    });
 
     const { data: monitorsRes, isLoading } = useQuery({
         queryKey: ['monitors', documentationId],
@@ -532,7 +546,15 @@ export function MonitorDashboard({ documentationId }: MonitorDashboardProps) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['monitors', documentationId] });
             setShowForm(false);
-            setForm({ name: '', url: '', method: 'GET', frequency: '5min', notifyEmail: '' });
+            setForm({
+                name: '',
+                url: '',
+                method: 'GET',
+                frequency: '5min',
+                notifyEmail: '',
+                webhookUrl: '',
+                webhookType: 'generic'
+            });
             toast.success('Monitor created & scheduled!');
         },
         onError: (err: any) => toast.error(err.message || 'Failed to create monitor'),
@@ -608,6 +630,23 @@ export function MonitorDashboard({ documentationId }: MonitorDashboardProps) {
                             {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                         </select>
                         <input className={`${inputClass} md:col-span-2`} placeholder="Alert email (optional)" value={form.notifyEmail} onChange={e => setForm(f => ({ ...f, notifyEmail: e.target.value }))} />
+
+                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input
+                                className={`${inputClass} md:col-span-2`}
+                                placeholder="Webhook URL (Slack or Custom)"
+                                value={form.webhookUrl}
+                                onChange={e => setForm(f => ({ ...f, webhookUrl: e.target.value }))}
+                            />
+                            <select
+                                className={inputClass}
+                                value={form.webhookType}
+                                onChange={e => setForm(f => ({ ...f, webhookType: e.target.value }))}
+                            >
+                                <option value="generic">Generic Webhook</option>
+                                <option value="slack">Slack Webhook</option>
+                            </select>
+                        </div>
                     </div>
                     <div className="flex gap-2 mt-4">
                         <button onClick={() => createMutation.mutate()} disabled={!form.name || !form.url || createMutation.isPending}

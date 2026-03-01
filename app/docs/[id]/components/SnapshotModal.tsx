@@ -7,6 +7,9 @@ import { X, Camera, RotateCcw, Trash2, Clock, CheckCircle2, AlertTriangle, Loade
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 import { toast } from 'react-hot-toast';
+import { useBetaMode } from '../../../../context/BetaModeContext';
+import { SnapshotDiffViewer } from './SnapshotDiffViewer';
+import { Eye } from 'lucide-react';
 
 interface SnapshotModalProps {
     isOpen: boolean;
@@ -20,6 +23,8 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
     const queryClient = useQueryClient();
     const [snapshotName, setSnapshotName] = useState('');
     const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
+    const [diffSnapshot, setDiffSnapshot] = useState<any | null>(null);
+    const { isBeta } = useBetaMode();
 
     const { data: snapshotsRes, isLoading: snapshotsLoading } = useQuery({
         queryKey: ['snapshots', documentationId],
@@ -55,6 +60,35 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
             toast.success('Snapshot deleted');
         }
     });
+
+
+
+    // Fetch individual snapshot for diff
+    const handleCompare = async (snapshot: any) => {
+        try {
+            const res = await api.snapshot.getOne(snapshot.id);
+            if (res.status) {
+                // Get current doc state from query cache or refetch
+                const currentDoc = queryClient.getQueryData(['doc', documentationId]) as any;
+                const currentFolders = queryClient.getQueryData(['folders', documentationId]) as any;
+
+                // Construct current state object like snapshot data
+                const currentState = {
+                    doc: currentDoc?.data,
+                    requests: currentDoc?.data?.requests || [],
+                    folders: currentFolders?.data || []
+                };
+
+                setDiffSnapshot({
+                    name: snapshot.name,
+                    data: res.data.data,
+                    currentState
+                });
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to fetch snapshot data');
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -144,6 +178,18 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                                         </div>
 
                                         <div className="flex items-center gap-2">
+                                            {isBeta && (
+                                                <button
+                                                    onClick={() => handleCompare(s)}
+                                                    className={`p-2.5 rounded-xl transition-all ${theme === 'dark'
+                                                        ? 'hover:bg-indigo-500/20 text-indigo-400 opacity-0 group-hover:opacity-100'
+                                                        : 'hover:bg-indigo-50 text-indigo-600 opacity-0 group-hover:opacity-100'
+                                                        }`}
+                                                    title="Compare with current state"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                            )}
                                             {confirmRestore === s.id ? (
                                                 <div className="flex items-center gap-2 animate-in slide-in-from-right-2 duration-200">
                                                     <button
@@ -199,6 +245,15 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                     <span>Restoring a snapshot will replace the current state of the collection. This action cannot be undone unless you create a snapshot of the current state first.</span>
                 </div>
             </div>
+
+            {diffSnapshot && (
+                <SnapshotDiffViewer
+                    snapshotName={diffSnapshot.name}
+                    oldData={diffSnapshot.data}
+                    newData={diffSnapshot.currentState}
+                    onClose={() => setDiffSnapshot(null)}
+                />
+            )}
         </div>
     );
 }

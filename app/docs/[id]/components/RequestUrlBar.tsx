@@ -120,7 +120,14 @@ export function RequestUrlBar({
     const [aiPrompt, setAiPrompt] = useState('');
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [showAiBuilder, setShowAiBuilder] = useState(false);
-    const themeClasses = getThemeClasses(theme);
+
+    // Theme Constants
+    const isDark = theme === 'dark';
+    const textColor = isDark ? 'text-white' : 'text-gray-900';
+    const subTextColor = isDark ? 'text-gray-400' : 'text-gray-500';
+    const borderCol = isDark ? 'border-white/5' : 'border-gray-200';
+    const inputBg = isDark ? 'bg-white/5' : 'bg-gray-50';
+    const secondaryBg = isDark ? 'bg-[#0a0a0b]/60 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-md';
 
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [suggestionIndex, setSuggestionIndex] = useState(0);
@@ -225,84 +232,87 @@ export function RequestUrlBar({
     return (
         <div className="flex flex-col shadow-md z-10">
             {aiEnabled && (
-                <div className={`${theme === 'dark' ? 'bg-[#1a1a2e]' : 'bg-indigo-50/50'} border-b ${themeClasses.borderCol} px-3 py-1.5 flex items-center justify-between`}>
+                <div className={`${theme === 'dark' ? 'bg-indigo-500/5 backdrop-blur-md' : 'bg-indigo-50/50'} border-b border-white/5 px-3.5 py-2 flex items-center justify-between`}>
                     {!showAiBuilder ? (
                         <button
                             onClick={() => setShowAiBuilder(true)}
-                            className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-all uppercase tracking-wider"
+                            className="flex items-center gap-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-all uppercase tracking-widest group"
                         >
-                            <Sparkles size={11} /> AI Request Builder
+                            <Sparkles size={12} className="group-hover:animate-pulse" /> AI Request Builder
                         </button>
                     ) : (
-                        <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-top-2 duration-200">
-                            <Sparkles size={11} className="text-indigo-400 flex-shrink-0" />
+                        <div className="flex-1 flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+                            <Sparkles size={12} className="text-indigo-400 flex-shrink-0" />
                             <input
                                 type="text"
                                 value={aiPrompt}
                                 onChange={(e) => setAiPrompt(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleAiGenerate(); if (e.key === 'Escape') setShowAiBuilder(false); }}
-                                placeholder="e.g., 'Get all users from /users' or 'Post a new item to /items with name and price'"
-                                className={`flex-1 bg-transparent border-none outline-none text-[11px] ${themeClasses.textColor} placeholder-indigo-400/40`}
+                                placeholder="Describe the request you want to build..."
+                                className={`flex-1 bg-transparent border-none outline-none text-[12px] ${textColor} placeholder-indigo-400/30`}
                                 autoFocus
                             />
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={handleAiGenerate}
                                     disabled={!aiPrompt || isAiLoading}
-                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold transition-all ${!aiPrompt || isAiLoading ? 'opacity-40' : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-900/20'}`}
+                                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${!aiPrompt || isAiLoading ? 'opacity-40 grayscale' : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/20'}`}
                                 >
-                                    {isAiLoading ? <Loader2 size={10} className="animate-spin" /> : 'GENERATE'}
+                                    {isAiLoading ? <Loader2 size={12} className="animate-spin" /> : 'GENERATE'}
                                 </button>
                                 <button
                                     onClick={() => setShowAiBuilder(false)}
-                                    className={`p-1 rounded-md ${theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-200'} text-gray-500`}
+                                    className={`p-1.5 rounded-lg ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-100'} text-gray-500 transition-colors`}
                                 >
-                                    <X size={12} />
+                                    <X size={14} />
                                 </button>
                             </div>
                         </div>
                     )}
                 </div>
             )}
-            <div className={`${themeClasses.secondaryBg} p-3 flex items-center gap-3`}>
-                <div className="flex-1 flex gap-2 min-w-0">
+            <div className={`${secondaryBg} p-4 flex items-center gap-3`}>
+                <div className="flex-1 flex gap-2.5 min-w-0">
                     {/* Protocol Selector */}
-                    <select
-                        value={currentReq.protocol || 'REST'}
-                        disabled={!canEdit}
-                        onChange={(e) => onProtocolChange(e.target.value as ProtocolType)}
-                        className={`flex-shrink-0 px-2 py-1.5 ${theme === 'dark' ? 'bg-indigo-900/20 text-indigo-400 border-indigo-900/50' : 'bg-indigo-50 text-indigo-600 border-indigo-200'} border rounded-lg font-bold focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 text-[10px] uppercase tracking-wider`}
-                    >
-                        <option value="REST">REST</option>
-                        <option value="WS">WebSocket</option>
-                        <option value="SSE">SSE</option>
-                        <option value="GRAPHQL">GraphQL</option>
-                    </select>
-
-                    {/* Method Selector (only for REST & GraphQL) */}
-                    {(currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol) && (
+                    <div className="relative group">
                         <select
-                            value={currentReq.method}
+                            value={currentReq.protocol || 'REST'}
                             disabled={!canEdit}
-                            onChange={(e) => onMethodChange(e.target.value)}
-                            className={`flex-shrink-0 px-2 py-1.5 ${themeClasses.inputBg} border ${themeClasses.borderCol} rounded-lg font-bold ${themeClasses.textColor} focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 text-[11px]`}
+                            onChange={(e) => onProtocolChange(e.target.value as ProtocolType)}
+                            className={`flex-shrink-0 px-3 py-2 ${isDark ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/20' : 'bg-indigo-50 text-indigo-600 border-indigo-200'} border rounded-xl appearance-none font-bold focus:ring-2 focus:ring-indigo-500/50 focus:outline-none disabled:opacity-50 text-[10px] uppercase tracking-widest cursor-pointer transition-all hover:bg-indigo-600/20`}
                         >
-                            <option>GET</option>
-                            <option>POST</option>
-                            <option>PUT</option>
-                            <option>DELETE</option>
-                            <option>PATCH</option>
+                            <option value="REST" className="bg-[#121214]">REST</option>
+                            <option value="WS" className="bg-[#121214]">WS</option>
+                            <option value="SSE" className="bg-[#121214]">SSE</option>
+                            <option value="GRAPHQL" className="bg-[#121214]">GQL</option>
                         </select>
+                    </div>
+
+                    {/* Method Selector */}
+                    {(currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol) && (
+                        <div className="relative group">
+                            <select
+                                value={currentReq.method}
+                                disabled={!canEdit}
+                                onChange={(e) => onMethodChange(e.target.value)}
+                                className={`flex-shrink-0 px-3 py-2 ${inputBg} border ${borderCol} rounded-xl appearance-none font-bold ${textColor} focus:ring-2 focus:ring-indigo-500/50 focus:outline-none disabled:opacity-50 text-[11px] cursor-pointer transition-all hover:bg-white/10`}
+                            >
+                                <option className="bg-[#121214]">GET</option>
+                                <option className="bg-[#121214]">POST</option>
+                                <option className="bg-[#121214]">PUT</option>
+                                <option className="bg-[#121214]">DELETE</option>
+                                <option className="bg-[#121214]">PATCH</option>
+                            </select>
+                        </div>
                     )}
 
                     {/* URL Input */}
                     <div className="flex-1 relative group min-w-0">
-                        {/* Highlighted overlay - must exactly match input positioning */}
                         <div
-                            className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg"
+                            className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl"
                             style={{
-                                padding: '6px 32px 6px 12px',
-                                height: '34px',
+                                padding: '8px 40px 8px 14px',
+                                height: '38px',
                                 lineHeight: '22px',
                                 boxSizing: 'border-box',
                             }}
@@ -310,7 +320,7 @@ export function RequestUrlBar({
                             <HighlightedText
                                 text={currentReq.url}
                                 variables={variables}
-                                className="text-[11px] font-mono"
+                                className="text-[12px] font-mono tracking-tight"
                             />
                         </div>
                         <input
@@ -319,37 +329,37 @@ export function RequestUrlBar({
                             readOnly={!canEdit}
                             onChange={handleUrlChange}
                             onKeyDown={handleKeyDown}
-                            className={`w-full border ${themeClasses.borderCol} rounded-lg focus:ring-none outline-none font-mono !text-[11px] ${themeClasses.inputBg} ${!canEdit ? 'cursor-default' : ''}`}
+                            className={`w-full border ${borderCol} rounded-xl focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono !text-[12px] ${inputBg} ${!canEdit ? 'cursor-default' : ''} transition-all`}
                             style={{
                                 color: 'transparent',
-                                caretColor: theme === 'dark' ? '#e5e7eb' : '#1f2937',
-                                padding: '6px 32px 6px 12px',
-                                height: '34px',
+                                caretColor: isDark ? '#fff' : '#000',
+                                padding: '8px 40px 8px 14px',
+                                height: '38px',
                                 boxSizing: 'border-box',
                             }}
-                            placeholder="Enter Request URL"
+                            placeholder="Enter request URL..."
                         />
-                        <div className="absolute inset-y-0 right-0 z-20 flex items-center pr-2">
+                        <div className="absolute inset-y-0 right-0 z-20 flex items-center pr-3">
                             <button
                                 onClick={onCopyUrl}
-                                className={`p-1 ${themeClasses.subTextColor} hover:text-indigo-400 hover:bg-gray-500/10 rounded-md transition-all`}
+                                className={`p-1.5 ${subTextColor} hover:text-white hover:bg-white/10 rounded-lg transition-all`}
                                 title="Copy full URL"
                             >
-                                <Copy size={12} />
+                                <Copy size={14} />
                             </button>
                         </div>
 
                         {/* Suggestions Dropdown */}
                         {suggestions.length > 0 && (
-                            <div className={`absolute left-0 top-full mt-1 w-80 ${themeClasses.secondaryBg} border ${themeClasses.borderCol} rounded-lg shadow-2xl z-50 py-1 max-h-60 overflow-y-auto`}>
+                            <div className={`absolute left-0 top-full mt-2 w-full max-w-sm ${secondaryBg} border ${borderCol} rounded-xl shadow-2xl z-50 py-1.5 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200`}>
                                 {suggestions.map((s, idx) => (
                                     <div
                                         key={s.value}
                                         onClick={() => handleSuggestionSelect(s)}
-                                        className={`px-3 py-2 text-[11px] cursor-pointer flex items-center gap-2 ${idx === suggestionIndex ? 'bg-indigo-600 text-white' : `${themeClasses.subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}`}
+                                        className={`px-3 py-2.5 text-[11px] cursor-pointer flex items-center gap-3 transition-colors ${idx === suggestionIndex ? 'bg-indigo-600 text-white' : `${subTextColor} hover:bg-white/5`}`}
                                     >
                                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${idx === suggestionIndex
-                                            ? 'bg-indigo-500'
+                                            ? 'bg-indigo-500 text-white'
                                             : s.type === 'dynamic'
                                                 ? 'bg-purple-600/20 text-purple-400'
                                                 : s.type === 'env'
@@ -360,13 +370,8 @@ export function RequestUrlBar({
                                         </span>
                                         <span className="font-mono flex-1 truncate">{s.displayValue}</span>
                                         {s.description && (
-                                            <span className={`text-[9px] truncate max-w-[110px] ${idx === suggestionIndex ? 'text-indigo-200' : 'text-gray-500'}`}>
+                                            <span className={`text-[10px] truncate max-w-[120px] ${idx === suggestionIndex ? 'text-indigo-100/70' : 'text-gray-500'}`}>
                                                 {s.description}
-                                            </span>
-                                        )}
-                                        {s.type === 'env' && (
-                                            <span className={`text-[9px] truncate max-w-[100px] ${idx === suggestionIndex ? 'text-indigo-200' : 'text-gray-500'}`}>
-                                                {variables[s.value]}
                                             </span>
                                         )}
                                     </div>
@@ -379,10 +384,10 @@ export function RequestUrlBar({
                     <button
                         onClick={onSend}
                         disabled={reqLoading}
-                        className={`flex-shrink-0 px-5 py-1.5 ${currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 text-[11px] disabled:opacity-50 uppercase`}
+                        className={`flex-shrink-0 px-6 py-2 ${currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'} text-white rounded-xl font-bold flex items-center gap-2.5 transition-all shadow-xl active:scale-[0.98] text-[11px] disabled:opacity-50 disabled:grayscale uppercase tracking-wider`}
                     >
-                        {reqLoading ? <span className="animate-spin text-xs">⌛</span> : (
-                            currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? <Zap size={14} /> : <Send size={14} />
+                        {reqLoading ? <Loader2 size={16} className="animate-spin" /> : (
+                            currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? <Zap size={16} /> : <Send size={16} />
                         )}
                         {currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? 'Connect' : 'Send'}
                     </button>
@@ -392,30 +397,30 @@ export function RequestUrlBar({
                         <button
                             onClick={onSave}
                             disabled={!isDirty}
-                            className={`flex-shrink-0 px-4 py-1.5 ${isDirty ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-900/20' : `${theme === 'dark' ? 'bg-gray-800 text-gray-500 border-gray-700' : 'bg-gray-100 text-gray-400 border-gray-200'} cursor-not-allowed opacity-50`} rounded-lg font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 text-[11px] border`}
-                            title={isDirty ? "Save this request" : "No changes to save"}
+                            className={`flex-shrink-0 px-5 py-2 ${isDirty ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-600/30 backdrop-blur-md' : `${isDark ? 'bg-white/5 text-gray-500 border-white/5' : 'bg-gray-100 text-gray-400 border-transparent'} cursor-not-allowed opacity-50`} rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg active:scale-[0.98] text-[11px] border`}
+                            title={isDirty ? "Save changes" : "No changes to save"}
                         >
-                            <Save size={14} />
+                            <Save size={16} />
                             SAVE
                         </button>
                     )}
                 </div>
 
                 {/* Actions */}
-                <div className={`flex items-center gap-1 border-l pl-3 ${themeClasses.borderCol} flex-shrink-0`}>
+                <div className={`flex items-center gap-2 border-l pl-4 ${borderCol} flex-shrink-0`}>
                     <button
                         onClick={onDownloadMarkdown}
-                        className={`p-1.5 ${themeClasses.subTextColor} hover:text-green-500 hover:bg-green-500/10 rounded-md transition-all`}
-                        title="Download Request Markdown"
+                        className={`p-2 ${subTextColor} hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all`}
+                        title="Download Markdown"
                     >
-                        <Download size={16} />
+                        <Download size={18} />
                     </button>
                     <button
                         onClick={onCopyMarkdown}
-                        className={`p-1.5 ${themeClasses.subTextColor} hover:text-indigo-500 hover:bg-indigo-500/10 rounded-md transition-all`}
-                        title="Copy Request Markdown"
+                        className={`p-2 ${subTextColor} hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all`}
+                        title="Copy Markdown"
                     >
-                        <Copy size={16} />
+                        <Copy size={18} />
                     </button>
                 </div>
             </div>

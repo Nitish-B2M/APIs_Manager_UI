@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FileText, Copy, Download } from 'lucide-react';
+import { FileText, Copy, Download, Globe, ExternalLink } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { Endpoint, Documentation } from '@/types';
 import { getThemeClasses } from '../utils/theme';
@@ -16,6 +16,7 @@ interface DocumentationViewProps {
     onDownloadPdf: () => void;
     resolveUrl: (ep: any) => string;
     resolveAll: (text: string, ep?: any) => string;
+    publicSlug?: string | null;
 }
 
 export function DocumentationView({
@@ -27,7 +28,8 @@ export function DocumentationView({
     onDownloadMarkdown,
     onDownloadPdf,
     resolveUrl,
-    resolveAll
+    resolveAll,
+    publicSlug
 }: DocumentationViewProps) {
     const themeClasses = getThemeClasses(theme);
 
@@ -64,6 +66,17 @@ export function DocumentationView({
                             <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} documented</p>
                         </div>
                         <div className="flex items-center gap-2">
+                            {publicSlug && (
+                                <a
+                                    href={`/public/${publicSlug}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-green-600/20 text-green-500 border border-green-500/30 rounded-lg text-[10px] font-bold hover:bg-green-600/30 transition-all shadow-sm"
+                                    title="Open Public Documentation Page"
+                                >
+                                    <Globe size={12} /> View Public
+                                </a>
+                            )}
                             <button onClick={onCopyMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
                                 <Copy size={12} /> COPY MD
                             </button>
