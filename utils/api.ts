@@ -27,7 +27,7 @@ export const api = {
         login: (data: any) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
         register: (data: any) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
         me: () => apiFetch('/auth/me'),
-        updateProfile: (data: { name?: string; avatarUrl?: string | null }) => apiFetch('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+        updateProfile: (data: { name?: string; avatarUrl?: string | null; settings?: Record<string, any> }) => apiFetch('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
         forgotPassword: (email: string) => apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
         resetPassword: (token: string, password: string) => apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
     },
@@ -42,6 +42,10 @@ export const api = {
         deleteRequest: (requestId: string) => apiFetch(`/documentation/request/${requestId}`, { method: 'DELETE' }),
         reorderRequests: (id: string, requests: { id: string; order: number }[]) =>
             apiFetch(`/documentation/${id}/requests/reorder`, { method: 'PATCH', body: JSON.stringify({ requests }) }),
+        bulkDeleteRequests: (requestIds: string[]) =>
+            apiFetch('/documentation/request/bulk-delete', { method: 'POST', body: JSON.stringify({ requestIds }) }),
+        bulkMoveRequests: (requestIds: string[], folderId: string | null) =>
+            apiFetch('/documentation/request/bulk-move', { method: 'PATCH', body: JSON.stringify({ requestIds, folderId }) }),
         delete: (id: string) => apiFetch(`/documentation/${id}`, { method: 'DELETE' }),
         togglePublic: (id: string, isPublic: boolean) => apiFetch(`/documentation/${id}/toggle-public`, { method: 'PATCH', body: JSON.stringify({ isPublic }) }),
         getSnippets: (requestId: string) => apiFetch(`/documentation/request/${requestId}/snippets`),
@@ -92,6 +96,7 @@ export const api = {
     snapshot: {
         create: (data: { documentationId: string, name: string }) => apiFetch('/snapshot/create', { method: 'POST', body: JSON.stringify(data) }),
         list: (documentationId: string) => apiFetch(`/snapshot/list/${documentationId}`),
+        getOne: (snapshotId: string) => apiFetch(`/snapshot/${snapshotId}`),
         restore: (snapshotId: string) => apiFetch(`/snapshot/restore/${snapshotId}`, { method: 'POST' }),
         delete: (snapshotId: string) => apiFetch(`/snapshot/delete/${snapshotId}`, { method: 'DELETE' }),
     },
@@ -118,5 +123,30 @@ export const api = {
             apiFetch(`/collaboration/collaborators/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
         cancelInvite: (id: string) =>
             apiFetch(`/collaboration/invitations/${id}`, { method: 'DELETE' }),
+    },
+    admin: {
+        listTemplates: () => apiFetch('/admin/templates'),
+        getTemplate: (id: string) => apiFetch(`/admin/templates/${id}`),
+        createTemplate: (data: any) => apiFetch('/admin/templates', { method: 'POST', body: JSON.stringify(data) }),
+        updateTemplate: (id: string, data: any) => apiFetch(`/admin/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        deleteTemplate: (id: string) => apiFetch(`/admin/templates/${id}`, { method: 'DELETE' }),
+        listLogs: () => apiFetch('/admin/logs'),
+    },
+    scheduler: {
+        getTasks: () => apiFetch('/scheduler/tasks'),
+        createTask: (data: any) => apiFetch('/scheduler/tasks', { method: 'POST', body: JSON.stringify(data) }),
+        updateTask: (id: string, data: any) => apiFetch(`/scheduler/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        deleteTask: (id: string) => apiFetch(`/scheduler/tasks/${id}`, { method: 'DELETE' }),
+        getHabits: () => apiFetch('/scheduler/habits'),
+        createHabit: (data: any) => apiFetch('/scheduler/habits', { method: 'POST', body: JSON.stringify(data) }),
+        getEvents: (start: string, end: string) => apiFetch(`/scheduler/events?start=${start}&end=${end}`),
+        getSettings: () => apiFetch('/scheduler/settings'),
+        optimize: () => apiFetch('/scheduler/optimize', { method: 'POST' }),
+    },
+    contact: {
+        submit: (data: any) => apiFetch('/contact', { method: 'POST', body: JSON.stringify(data) }),
+        list: (status?: string) => apiFetch(`/contact${status ? `?status=${status}` : ''}`),
+        updateStatus: (id: string, status: string) => apiFetch(`/contact/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+        delete: (id: string) => apiFetch(`/contact/${id}`, { method: 'DELETE' }),
     }
 };

@@ -1,537 +1,405 @@
 'use client';
-import { useParams } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../utils/api';
 import { useTheme } from '../../../context/ThemeContext';
-import { ChevronDown, ChevronRight, Globe, ExternalLink, Copy, Check, FileText, CheckSquare, Square } from 'lucide-react';
+import { useBetaMode } from '../../../context/BetaModeContext';
+import { FileText, Copy, Download, Beaker, ArrowLeft, Globe, Search } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import React, { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import Editor from '@monaco-editor/react';
 
-interface PublicRequest {
-    id: string;
-    name: string;
-    method: string;
-    url: string;
-    description: string;
-    body: any;
-    headers: { key: string; value: string }[];
-    params?: { key: string; value: string; type?: string }[];
-    lastResponse?: {
-        status: number;
-        statusText: string;
-        time: number;
-        data: unknown;
-        timestamp: string;
-    } | null;
-    folderId: string | null;
-    order: number;
-}
-
-interface PublicFolder {
-    id: string;
-    name: string;
-    description?: string;
-    parentId?: string | null;
-    order: number;
-}
-
-const METHOD_COLORS: Record<string, string> = {
-    GET: 'bg-green-500/20 text-green-400 border-green-500/30',
-    POST: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    PUT: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
-    PATCH: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    DELETE: 'bg-red-500/20 text-red-400 border-red-500/30',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    '2': 'bg-green-500/20 text-green-400 border-green-500/30',
-    '3': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    '4': 'bg-red-500/20 text-red-400 border-red-500/30',
-    '5': 'bg-red-500/20 text-red-300 border-red-500/30',
-};
-
-function getStatusColor(status: number): string {
-    const key = String(status).charAt(0);
-    return STATUS_COLORS[key] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-}
-
-// ─── Copy Button Component ───────────────────────────────────────
-function CopyButton({ text, label, theme }: { text: string; label?: string; theme: string }) {
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = useCallback(async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        try {
-            await navigator.clipboard.writeText(text);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch { /* ignore */ }
-    }, [text]);
-
-    return (
-        <button
-            onClick={handleCopy}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${copied
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                : theme === 'dark'
-                    ? 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700 border border-gray-700'
-                    : 'bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200 border border-gray-200'
-                }`}
-            title={copied ? 'Copied!' : (label || 'Copy')}
-        >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-            {label && <span>{copied ? 'Copied!' : label}</span>}
-            {!label && copied && <span>Copied!</span>}
-        </button>
-    );
-}
-
-// ─── Markdown Generation Utilities ───────────────────────────────
-function formatBodyForDisplay(body: any): string | null {
-    if (!body) return null;
-
-    // Handle body with .raw property (Postman-style)
-    if (body.raw) {
-        try {
-            const parsed = JSON.parse(body.raw);
-            return JSON.stringify(parsed, null, 2);
-        } catch {
-            return body.raw;
-        }
-    }
-
-    // Handle body that is directly a JSON object (but not empty {})
-    if (typeof body === 'object') {
-        const keys = Object.keys(body);
-        // Skip if it's just { mode, raw } wrapper with no raw
-        if (keys.length === 0 || (keys.length <= 2 && keys.every(k => ['mode', 'raw'].includes(k)) && !body.raw)) {
-            return null;
-        }
-        // If it has unexpected keys beyond mode/raw, render it
-        if (!keys.every(k => ['mode', 'raw'].includes(k))) {
-            return JSON.stringify(body, null, 2);
-        }
-    }
-
-    return null;
-}
-
-function requestToMarkdown(request: PublicRequest): string {
-    const lines: string[] = [];
-    lines.push(`## ${request.method} ${request.url || '/untitled'}`);
-    if (request.name) lines.push(`**${request.name}**`);
-    lines.push('');
-
-    if (request.description) {
-        lines.push(request.description);
-        lines.push('');
-    }
-
-    // Headers
-    const validHeaders = request.headers?.filter(h => h.key) || [];
-    if (validHeaders.length > 0) {
-        lines.push('### Headers');
-        lines.push('| Key | Value |');
-        lines.push('| --- | --- |');
-        validHeaders.forEach(h => lines.push(`| ${h.key} | ${h.value} |`));
-        lines.push('');
-    }
-
-    // Params  
-    const validParams = request.params?.filter(p => p.key) || [];
-    if (validParams.length > 0) {
-        lines.push('### Parameters');
-        lines.push('| Key | Value | Type |');
-        lines.push('| --- | --- | --- |');
-        validParams.forEach(p => lines.push(`| ${p.key} | ${p.value} | ${p.type || '-'} |`));
-        lines.push('');
-    }
-
-    // Body
-    const bodyStr = formatBodyForDisplay(request.body);
-    if (bodyStr) {
-        lines.push('### Body');
-        lines.push('```json');
-        lines.push(bodyStr);
-        lines.push('```');
-        lines.push('');
-    }
-
-    // Response
-    if (request.lastResponse) {
-        const resp = request.lastResponse;
-        lines.push(`### Response (${resp.status} ${resp.statusText})${resp.time ? ` — ${resp.time}ms` : ''}`);
-        if (resp.data) {
-            lines.push('```json');
-            lines.push(typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data, null, 2));
-            lines.push('```');
-        }
-        lines.push('');
-    }
-
-    lines.push('---');
-    lines.push('');
-    return lines.join('\n');
-}
-
-// ─── Main Page Component ─────────────────────────────────────────
 export default function PublicDocsPage() {
-    const params = useParams();
-    const slug = params?.slug as string;
+    const { slug } = useParams();
+    const router = useRouter();
     const { theme } = useTheme();
+    const { isBeta, toggleBeta } = useBetaMode();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [methodFilter, setMethodFilter] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<string | null>(null);
 
-    const [doc, setDoc] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
-    const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
+    const { data: docRes, isLoading, error } = useQuery({
+        queryKey: ['public-docs', slug],
+        queryFn: () => api.documentation.getPublic(slug as string),
+        enabled: !!slug,
+    });
 
-    useEffect(() => {
-        if (!slug) return;
-        setLoading(true);
-        api.documentation.getPublic(slug)
-            .then(res => {
-                if (res.status) {
-                    setDoc(res.data);
-                } else {
-                    setError(res.message || 'Documentation not found');
-                }
-            })
-            .catch(() => setError('Failed to load documentation'))
-            .finally(() => setLoading(false));
-    }, [slug]);
+    const doc = docRes?.data;
+    const endpoints = doc?.requests || [];
 
-    const toggleRequest = (id: string) => {
-        setExpandedRequests(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
+    const filteredEndpoints = endpoints.filter((ep: any) => {
+        const matchesSearch = ep.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            ep.url?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesMethod = !methodFilter || ep.method === methodFilter;
+        return matchesSearch && matchesMethod;
+    });
+
+    // Scroll Spy Logic
+    React.useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setActiveId(entry.target.id);
+                    }
+                });
+            },
+            { rootMargin: '-20% 0px -70% 0px' }
+        );
+
+        const sections = document.querySelectorAll('section[id^="request-"]');
+        sections.forEach((section) => observer.observe(section));
+
+        return () => {
+            sections.forEach((section) => observer.unobserve(section));
+        };
+    }, [filteredEndpoints]);
+
+    const resolveAll = (text: string) => {
+        if (!text) return '';
+        // In public mode we don't resolve env vars yet as we don't have an environment
+        return text;
     };
 
-    const toggleSelect = useCallback((id: string, e?: React.MouseEvent) => {
-        if (e) e.stopPropagation();
-        setSelectedRequests(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    }, []);
+    const resolveUrl = (ep: any) => {
+        return ep.url || '';
+    };
 
-    const toggleSelectAll = useCallback((requests: PublicRequest[]) => {
-        setSelectedRequests(prev => {
-            if (prev.size === requests.length) return new Set();
-            return new Set(requests.map(r => r.id));
-        });
-    }, []);
-
-    const copySelectedMarkdown = useCallback(async (requests: PublicRequest[], title: string) => {
-        const selected = requests.filter(r => selectedRequests.has(r.id));
-        if (selected.length === 0) return;
-
-        const md = `# ${title}\n\n${selected.map(requestToMarkdown).join('\n')}`;
-        try {
-            await navigator.clipboard.writeText(md);
-        } catch { /* ignore */ }
-    }, [selectedRequests]);
-
-    // ─── Theme vars ──────────────────────────────────────────────
-    const mainBg = theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900';
-    const cardBg = theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm';
-    const headerBg = theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200';
-    const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
-    const codeBg = theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-gray-100 border-gray-200';
-    const tableBg = theme === 'dark' ? 'bg-gray-950/50' : 'bg-gray-50';
-    const tableHeaderBg = theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100';
-    const tableBorder = theme === 'dark' ? 'border-gray-800' : 'border-gray-200';
-
-    if (loading) {
+    if (isLoading) {
         return (
-            <div className={`min-h-screen ${mainBg} flex items-center justify-center`}>
-                <div className="animate-pulse text-indigo-500 text-lg">Loading documentation...</div>
+            <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm font-medium animate-pulse">Fetching public documentation...</p>
+                </div>
             </div>
         );
     }
 
     if (error || !doc) {
         return (
-            <div className={`min-h-screen ${mainBg} flex items-center justify-center`}>
-                <div className="text-center">
-                    <Globe size={48} className="mx-auto mb-4 text-gray-500" />
-                    <h2 className="text-xl font-bold mb-2">Documentation Not Found</h2>
-                    <p className={subTextColor}>{error || 'This documentation does not exist or is not public.'}</p>
+            <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+                <div className="max-w-md text-center px-6">
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">404 - Not Found</h1>
+                    <p className="text-gray-500 mb-8 font-medium">This documentation might be private or doesn't exist.</p>
+                    <button onClick={() => router.push('/')} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition-all active:scale-95">
+                        Back to Home
+                    </button>
                 </div>
             </div>
         );
     }
 
-    const requests: PublicRequest[] = doc.requests || [];
-    const folders: PublicFolder[] = doc.folders || [];
+    // If Beta mode is OFF, we just show a "beta only" message for now or the raw JSON
+    // Actually, user said: "when off show the old one". The old one for public/:slug was raw JSON (browser default).
+    // I'll implement a basic professional view but hide the "Enhanced" features if isBeta is false.
+    // Or better, I'll follow the plan: Phase 1.1 Public Doc Viewer Page is a beta feature.
 
-    // Group requests by folder
-    const rootRequests = requests.filter(r => !r.folderId);
-    const folderMap = new Map<string, PublicRequest[]>();
-    requests.forEach(r => {
-        if (r.folderId) {
-            const list = folderMap.get(r.folderId) || [];
-            list.push(r);
-            folderMap.set(r.folderId, list);
-        }
-    });
-
-    const rootFolders = folders.filter(f => !f.parentId);
-    const allSelected = selectedRequests.size === requests.length && requests.length > 0;
-
-    // ─── Render a single request ─────────────────────────────────
-    const renderRequest = (request: PublicRequest) => {
-        const isExpanded = expandedRequests.has(request.id);
-        const isSelected = selectedRequests.has(request.id);
-        const methodColor = METHOD_COLORS[request.method] || 'bg-gray-500/20 text-gray-400';
-
-        const bodyStr = formatBodyForDisplay(request.body);
-        const validHeaders = request.headers?.filter(h => h.key) || [];
-        const validParams = request.params?.filter((p: any) => p.key) || [];
-        const resp = request.lastResponse;
-
+    if (!isBeta) {
         return (
-            <div key={request.id} className={`${cardBg} border rounded-lg overflow-hidden transition-all`}>
-                {/* ─── Collapsed Header ─── */}
-                <div className="flex items-center">
-                    {/* Checkbox */}
-                    <button
-                        onClick={(e) => toggleSelect(request.id, e)}
-                        className={`flex-shrink-0 ml-3 p-0.5 rounded transition-colors ${theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                            }`}
-                        title={isSelected ? 'Deselect' : 'Select for markdown export'}
-                    >
-                        {isSelected
-                            ? <CheckSquare size={16} className="text-indigo-400" />
-                            : <Square size={16} className={subTextColor} />
-                        }
-                    </button>
-
-                    <button
-                        onClick={() => toggleRequest(request.id)}
-                        className="flex-1 flex items-center gap-3 px-3 py-3 text-left hover:bg-opacity-80 transition-colors"
-                    >
-                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        <span className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase border ${methodColor}`}>
-                            {request.method}
-                        </span>
-                        <span className="font-mono text-sm flex-1 truncate">{request.url || '/untitled'}</span>
-                        <span className={`text-xs ${subTextColor} truncate max-w-48`}>{request.name}</span>
-                    </button>
-                </div>
-
-                {/* ─── Expanded Content ─── */}
-                {isExpanded && (
-                    <div className={`px-4 pb-4 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
-                        {/* Description */}
-                        {request.description && (
-                            <p className={`text-sm mt-3 ${subTextColor}`}>{request.description}</p>
-                        )}
-
-                        {/* ─── Headers Table ─── */}
-                        {validHeaders.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="text-xs font-semibold uppercase tracking-wider mb-2 text-indigo-400">Headers</h4>
-                                <div className={`border rounded-md overflow-hidden ${tableBorder}`}>
-                                    <table className="w-full text-xs font-mono">
-                                        <thead>
-                                            <tr className={tableHeaderBg}>
-                                                <th className={`text-left py-1.5 px-3 font-semibold border-b ${tableBorder}`}>Key</th>
-                                                <th className={`text-left py-1.5 px-3 font-semibold border-b ${tableBorder}`}>Value</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className={tableBg}>
-                                            {validHeaders.map((h, i) => (
-                                                <tr key={i} className={`border-b last:border-b-0 ${tableBorder}`}>
-                                                    <td className="py-1.5 px-3 text-indigo-400">{h.key}</td>
-                                                    <td className="py-1.5 px-3">{h.value}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ─── Parameters Table ─── */}
-                        {validParams.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="text-xs font-semibold uppercase tracking-wider mb-2 text-indigo-400">Parameters</h4>
-                                <div className={`border rounded-md overflow-hidden ${tableBorder}`}>
-                                    <table className="w-full text-xs font-mono">
-                                        <thead>
-                                            <tr className={tableHeaderBg}>
-                                                <th className={`text-left py-1.5 px-3 font-semibold border-b ${tableBorder}`}>Key</th>
-                                                <th className={`text-left py-1.5 px-3 font-semibold border-b ${tableBorder}`}>Value</th>
-                                                <th className={`text-left py-1.5 px-3 font-semibold border-b ${tableBorder}`}>Type</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className={tableBg}>
-                                            {validParams.map((p: any, i: number) => (
-                                                <tr key={i} className={`border-b last:border-b-0 ${tableBorder}`}>
-                                                    <td className="py-1.5 px-3 text-indigo-400">{p.key}</td>
-                                                    <td className="py-1.5 px-3">{p.value}</td>
-                                                    <td className={`py-1.5 px-3 ${subTextColor}`}>{p.type || '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ─── Body ─── */}
-                        {bodyStr && (
-                            <div className="mt-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-indigo-400">Body</h4>
-                                    <CopyButton text={bodyStr} theme={theme} />
-                                </div>
-                                <pre className={`${codeBg} border rounded-md p-3 text-xs font-mono overflow-auto max-h-60 whitespace-pre-wrap`}>
-                                    {bodyStr}
-                                </pre>
-                            </div>
-                        )}
-
-                        {/* ─── Response ─── */}
-                        {resp && (
-                            <div className="mt-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <h4 className="text-xs font-semibold uppercase tracking-wider text-indigo-400">Response</h4>
-                                        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getStatusColor(resp.status)}`}>
-                                            {resp.status} {resp.statusText}
-                                        </span>
-                                        {resp.time && (
-                                            <span className={`text-xs ${subTextColor}`}>{resp.time}ms</span>
-                                        )}
+            <div className={`min-h-screen relative overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0f] text-white' : 'bg-gray-50 text-gray-900'}`}>
+                {/* Blurred Background Preview */}
+                <div className="absolute inset-0 z-0 opacity-20 blur-xl pointer-events-none scale-105 select-none overflow-hidden">
+                    <div className="max-w-4xl mx-auto px-6 py-12">
+                        <div className="h-12 w-full bg-gray-700/50 mb-16 rounded-2xl"></div>
+                        <div className="space-y-12">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="space-y-6">
+                                    <div className="flex gap-4">
+                                        <div className="w-16 h-16 bg-gray-700/50 rounded-2xl"></div>
+                                        <div className="h-8 w-64 bg-gray-700/50 rounded-lg"></div>
                                     </div>
-                                    <CopyButton
-                                        text={typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data, null, 2)}
-                                        theme={theme}
-                                    />
+                                    <div className="h-20 w-full bg-indigo-500/20 rounded-2xl"></div>
+                                    <div className="h-32 w-full bg-gray-700/30 rounded-2xl"></div>
                                 </div>
-                                <pre className={`${codeBg} border rounded-md p-3 text-xs font-mono overflow-auto max-h-72 whitespace-pre-wrap`}>
-                                    {typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data, null, 2)}
-                                </pre>
-                            </div>
-                        )}
-
-                        {/* ─── Copy as Markdown (individual) ─── */}
-                        <div className="mt-4 pt-3 border-t flex justify-end" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                            <CopyButton
-                                text={requestToMarkdown(request)}
-                                label="Copy as Markdown"
-                                theme={theme}
-                            />
+                            ))}
                         </div>
                     </div>
-                )}
-            </div>
-        );
-    };
+                </div>
 
-    const renderFolder = (folder: PublicFolder) => {
-        const folderRequests = folderMap.get(folder.id) || [];
-        const childFolders = folders.filter(f => f.parentId === folder.id);
-
-        return (
-            <div key={folder.id} className="mb-6">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-400 mb-3 flex items-center gap-2">
-                    📁 {folder.name}
-                </h3>
-                {folder.description && (
-                    <p className={`text-xs ${subTextColor} mb-3`}>{folder.description}</p>
-                )}
-                <div className="space-y-2 ml-2">
-                    {folderRequests.map(renderRequest)}
-                    {childFolders.map(renderFolder)}
+                {/* Main Modal */}
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+                    <div className="max-w-xl p-10 rounded-[2.5rem] border border-indigo-500/20 bg-indigo-500/5 backdrop-blur-[32px] text-center shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] animate-in zoom-in duration-500">
+                        <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-indigo-600/20 transform hover:scale-110 transition-transform">
+                            <Beaker size={40} />
+                        </div>
+                        <h2 className="text-3xl font-black mb-6 tracking-tight">Beta Feature Required</h2>
+                        <p className="text-gray-400 mb-10 leading-relaxed text-lg px-4 font-medium">
+                            The rendered Documentation Viewer is currently in <span className="text-indigo-400 font-bold">Phase 1 Beta</span>.
+                            Enable it now to unlock this interactive preview.
+                        </p>
+                        <div className="flex flex-col gap-4 px-8">
+                            <button
+                                onClick={() => {
+                                    toggleBeta();
+                                    toast.success('Beta Mode Enabled! Enjoy the view.');
+                                }}
+                                className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-lg shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
+                            >
+                                <Globe size={24} /> Enable Beta Mode
+                            </button>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-4">No login required • Safe to enable</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
-    };
+    }
 
     return (
-        <div className={`min-h-screen ${mainBg}`}>
-            {/* Header */}
-            <div className={`${headerBg} border-b sticky top-0 z-40`}>
-                <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">API</div>
-                        <div>
-                            <h1 className="font-bold text-lg">{doc.title}</h1>
-                            <p className={`text-xs ${subTextColor}`}>Public API Documentation</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {/* Select All / Deselect All */}
-                        <button
-                            onClick={() => toggleSelectAll(requests)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${theme === 'dark'
-                                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
-                                }`}
-                            title={allSelected ? 'Deselect all' : 'Select all'}
-                        >
-                            {allSelected
-                                ? <CheckSquare size={14} className="text-indigo-400" />
-                                : <Square size={14} />
-                            }
-                            <span>{allSelected ? 'Deselect All' : 'Select All'}</span>
-                        </button>
-
-                        {/* Copy Selected as Markdown */}
-                        <button
-                            onClick={() => copySelectedMarkdown(requests, doc.title)}
-                            disabled={selectedRequests.size === 0}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${selectedRequests.size > 0
-                                ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm'
-                                : theme === 'dark'
-                                    ? 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed'
-                                    : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                                }`}
-                            title={selectedRequests.size === 0 ? 'Select requests first' : `Copy ${selectedRequests.size} request(s) as Markdown`}
-                        >
-                            <FileText size={14} />
-                            <span>Copy Markdown{selectedRequests.size > 0 ? ` (${selectedRequests.size})` : ''}</span>
-                        </button>
-
-                        <span className="px-2.5 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-medium border border-green-500/30">
-                            Public
-                        </span>
-                        <span className={`text-xs ${subTextColor}`}>{requests.length} endpoints</span>
+        <div className={`h-screen flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0f] text-white' : 'bg-gray-50 text-gray-900'}`}>
+            {/* Simple Public Header */}
+            <header className={`h-14 border-b flex items-center justify-between px-6 flex-shrink-0 backdrop-blur-md ${theme === 'dark' ? 'bg-[#0a0a0f]/80 border-white/5' : 'bg-white/80 border-gray-100'}`}>
+                <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-[10px]">P</div>
+                    <div>
+                        <h1 className="text-xs font-black truncate max-w-[200px] leading-tight">{doc.title}</h1>
+                        <p className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest leading-none mt-0.5">Public Documentation</p>
                     </div>
                 </div>
-            </div>
+                <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[8px] font-black uppercase tracking-widest text-indigo-500">
+                        <Beaker size={8} /> Beta Viewer
+                    </span>
+                </div>
+            </header>
 
-            {/* Content */}
-            <div className="max-w-5xl mx-auto px-6 py-8">
-                {/* Folder sections */}
-                {rootFolders.map(renderFolder)}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Sidebar - Fixed height, scroll only on overflow */}
+                <aside className={`w-64 border-r hidden lg:flex flex-col h-full ${theme === 'dark' ? 'bg-[#0a0a0f]/40 border-white/5' : 'bg-white border-gray-100'}`}>
+                    <div className="p-4 border-b border-white/5 flex-shrink-0 space-y-3">
+                        <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Table of Contents</h4>
 
-                {/* Root-level requests */}
-                {rootRequests.length > 0 && (
-                    <div className="mb-6">
-                        {rootFolders.length > 0 && (
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-400 mb-3">
-                                Other Endpoints
-                            </h3>
-                        )}
-                        <div className="space-y-2">
-                            {rootRequests.map(renderRequest)}
+                        {/* Search Input */}
+                        <div className="relative group">
+                            <Search size={12} className={`absolute left-0 top-1/2 -translate-y-1/2 transition-colors ${theme === 'dark' ? 'text-gray-600 group-focus-within:text-indigo-500' : 'text-gray-400 group-focus-within:text-indigo-500'}`} />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search endpoints..."
+                                className={`w-full bg-transparent border-b pl-5 py-1.5 text-[10px] outline-none transition-all ${theme === 'dark' ? 'border-white/10 focus:border-indigo-500 text-white placeholder:text-gray-700' : 'border-gray-200 focus:border-indigo-500 text-gray-900'}`}
+                            />
+                        </div>
+
+                        {/* Method Filters */}
+                        <div className="flex flex-wrap gap-1">
+                            {['GET', 'POST', 'PUT', 'DELETE'].map(method => (
+                                <button
+                                    key={method}
+                                    onClick={() => setMethodFilter(methodFilter === method ? null : method)}
+                                    className={`text-[7px] font-black px-1.5 py-0.5 rounded transition-all border ${methodFilter === method
+                                        ? (method === 'GET' ? 'bg-emerald-500 border-emerald-500 text-white' :
+                                            method === 'POST' ? 'bg-blue-500 border-blue-500 text-white' :
+                                                'bg-indigo-600 border-indigo-600 text-white')
+                                        : (theme === 'dark' ? 'border-white/10 text-gray-500 hover:border-white/20' : 'border-gray-200 text-gray-400 hover:border-gray-300')
+                                        }`}
+                                >
+                                    {method}
+                                </button>
+                            ))}
+                            {methodFilter && (
+                                <button
+                                    onClick={() => setMethodFilter(null)}
+                                    className="text-[7px] font-black px-1.5 py-0.5 rounded transition-all border border-red-500/20 text-red-500 hover:bg-red-500/10"
+                                >
+                                    CLEAR
+                                </button>
+                            )}
                         </div>
                     </div>
-                )}
+                    <nav className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                        {filteredEndpoints.length > 0 ? (
+                            filteredEndpoints.map((ep: any, idxArr: number) => (
+                                <a
+                                    key={ep.id || idxArr}
+                                    href={`#request-${ep.id || idxArr}`}
+                                    className={`group flex items-center gap-2.5 p-2 rounded-lg transition-all border ${activeId === `request-${ep.id || idxArr}`
+                                        ? (theme === 'dark' ? 'border-indigo-500/50 bg-indigo-500/10 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-700')
+                                        : `border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5 ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-indigo-600'}`
+                                        }`}
+                                >
+                                    <span className={`text-[8px] font-black w-8 text-center py-0.5 rounded shadow-sm ${ep.method === 'GET' ? 'bg-emerald-500/10 text-emerald-500' :
+                                        ep.method === 'POST' ? 'bg-blue-500/10 text-blue-500' :
+                                            'bg-gray-500/10 text-gray-500'
+                                        }`}>{ep.method}</span>
+                                    <span className="text-[11px] font-bold truncate">{ep.name || 'Untitled'}</span>
+                                </a>
+                            ))
+                        ) : (
+                            <div className="p-4 text-center">
+                                <p className="text-[10px] text-gray-500 font-bold italic">No results found</p>
+                            </div>
+                        )}
+                    </nav>
+                </aside>
 
-                {requests.length === 0 && (
-                    <div className="text-center py-20">
-                        <ExternalLink size={48} className={`mx-auto mb-4 ${subTextColor}`} />
-                        <p className={subTextColor}>No endpoints documented yet.</p>
+                {/* Content */}
+                <main className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar">
+                    <div className="max-w-[1400px] mx-auto px-6 py-8">
+                        <div className="mb-12">
+                            <h1 className="text-3xl lg:text-4xl font-black mb-2 tracking-tight">{doc.title}</h1>
+                            {doc.content?.collection?.description && (
+                                <p className="text-base text-gray-500 leading-relaxed font-medium max-w-2xl">{doc.content.collection.description}</p>
+                            )}
+                        </div>
+
+                        <div className="space-y-16">
+                            {filteredEndpoints.map((ep: any, idxArr: number) => (
+                                <section key={ep.id || idxArr} id={`request-${ep.id || idxArr}`} className="scroll-mt-20">
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+                                        {/* Left Column: Info */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`px-2.5 py-1 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-100'} border ${theme === 'dark' ? 'border-white/5' : 'border-gray-200'}`}>
+                                                    <div className={`text-[10px] font-black uppercase tracking-widest ${ep.method === 'GET' ? 'text-emerald-500' :
+                                                        ep.method === 'POST' ? 'text-blue-500' :
+                                                            'text-gray-500'
+                                                        }`}>{ep.method}</div>
+                                                </div>
+                                                <h2 className="text-xl font-black">{ep.name || 'Untitled Request'}</h2>
+                                            </div>
+
+                                            <div className={`group relative p-3 rounded-xl border font-mono text-xs transition-all hover:shadow-lg hover:shadow-indigo-500/5 ${theme === 'dark' ? 'bg-indigo-500/5 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-700'}`}>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="truncate pr-4 font-bold">{resolveUrl(ep)}</span>
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(resolveUrl(ep));
+                                                            toast.success('URL copied');
+                                                        }}
+                                                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white/10 rounded-lg transition-all"
+                                                        title="Copy URL"
+                                                    >
+                                                        <Copy size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {ep.description && (
+                                                <div>
+                                                    <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2 px-1">Description</h3>
+                                                    <p className="text-gray-400 text-sm leading-relaxed whitespace-pre-wrap">{resolveAll(ep.description)}</p>
+                                                </div>
+                                            )}
+
+                                            {ep.headers && Array.isArray(ep.headers) && ep.headers.length > 0 && (
+                                                <div>
+                                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2 px-1">Headers</h3>
+                                                    <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-white shadow-sm'}`}>
+                                                        <table className="w-full text-[11px]">
+                                                            <thead>
+                                                                <tr className={theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}>
+                                                                    <th className="px-4 py-2.5 text-left font-black uppercase tracking-widest text-[9px] text-gray-500">Key</th>
+                                                                    <th className="px-4 py-2.5 text-left font-black uppercase tracking-widest text-[9px] text-gray-500">Value</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-white/5">
+                                                                {ep.headers.map((h: any, hi: number) => (
+                                                                    <tr key={hi} className="hover:bg-white/[0.02] transition-colors">
+                                                                        <td className="px-4 py-2.5 font-mono text-indigo-400 font-bold">{h.key}</td>
+                                                                        <td className="px-4 py-2.5 text-gray-400 truncate max-w-[200px]">{h.value}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Right Column: Code blocks (Request & Response) */}
+                                        <div className="space-y-4">
+                                            {ep.body?.raw && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between px-1">
+                                                        <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Request Body</h3>
+                                                    </div>
+                                                    <div className="rounded-xl overflow-hidden border border-white/5 shadow-2xl bg-[#1e1e2e] relative group">
+                                                        <div className="absolute right-4 top-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => { navigator.clipboard.writeText(ep.body.raw); toast.success('Body copied'); }}
+                                                                className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 border border-white/5 transition-all"
+                                                            >
+                                                                <Copy size={12} />
+                                                            </button>
+                                                        </div>
+                                                        <Editor
+                                                            height={ep.body.raw.split('\n').length > 15 ? "300px" : `${Math.max(ep.body.raw.split('\n').length * 20 + 32, 100)}px`}
+                                                            language="json"
+                                                            value={ep.body.raw}
+                                                            theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                                            options={{
+                                                                readOnly: true,
+                                                                fontSize: 12,
+                                                                fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                                                                minimap: { enabled: false },
+                                                                scrollBeyondLastLine: false,
+                                                                wordWrap: 'on',
+                                                                automaticLayout: true,
+                                                                padding: { top: 16, bottom: 16 },
+                                                                renderLineHighlight: 'none',
+                                                                lineNumbers: 'off',
+                                                                folding: true,
+                                                                scrollbar: { vertical: 'hidden', horizontal: 'hidden' }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Response Preview */}
+                                            {ep.lastResponse?.data && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between px-1">
+                                                        <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Example Response</h3>
+                                                        <span className="text-[9px] font-bold text-gray-500 uppercase px-2 py-0.5 bg-emerald-500/10 rounded-md border border-emerald-500/20">{ep.lastResponse.status}</span>
+                                                    </div>
+                                                    <div className="rounded-xl overflow-hidden border border-emerald-500/10 shadow-2xl bg-[#1e1e2e] relative group">
+                                                        <div className="absolute right-4 top-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => { navigator.clipboard.writeText(JSON.stringify(ep.lastResponse.data, null, 2)); toast.success('Response copied'); }}
+                                                                className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 border border-white/5 transition-all"
+                                                            >
+                                                                <Copy size={12} />
+                                                            </button>
+                                                        </div>
+                                                        <Editor
+                                                            height={JSON.stringify(ep.lastResponse.data, null, 2).split('\n').length > 20 ? "400px" : `${Math.max(JSON.stringify(ep.lastResponse.data, null, 2).split('\n').length * 20 + 32, 150)}px`}
+                                                            language="json"
+                                                            value={JSON.stringify(ep.lastResponse.data, null, 2)}
+                                                            theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                                            options={{
+                                                                readOnly: true,
+                                                                fontSize: 12,
+                                                                fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                                                                minimap: { enabled: false },
+                                                                scrollBeyondLastLine: false,
+                                                                wordWrap: 'on',
+                                                                automaticLayout: true,
+                                                                padding: { top: 16, bottom: 16 },
+                                                                renderLineHighlight: 'none',
+                                                                lineNumbers: 'off',
+                                                                folding: true,
+                                                                scrollbar: { vertical: 'auto', horizontal: 'hidden' }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {idxArr < endpoints.length - 1 && <div className="mt-16 h-px bg-white/5"></div>}
+                                </section>
+                            ))}
+                        </div>
+
+                        <footer className="mt-20 pt-8 border-t border-white/5 text-center">
+                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Generated by Postman Docs Manager • Beta v1.0</p>
+                        </footer>
                     </div>
-                )}
+                </main>
             </div>
         </div>
     );

@@ -1,3 +1,5 @@
+'use client';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../utils/api';
 import { Endpoint } from '../types';
@@ -25,7 +27,7 @@ export function useRequestOrdering({
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const reorderMutation = useMutation({
-        mutationFn: (reqs: { id: string; order: number }[]) => 
+        mutationFn: (reqs: { id: string; order: number }[]) =>
             api.documentation.reorderRequests(documentationId, reqs),
         onError: (error: any) => {
             toast.error(error.message || 'Failed to save order');
@@ -44,7 +46,7 @@ export function useRequestOrdering({
             const reorderData = newRequests
                 .filter(r => r.id) // Only persist saved requests
                 .map((r, idx) => ({ id: r.id!, order: idx }));
-            
+
             if (reorderData.length > 0) {
                 reorderMutation.mutate(reorderData);
             }

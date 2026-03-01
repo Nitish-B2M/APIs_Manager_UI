@@ -197,7 +197,7 @@ export default function TodoBoard() {
     }, {} as Record<string, Todo[]>);
 
     if (isLoading) {
-        return <div className="flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div>;
+        return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-violet-500" /></div>;
     }
 
     return (
@@ -205,19 +205,19 @@ export default function TodoBoard() {
 
             {/* Input Section - Matches design */}
             <div className="relative">
-                <form onSubmit={handleAddTodo} className="flex bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-orange-500/50 transition-shadow duration-300 ease-in-out">
+                <form onSubmit={handleAddTodo} className="flex bg-white/5 rounded-2xl overflow-hidden border border-white/5 focus-within:border-violet-500/50 shadow-2xl transition-all duration-300">
                     <input
                         type="text"
                         value={newTaskTitle}
                         onChange={(e) => setNewTaskTitle(e.target.value)}
-                        placeholder="Add your task"
-                        className="flex-1 bg-transparent px-8 py-4 text-gray-800 dark:text-gray-100 outline-none placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-colors duration-200"
+                        placeholder="Add a new high-priority task..."
+                        className="flex-1 bg-transparent px-8 py-5 text-white outline-none placeholder:text-slate-500 transition-colors duration-200 font-medium"
                     />
                     <button
                         type="submit"
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-10 py-4 transition-colors duration-200 ease-out uppercase tracking-wide text-sm"
+                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-black px-12 py-5 transition-all duration-300 active:scale-95 uppercase tracking-widest text-xs"
                     >
-                        Add
+                        Create
                     </button>
                 </form>
             </div>
@@ -250,28 +250,28 @@ export default function TodoBoard() {
                 )}
 
                 {/* View Toggle */}
-                <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-xl flex gap-1">
+                <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/5">
                     <button
                         onClick={() => setShowTimestamp(!showTimestamp)}
-                        className={`p-2 rounded-lg transition-colors duration-200 ${showTimestamp ? 'bg-white dark:bg-gray-600 text-orange-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-all duration-200 ${showTimestamp ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'text-slate-400 hover:text-white'}`}
                         title="Toggle Timestamp"
                     >
-                        <Clock size={20} />
+                        <Clock size={18} />
                     </button>
-                    <div className="w-px bg-gray-300 dark:bg-gray-600 mx-1 self-stretch"></div>
+                    <div className="w-px bg-white/5 mx-1 self-stretch"></div>
                     <button
                         onClick={() => setViewMode('list')}
-                        className={`p-2 rounded-lg transition-colors duration-200 ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 text-orange-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'text-slate-400 hover:text-white'}`}
                         title="List View"
                     >
-                        <LayoutList size={20} />
+                        <LayoutList size={18} />
                     </button>
                     <button
                         onClick={() => setViewMode('split')}
-                        className={`p-2 rounded-lg transition-colors duration-200 ${viewMode === 'split' ? 'bg-white dark:bg-gray-600 text-orange-500 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                        className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'split' ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'text-slate-400 hover:text-white'}`}
                         title="Split View"
                     >
-                        <Columns size={20} />
+                        <Columns size={18} />
                     </button>
                 </div>
             </div>

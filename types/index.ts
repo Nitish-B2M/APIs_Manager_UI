@@ -132,6 +132,7 @@ export interface Endpoint {
     description: string;
     auth?: AuthConfig;
     assertions?: RequestAssertion[];
+    responseSchema?: any;
     lastResponse: ApiResponse | null;
     history: HistoryItem[];
     folderId?: string | null;
@@ -237,6 +238,8 @@ export interface User {
     userId?: string;
     name?: string;
     avatarUrl?: string;
+    isAdmin?: boolean;
+    settings?: Record<string, any>;
 }
 
 export interface AuthResponse {
