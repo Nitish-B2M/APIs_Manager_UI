@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const res = await api.auth.me();
             if (res.status && res.data) {
                 setUser(res.data);
+                localStorage.setItem('settings', JSON.stringify(res.data.settings));
             } else {
                 localStorage.removeItem('token');
                 setUser(null);
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = useCallback(() => {
         localStorage.removeItem('token');
+        localStorage.removeItem('settings');
         setUser(null);
         router.push('/login');
     }, [router]);
