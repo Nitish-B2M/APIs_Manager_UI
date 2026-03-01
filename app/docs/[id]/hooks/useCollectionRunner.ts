@@ -25,7 +25,7 @@ interface UseCollectionRunnerReturn {
     isRunning: boolean;
     currentIndex: number;
     runVariables: Record<string, string>;
-    start: (endpoints: Endpoint[], delay: number) => void;
+    start: (endpoints: Endpoint[], delay: number, enableChaining?: boolean) => void;
     stop: () => void;
 }
 
@@ -163,7 +163,7 @@ export function useCollectionRunner({ variables }: UseCollectionRunnerProps): Us
         }
     };
 
-    const start = useCallback((endpoints: Endpoint[], delay: number) => {
+    const start = useCallback((endpoints: Endpoint[], delay: number, enableChaining: boolean = true) => {
         abortRef.current = false;
         setIsRunning(true);
         setResults([]);
@@ -181,7 +181,7 @@ export function useCollectionRunner({ variables }: UseCollectionRunnerProps): Us
                 setResults(prev => [...prev, result]);
 
                 // Extract variables from response
-                if (result.responseData) {
+                if (enableChaining && result.responseData) {
                     const extracted = extractVariables(result.responseData, currentVars);
                     if (Object.keys(extracted).length > 0) {
                         Object.assign(currentVars, extracted);

@@ -8,6 +8,7 @@ import {
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses, getMethodColor } from '../utils/theme';
 import { useCollectionRunner, RunResult } from '../hooks/useCollectionRunner';
+import { useBetaMode } from '../../../../context/BetaModeContext';
 import { Endpoint } from '@/types';
 
 interface CollectionRunnerProps {
@@ -26,6 +27,8 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
     );
     const [showExtracted, setShowExtracted] = useState(false);
     const [expandedResult, setExpandedResult] = useState<string | null>(null);
+    const [isChainingEnabled, setIsChainingEnabled] = useState(true);
+    const { isBeta } = useBetaMode();
 
     const { results, isRunning, currentIndex, runVariables, start, stop } = useCollectionRunner({ variables });
 
@@ -50,7 +53,7 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
         }
     };
 
-    const handleStart = () => start(selectedEndpoints, delay);
+    const handleStart = () => start(selectedEndpoints, delay, isBeta && isChainingEnabled);
 
     const stats = useMemo(() => {
         const passed = results.filter(r => r.passed).length;
@@ -137,12 +140,26 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                             onChange={e => setDelay(Number(e.target.value))}
                             disabled={isRunning}
                             className={`w-20 px-2 py-1 rounded-md text-xs border transition-colors ${theme === 'dark'
-                                    ? 'bg-[#1e1e2e] border-gray-700 text-gray-200'
-                                    : 'bg-white border-gray-300 text-gray-800'
+                                ? 'bg-[#1e1e2e] border-gray-700 text-gray-200'
+                                : 'bg-white border-gray-300 text-gray-800'
                                 } disabled:opacity-50`}
                         />
                         <span className={`text-xs ${themeClasses.subTextColor}`}>ms</span>
                     </div>
+
+                    {isBeta && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 ml-2">
+                            <label className={`text-[10px] font-black uppercase tracking-widest text-indigo-400 cursor-pointer flex items-center gap-2`}>
+                                <input
+                                    type="checkbox"
+                                    checked={isChainingEnabled}
+                                    onChange={e => setIsChainingEnabled(e.target.checked)}
+                                    className="accent-indigo-500"
+                                />
+                                Smart Chaining
+                            </label>
+                        </div>
+                    )}
 
                     {results.length > 0 && (
                         <div className="flex items-center gap-3 ml-auto text-xs font-bold">
@@ -173,12 +190,12 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                     <label
                                         key={ep.id}
                                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all border ${isSelected
-                                                ? theme === 'dark'
-                                                    ? 'bg-[#22224a] border-purple-800/40'
-                                                    : 'bg-blue-50 border-blue-200'
-                                                : theme === 'dark'
-                                                    ? 'bg-[#1e1e36] border-transparent hover:bg-[#25254a]'
-                                                    : 'bg-gray-50 border-transparent hover:bg-gray-100'
+                                            ? theme === 'dark'
+                                                ? 'bg-[#22224a] border-purple-800/40'
+                                                : 'bg-blue-50 border-blue-200'
+                                            : theme === 'dark'
+                                                ? 'bg-[#1e1e36] border-transparent hover:bg-[#25254a]'
+                                                : 'bg-gray-50 border-transparent hover:bg-gray-100'
                                             }`}
                                     >
                                         <input
@@ -214,20 +231,20 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                     <div key={ep.id}>
                                         <div
                                             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border ${isCurrent
+                                                ? theme === 'dark'
+                                                    ? 'bg-blue-900/20 border-blue-700/40 ring-1 ring-blue-600/30'
+                                                    : 'bg-blue-50 border-blue-300 ring-1 ring-blue-200'
+                                                : result?.passed
                                                     ? theme === 'dark'
-                                                        ? 'bg-blue-900/20 border-blue-700/40 ring-1 ring-blue-600/30'
-                                                        : 'bg-blue-50 border-blue-300 ring-1 ring-blue-200'
-                                                    : result?.passed
+                                                        ? 'bg-green-900/10 border-green-800/30'
+                                                        : 'bg-green-50 border-green-200'
+                                                    : result && !result.passed
                                                         ? theme === 'dark'
-                                                            ? 'bg-green-900/10 border-green-800/30'
-                                                            : 'bg-green-50 border-green-200'
-                                                        : result && !result.passed
-                                                            ? theme === 'dark'
-                                                                ? 'bg-red-900/10 border-red-800/30'
-                                                                : 'bg-red-50 border-red-200'
-                                                            : theme === 'dark'
-                                                                ? 'bg-[#1e1e36] border-transparent'
-                                                                : 'bg-gray-50 border-transparent'
+                                                            ? 'bg-red-900/10 border-red-800/30'
+                                                            : 'bg-red-50 border-red-200'
+                                                        : theme === 'dark'
+                                                            ? 'bg-[#1e1e36] border-transparent'
+                                                            : 'bg-gray-50 border-transparent'
                                                 }`}
                                         >
                                             {/* Status icon */}
