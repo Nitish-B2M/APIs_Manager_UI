@@ -2,8 +2,10 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Settings, Check, ChevronDown, Edit3, Globe, Eye, EyeOff, Shield, Download, Upload, FileJson, FileText, Save } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useBetaMode } from '../../context/BetaModeContext';
 import { useEnvironments } from '../../hooks/useEnvironments';
 import { useGlobalEnvironments } from '../../hooks/useGlobalEnvironments';
+import { toast } from 'react-hot-toast';
 import { Environment } from '../../types';
 
 interface EnvModalProps {
@@ -17,6 +19,7 @@ interface EnvModalProps {
 
 export default function EnvModal({ isOpen, onClose, documentationId, variables: legacyVariables, setVariables: legacySetVariables }: EnvModalProps) {
     const { theme } = useTheme();
+    const { isBeta } = useBetaMode();
     const [scope, setScope] = useState<'COLLECTION' | 'GLOBAL'>('COLLECTION');
 
     // Collection environments
@@ -54,6 +57,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
     const [isBulkEdit, setIsBulkEdit] = useState(false);
     const [bulkText, setBulkText] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Sync with environments when scope changes or initial load
     useEffect(() => {
@@ -182,8 +186,30 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
         URL.revokeObjectURL(url);
     };
 
-    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+    const handleExportEnv = () => {
+        if (!selectedEnv) return;
+        const text = Object.entries(editingVariables)
+            .map(([k, v]) => `${k}=${v.includes(' ') || v.includes('"') || v.includes("'") ? `"${v.replace(/"/g, '\\"')}"` : v}`)
+            .join('\n');
+
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${editingName.replace(/\s+/g, '_')}.env`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('.env exported!');
+    };
+
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
+        let file: File | undefined;
+        if ('files' in e.target && e.target.files) {
+            file = e.target.files[0];
+        } else if ('dataTransfer' in e && e.dataTransfer.files) {
+            file = e.dataTransfer.files[0];
+        }
+
         if (!file) return;
 
         const reader = new FileReader();
@@ -193,7 +219,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
             let newSecrets: string[] = [...editingSecrets];
 
             try {
-                if (file.name.endsWith('.env')) {
+                if (file!.name.endsWith('.env')) {
                     // Parse .env format
                     const lines = content.split(/\r?\n/);
                     lines.forEach(line => {
@@ -207,11 +233,14 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                             newVars[key] = value;
                         }
                     });
-                } else if (file.name.endsWith('.json')) {
+                } else if (file!.name.endsWith('.json')) {
                     // Parse JSON format
                     const data = JSON.parse(content);
                     if (data.variables) {
                         newVars = { ...newVars, ...data.variables };
+                    } else if (typeof data === 'object' && !Array.isArray(data)) {
+                        // Support flat JSON as well
+                        newVars = { ...newVars, ...data };
                     }
                     if (data.secrets && Array.isArray(data.secrets)) {
                         newSecrets = Array.from(new Set([...newSecrets, ...data.secrets]));
@@ -220,14 +249,24 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
 
                 setEditingVariables(newVars);
                 setEditingSecrets(newSecrets);
-                // Clear input
-                e.target.value = '';
+                toast.success('Environment imported!');
+                // Clear input if it was a file input
+                if ('target' in e && 'value' in e.target) (e.target as any).value = '';
             } catch (err) {
                 console.error('Import failed', err);
-                alert('Failed to parse file. Please ensure it is a valid .env or JSON file.');
+                toast.error('Failed to parse file. Please use valid .env or JSON.');
             }
         };
         reader.readAsText(file);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+    const handleDragLeave = () => { setIsDragging(false); };
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (!isBeta) return;
+        handleImport(e);
     };
 
     const toggleBulkEdit = () => {
@@ -434,26 +473,37 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                             </button>
                                         )}
                                         <div className="flex items-center gap-1">
-                                            <input
-                                                type="file"
-                                                id="import-env-file"
-                                                className="hidden"
-                                                accept=".json,.env"
-                                                onChange={handleImport}
-                                            />
-                                            <label
-                                                htmlFor="import-env-file"
-                                                className={`p-1.5 rounded-lg cursor-pointer ${actionBtn}`}
-                                                title="Import from .env or JSON"
-                                            >
-                                                <Upload size={18} />
-                                            </label>
+                                            {isBeta && (
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        id="import-env-file"
+                                                        className="hidden"
+                                                        accept=".json,.env"
+                                                        onChange={handleImport}
+                                                    />
+                                                    <label
+                                                        htmlFor="import-env-file"
+                                                        className={`p-1.5 rounded-lg cursor-pointer ${actionBtn}`}
+                                                        title="Import from .env or JSON"
+                                                    >
+                                                        <Upload size={18} />
+                                                    </label>
+                                                </>
+                                            )}
                                             <button
                                                 onClick={handleExport}
                                                 className={`p-1.5 rounded-lg ${actionBtn}`}
                                                 title="Export as JSON"
                                             >
-                                                <Download size={18} />
+                                                <FileJson size={18} />
+                                            </button>
+                                            <button
+                                                onClick={handleExportEnv}
+                                                className={`p-1.5 rounded-lg ${actionBtn}`}
+                                                title="Export as .env"
+                                            >
+                                                <FileText size={18} />
                                             </button>
                                         </div>
                                         <button
@@ -467,7 +517,21 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                 </div>
 
                                 {/* Variables */}
-                                <div className="flex-1 p-6 overflow-y-auto">
+                                <div
+                                    className={`flex-1 p-6 overflow-y-auto relative transition-colors ${isDragging && isBeta ? (theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50') : ''}`}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                >
+                                    {isDragging && isBeta && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-indigo-500/10 backdrop-blur-sm z-50 pointer-events-none border-2 border-dashed border-indigo-500 rounded-xl m-2 animate-in fade-in duration-200">
+                                            <div className="text-center">
+                                                <Upload size={48} className="mx-auto mb-4 text-indigo-500 animate-bounce" />
+                                                <p className="text-lg font-black text-indigo-500">Drop to Import Environments</p>
+                                                <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mt-2">.env or .json supported</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between mb-6">
                                         <div>
                                             <p className={`text-sm ${textColor} font-semibold mb-1`}>
