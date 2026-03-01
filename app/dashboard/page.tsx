@@ -8,32 +8,33 @@ import Modal from '../../components/Modal';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import toast from 'react-hot-toast';
-import { Trash2, ExternalLink, AlertTriangle, AlertCircle, Mail, Check, X, Users, Shield, User, Clock } from 'lucide-react';
+import { Trash2, ExternalLink, Clock, Plus, AlertTriangle, AlertCircle, Database, HelpCircle, Mail, User, Shield, Users, Check } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { createCollectionSchema } from '../../types';
 import { ZodError } from 'zod';
 import { Documentation } from '../../types';
-import { ProtectedRoute } from '../../components/AuthGuard';
+import { useAuth } from '../../context/AuthContext';
+import { DemoOverlay } from '../components/DemoOverlay';
 
 interface FormErrors {
     title?: string;
 }
 
-const CollaboratorAvatars = ({ collaborators, theme }: { collaborators?: any[], theme: string }) => {
+import { GlassCard, PremiumButton, TextGradient } from '../../components/UIComponents';
+
+const CollaboratorAvatars = ({ collaborators }: { collaborators?: any[] }) => {
     if (!collaborators || collaborators.length === 0) return null;
 
     const maxDisplay = 3;
     const displayCollaborators = collaborators.slice(0, maxDisplay);
     const remainingCount = collaborators.length - maxDisplay;
 
-    const tooltipText = collaborators.map(c => `${c.name || c.email} (${c.role})`).join('\n');
-
     return (
-        <div className="flex items-center -space-x-2 group relative" title={tooltipText}>
+        <div className="flex items-center -space-x-2 group relative">
             {displayCollaborators.map((c, i) => (
                 <div
                     key={c.id || i}
-                    className={`w-6 h-6 rounded-full border-2 ${theme === 'dark' ? 'border-gray-800' : 'border-white'} flex items-center justify-center overflow-hidden bg-indigo-500 text-[10px] text-white font-bold transition-transform`}
+                    className="w-7 h-7 rounded-full border-2 border-[#121212] flex items-center justify-center overflow-hidden bg-gradient-to-tr from-indigo-500 to-violet-500 text-[10px] text-white font-bold transition-transform group-hover:scale-110"
                     style={{ zIndex: collaborators.length - i }}
                 >
                     {c.avatarUrl ? (
@@ -45,23 +46,11 @@ const CollaboratorAvatars = ({ collaborators, theme }: { collaborators?: any[], 
             ))}
             {remainingCount > 0 && (
                 <div
-                    className={`w-6 h-6 rounded-full border-2 ${theme === 'dark' ? 'border-gray-800' : 'border-white'} bg-gray-600 text-white text-[8px] flex items-center justify-center font-bold relative z-0 transition-transform`}
+                    className="w-7 h-7 rounded-full border-2 border-[#121212] bg-slate-800 text-white text-[8px] flex items-center justify-center font-bold relative z-0"
                 >
                     +{remainingCount}
                 </div>
             )}
-
-            {/* Premium Tooltip */}
-            <div className={`absolute top-full left-0 mt-2 p-2 rounded-lg text-[10px] whitespace-pre-wrap ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-800 text-white'} opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all shadow-xl z-50 pointer-events-none min-w-[max-content] border ${theme === 'dark' ? 'border-gray-600' : 'border-gray-700'}`}>
-                {collaborators.map(c => (
-                    <div key={c.id} className="flex items-center gap-2 mb-1 last:mb-0">
-                        <span className={`w-1.5 h-1.5 rounded-full ${c.role === 'OWNER' ? 'bg-yellow-400' : 'bg-indigo-400'}`} />
-                        <span>{c.name || c.email}</span>
-                        <span className="opacity-50 text-[8px] uppercase">{c.role}</span>
-                    </div>
-                ))}
-                <div className={`absolute bottom-full left-3 border-subtle border-8 border-transparent ${theme === 'dark' ? 'border-b-gray-700' : 'border-b-gray-800'}`} />
-            </div>
         </div>
     );
 };
@@ -74,7 +63,7 @@ function DashboardContent() {
         retry: 1
     });
     const { data: meRes } = useQuery({ queryKey: ['me'], queryFn: api.auth.me });
-    const { data: invitesRes, refetch: refetchInvites } = useQuery({
+    const { data: invitesRes } = useQuery({
         queryKey: ['invites'],
         queryFn: api.collaboration.listMyInvitations
     });
@@ -104,7 +93,6 @@ function DashboardContent() {
         mutationFn: (data: { id: string }) => api.documentation.delete(data.id)
     });
 
-    const { theme } = useTheme();
     const router = useRouter();
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -115,13 +103,7 @@ function DashboardContent() {
     const [isCreating, setIsCreating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // UI Colors
-    const mainBg = theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900';
-    const cardBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 hover:border-gray-500' : 'bg-white border-gray-200 hover:border-indigo-300 shadow-sm transition-all';
-    const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
-    const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
-    const inputBg = theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900';
-    const inputErrorBg = theme === 'dark' ? 'bg-gray-900 border-red-500 text-white' : 'bg-gray-50 border-red-500 text-gray-900';
+    const { theme } = useTheme();
 
     // Clear form errors when typing
     useEffect(() => {
@@ -131,7 +113,7 @@ function DashboardContent() {
     }, [newCollectionTitle, formErrors.title]);
 
     const handleCreateBlank = () => {
-        setNewCollectionTitle('New Collection');
+        setNewCollectionTitle('');
         setFormErrors({});
         setIsCreateModalOpen(true);
     };
@@ -158,13 +140,8 @@ function DashboardContent() {
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
-
+        if (!validateForm()) return;
         setIsCreating(true);
-
         try {
             const res = await createEmptyMutation.mutateAsync({
                 title: newCollectionTitle.trim()
@@ -173,8 +150,7 @@ function DashboardContent() {
             toast.success(res.message || 'Collection created!');
             router.push(`/docs/${res.data.id}`);
         } catch (e: unknown) {
-            const errorMessage = e instanceof Error ? e.message : 'Failed to create collection';
-            toast.error(errorMessage);
+            toast.error(e instanceof Error ? e.message : 'Failed to create collection');
         } finally {
             setIsCreating(false);
         }
@@ -194,8 +170,7 @@ function DashboardContent() {
             setIsDeleteModalOpen(false);
             toast.success('Collection deleted');
         } catch (e: unknown) {
-            const errorMessage = e instanceof Error ? e.message : 'Failed to delete collection';
-            toast.error(errorMessage);
+            toast.error(e instanceof Error ? e.message : 'Failed to delete collection');
         } finally {
             setIsDeleting(false);
             setDocToDelete(null);
@@ -204,15 +179,9 @@ function DashboardContent() {
 
     if (isLoading) {
         return (
-            <div className="flex-1 p-8 animate-pulse">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex justify-between items-center mb-8">
-                        <div>
-                            <h1 className="text-3xl font-bold">Your Documentations</h1>
-                        </div>
-                    </div>
-                    <DashboardSkeleton />
-                </div>
+            <div className="flex-1 p-8 animate-pulse max-w-7xl mx-auto">
+                <div className="h-10 w-64 bg-white/5 rounded-lg mb-8" />
+                <DashboardSkeleton />
             </div>
         );
     }
@@ -220,172 +189,186 @@ function DashboardContent() {
     if (error) {
         return (
             <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
+                <GlassCard className="text-center max-w-md">
                     <AlertTriangle className="mx-auto mb-4 text-red-500" size={48} />
-                    <h2 className="text-xl font-bold mb-2">Failed to load documentations</h2>
-                    <p className="opacity-70">Please try refreshing the page</p>
-                    <button
+                    <h2 className="text-xl font-bold mb-2 text-white">Failed to load documentations</h2>
+                    <p className="text-secondary text-sm">Please try refreshing the page</p>
+                    <PremiumButton
                         onClick={() => queryClient.invalidateQueries({ queryKey: ['docs'] })}
-                        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all font-bold"
+                        className="mt-6 w-full"
                     >
                         Retry
-                    </button>
-                </div>
+                    </PremiumButton>
+                </GlassCard>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 p-8 transition-colors duration-300">
-            <div className="max-w-6xl mx-auto">
-                <div className="flex justify-between items-center mb-8">
+        <div className="flex-1 p-8 bg-background/90 text-foreground">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
                     <div>
-                        <h1 className={`text-3xl font-bold ${textColor}`}>Your Documentations</h1>
-                        {me && <p className={`${subTextColor} text-sm mt-1`}>Logged in as: <span className="text-indigo-500 font-medium">{me.email}</span></p>}
+                        <h1 className="text-4xl font-black tracking-tight">
+                            API <TextGradient>Collection</TextGradient>
+                        </h1>
+                        {me && <p className="text-slate-400 text-sm mt-2 font-medium tracking-tight">Efficiently manage and document your API ecosystem.</p>}
                     </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleCreateBlank}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow transition-colors flex items-center gap-2 font-bold text-sm"
-                        >
-                            + Create Blank
-                        </button>
-                        <Link
-                            href="/import"
-                            className={`px-4 py-2 rounded shadow transition-colors font-bold text-sm ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
-                        >
-                            Import JSON
-                        </Link>
+                    <div className="flex gap-4">
+                        <PremiumButton variant="outline" onClick={() => router.push('/import')} className="flex items-center gap-2">
+                            <Database size={16} /> Import
+                        </PremiumButton>
+                        <PremiumButton onClick={handleCreateBlank} className="flex items-center gap-2 px-8">
+                            + New Collection
+                        </PremiumButton>
                     </div>
                 </div>
 
                 {invites.length > 0 && (
-                    <div className="mb-10">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500">
-                                <Mail size={20} />
-                            </div>
-                            <h2 className={`text-xl font-bold ${textColor}`}>Pending Invitations</h2>
+                    <div className="mb-12">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="w-1.5 h-6 bg-violet-600 rounded-full" />
+                            <h2 className="text-lg font-bold text-white uppercase tracking-wider">Pending Invitations</h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {invites.map((invite: any) => (
-                                <div key={invite.id} className={`${cardBg} p-5 rounded-xl border border-indigo-500/30 bg-indigo-500/5`}>
-                                    <div className="flex justify-between items-start mb-3">
+                                <GlassCard key={invite.id} className="border-indigo-500/30 bg-indigo-500/5">
+                                    <div className="flex justify-between items-start mb-4">
                                         <div>
-                                            <h3 className={`font-bold ${textColor}`}>{invite.documentationTitle}</h3>
-                                            <p className={`text-[10px] ${subTextColor}`}>Invited by {invite.invitedByName}</p>
+                                            <h3 className="font-bold text-heading mb-1">{invite.documentationTitle}</h3>
+                                            <p className="text-[10px] text-secondary lowercase">Invited by {invite.invitedByName}</p>
                                         </div>
-                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400`}>
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 uppercase tracking-tighter">
                                             {invite.role}
                                         </span>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => acceptInviteMutation.mutate(invite.token)}
-                                            disabled={acceptInviteMutation.isPending}
-                                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-1.5 rounded-lg transition-all flex items-center justify-center gap-1"
-                                        >
-                                            <Check size={12} /> {acceptInviteMutation.isPending ? 'JOINING...' : 'ACCEPT'}
-                                        </button>
-                                    </div>
-                                </div>
+                                    <PremiumButton
+                                        onClick={() => acceptInviteMutation.mutate(invite.token)}
+                                        disabled={acceptInviteMutation.isPending}
+                                        className="w-full text-xs py-2"
+                                    >
+                                        <Check size={14} className="inline mr-2" />
+                                        {acceptInviteMutation.isPending ? 'JOINING...' : 'ACCEPT INVITATION'}
+                                    </PremiumButton>
+                                </GlassCard>
                             ))}
                         </div>
                     </div>
                 )}
 
-                <div className="mb-10">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500">
-                            <User size={20} />
-                        </div>
-                        <h2 className={`text-xl font-bold ${textColor}`}>My Documentations</h2>
+                <div className="mb-12">
+                    <div className="flex items-center gap-2 mb-6">
+                        <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+                        <h2 className="text-lg font-bold text-heading uppercase tracking-wider">My Documentations</h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {ownedDocs.map((doc) => (
-                            <div key={doc.id} className={`${cardBg} p-6 rounded-xl border flex flex-col justify-between group h-full shadow-sm`}>
-                                <div className="flex justify-between mb-4">
-                                    <div className="flex-1 min-w-0 pr-4">
-                                        <p className={`text-[10px] ${subTextColor} mb-1 uppercase tracking-wider font-semibold`}>{doc.layout || 'Collection'}</p>
-                                        <h2 className={`text-xl font-bold mb-2 ${textColor} truncate`}>{doc.title}</h2>
-                                        <p className={`${subTextColor} text-[10px] flex items-center gap-1`}>
+                            <GlassCard key={doc.id} className="relative group overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => handleDeleteClick(doc)}
+                                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                                <div className="mb-6">
+                                    <span className="text-[10px] font-black text-secondary uppercase tracking-[2px] mb-2 block">{doc.layout || 'Personal'}</span>
+                                    <h2 className="text-xl font-bold text-heading truncate mb-2">{doc.title}</h2>
+                                    <div className="flex items-center gap-4">
+                                        <p className="text-secondary text-[10px] flex items-center gap-1.5 italic">
                                             <Clock size={12} /> {new Date(doc.updatedAt).toLocaleDateString()}
                                         </p>
-                                        <div className="flex justify-start pt-2 border-opacity-10 dark:border-white border-black">
-                                            <CollaboratorAvatars collaborators={doc.collaborators} theme={theme} />
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-2 shrink-0">
-                                        <Link
-                                            href={`/docs/${doc.id}`}
-                                            className="bg-indigo-600 text-white w-10 h-10 rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center shadow-md"
-                                        >
-                                            <ExternalLink size={20} />
-                                        </Link>
-                                        <button
-                                            onClick={() => handleDeleteClick(doc)}
-                                            className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center ${theme === 'dark' ? 'bg-gray-700 text-gray-300 hover:bg-red-600/20 hover:text-red-400' : 'bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600'}`}
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <CollaboratorAvatars collaborators={doc.collaborators} />
                                     </div>
                                 </div>
-                            </div>
+                                <PremiumButton
+                                    onClick={() => router.push(`/docs/${doc.id}`)}
+                                    className="w-full flex items-center justify-center gap-2 group/btn"
+                                >
+                                    OPEN COLLECTION <ExternalLink size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                </PremiumButton>
+                            </GlassCard>
                         ))}
                         {ownedDocs.length === 0 && (
-                            <div className={`col-span-full flex flex-col items-center justify-center py-12 px-4 rounded-xl border-2 border-dashed ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-                                <p className={`${subTextColor} text-sm mb-4`}>No personal collections yet</p>
-                                <button
-                                    onClick={handleCreateBlank}
-                                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs hover:shadow-lg transition-all"
-                                >
-                                    + Create Your First Collection
-                                </button>
+                            <div className="col-span-full py-16 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                                <p className="text-secondary mb-6">You haven't created any collections yet.</p>
+                                <PremiumButton onClick={handleCreateBlank}>
+                                    Create First Collection
+                                </PremiumButton>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {sharedDocs.length > 0 && (
-                    <div className="mb-10">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500">
-                                <Users size={20} />
-                            </div>
-                            <h2 className={`text-xl font-bold ${textColor}`}>Shared with Me</h2>
+                    <div className="mb-12">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="w-1.5 h-6 bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.3)]" />
+                            <h2 className="text-lg font-bold text-white uppercase tracking-wider">Shared work</h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {sharedDocs.map((doc) => (
-                                <div key={doc.id} className={`${cardBg} p-6 rounded-xl border flex flex-col justify-between border-l-4 border-l-indigo-500 shadow-sm`}>
-                                    <div className="flex justify-between mb-4">
-                                        <div className="flex-1 min-w-0 pr-4">
-                                            <div className="flex items-center gap-2 mb-1.5">
-                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                                                    <Shield size={10} /> {doc.role}
-                                                </span>
-                                            </div>
-                                            <h2 className={`text-xl font-bold mb-2 ${textColor} truncate`}>{doc.title}</h2>
-                                            <p className={`${subTextColor} text-[10px] flex items-center gap-1`}>
+                                <GlassCard key={doc.id} className="border-white/5 hover:border-violet-500/20">
+                                    <div className="mb-6">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 uppercase tracking-tighter flex items-center gap-1">
+                                                <Shield size={10} /> {doc.role}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-xl font-bold text-white truncate mb-2">{doc.title}</h2>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-slate-500 text-[10px] flex items-center gap-1.5 italic">
                                                 <Clock size={12} /> {new Date(doc.updatedAt).toLocaleDateString()}
                                             </p>
-                                        </div>
-                                        <div className="flex flex-col gap-2 justify-center shrink-0">
-                                            <Link
-                                                href={`/docs/${doc.id}`}
-                                                className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-2 font-bold text-xs"
-                                            >
-                                                OPEN <ExternalLink size={14} />
-                                            </Link>
+                                            <CollaboratorAvatars collaborators={doc.collaborators} />
                                         </div>
                                     </div>
-                                    <div className="flex justify-end pt-2 border-t border-dashed border-opacity-10 dark:border-white border-black">
-                                        <CollaboratorAvatars collaborators={doc.collaborators} theme={theme} />
-                                    </div>
-                                </div>
+                                    <PremiumButton
+                                        variant="outline"
+                                        onClick={() => router.push(`/docs/${doc.id}`)}
+                                        className="w-full flex items-center justify-center gap-2 group/btn border-white/5 bg-white/5 text-white py-3 h-auto min-h-0"
+                                    >
+                                        OPEN SHARED <ExternalLink size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                    </PremiumButton>
+                                </GlassCard>
                             ))}
                         </div>
                     </div>
                 )}
+
+                {/* Recent Activity Section */}
+                <div className="mt-16">
+                    <div className="flex items-center gap-2 mb-8">
+                        <div className="w-1.5 h-6 bg-violet-500 rounded-full shadow-[0_0_10px_rgba(139,92,246,0.3)]" />
+                        <h2 className="text-lg font-bold text-heading uppercase tracking-wider">Recent Activity</h2>
+                    </div>
+                    <GlassCard className="border-glass-border bg-background/50 p-0 overflow-hidden">
+                        <div className="divide-y divide-glass-border">
+                            {[1, 2, 3].map((_, i) => (
+                                <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 transition-colors group text-foreground">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center text-violet-400 border border-violet-500/20 group-hover:scale-110 transition-transform">
+                                            <Clock size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-heading">Payment API Documentation Updated</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">Updated 2 hours ago by <span className="text-violet-400 font-medium">You</span></p>
+                                        </div>
+                                    </div>
+                                    <button className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100">
+                                        <ExternalLink size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="px-6 py-3 bg-white/[0.01] border-t border-white/5 text-center">
+                            <button className="text-[10px] font-bold text-slate-500 hover:text-violet-400 uppercase tracking-widest transition-colors">
+                                View all activity
+                            </button>
+                        </div>
+                    </GlassCard>
+                </div>
             </div>
 
             <Modal
@@ -393,44 +376,43 @@ function DashboardContent() {
                 onClose={() => setIsCreateModalOpen(false)}
                 title="Create New Collection"
             >
-                <form onSubmit={handleCreateSubmit} className="space-y-4" noValidate>
+                <form onSubmit={handleCreateSubmit} className="space-y-6 pt-4" noValidate>
                     <div>
-                        <label htmlFor="collection-name" className={`block text-sm font-medium ${subTextColor} mb-1`}>
-                            Collection Name
+                        <label htmlFor="collection-name" className="block text-xs font-bold text-secondary uppercase tracking-[2px] mb-3">
+                            Collection Title
                         </label>
                         <input
                             id="collection-name"
                             type="text"
                             value={newCollectionTitle}
                             onChange={(e) => setNewCollectionTitle(e.target.value)}
-                            placeholder="e.g. My API Documentation"
-                            className={`w-full rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 border ${formErrors.title ? inputErrorBg : inputBg}`}
+                            placeholder="e.g. Payments Gateway API"
+                            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${formErrors.title ? 'border-red-500 ring-red-500/20' : 'border-white/10'}`}
                             autoFocus
-                            aria-invalid={!!formErrors.title}
-                            aria-describedby={formErrors.title ? 'title-error' : undefined}
                         />
                         {formErrors.title && (
-                            <div id="title-error" className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                            <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-2 font-bold uppercase tracking-wider">
                                 <AlertCircle size={12} />
                                 <span>{formErrors.title}</span>
                             </div>
                         )}
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <button
+                    <div className="flex justify-end gap-3 pt-4">
+                        <PremiumButton
                             type="button"
+                            variant="ghost"
                             onClick={() => setIsCreateModalOpen(false)}
-                            className={`px-4 py-2 text-sm ${subTextColor} hover:text-indigo-500 transition-colors`}
+                            className="text-xs"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </PremiumButton>
+                        <PremiumButton
                             type="submit"
                             disabled={isCreating}
-                            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="text-xs px-8"
                         >
-                            {isCreating ? 'Creating...' : 'Create Collection'}
-                        </button>
+                            {isCreating ? 'CREATING...' : 'PROCEED'}
+                        </PremiumButton>
                     </div>
                 </form>
             </Modal>
@@ -440,30 +422,30 @@ function DashboardContent() {
                 onClose={() => setIsDeleteModalOpen(false)}
                 title="Delete Collection"
             >
-                <div className="space-y-4">
-                    <div className={`flex items-start gap-3 p-4 rounded-lg ${theme === 'dark' ? 'bg-red-900/10 border border-red-900/20' : 'bg-red-50 border border-red-100'}`}>
-                        <AlertTriangle className="text-red-500 shrink-0" size={24} />
-                        <div>
-                            <p className={`text-sm ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-                                Are you sure you want to delete <span className="font-bold text-red-600">"{docToDelete?.title}"</span>?
-                            </p>
-                            <p className={`text-xs ${subTextColor} mt-1`}> This action cannot be undone. All endpoints and history inside this collection will be permanently removed.</p>
-                        </div>
+                <div className="space-y-6 pt-4">
+                    <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 text-center">
+                        <AlertTriangle className="mx-auto mb-4 text-red-500" size={32} />
+                        <p className="text-sm text-white font-medium mb-2">
+                            Delete <span className="text-red-400">"{docToDelete?.title}"</span>?
+                        </p>
+                        <p className="text-xs text-secondary leading-relaxed">
+                            This will permanently remove the collection and all its history. This action is irreversible.
+                        </p>
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                        <button
+                    <div className="flex justify-end gap-3">
+                        <PremiumButton
+                            variant="ghost"
                             onClick={() => setIsDeleteModalOpen(false)}
-                            className={`px-4 py-2 text-sm ${subTextColor} hover:text-indigo-500 transition-colors`}
                         >
-                            Cancel
-                        </button>
+                            Back
+                        </PremiumButton>
                         <button
                             onClick={confirmDelete}
                             disabled={isDeleting}
-                            className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded shadow transition-colors disabled:opacity-50 flex items-center gap-2"
+                            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 text-xs"
                         >
-                            {isDeleting ? 'Deleting...' : 'Permanently Delete'}
+                            {isDeleting ? 'DELETING...' : 'CONFIRM DELETE'}
                         </button>
                     </div>
                 </div>
@@ -473,14 +455,20 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
-    const { theme } = useTheme();
+    const { isLoggedIn } = useAuth();
     return (
-        <ProtectedRoute>
-            <main className={`min-h-screen flex flex-col ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <main className="min-h-screen relative flex flex-col bg-[#0B0A0F] text-white overflow-hidden">
+            {!isLoggedIn && (
+                <DemoOverlay
+                    title="API Studio & Dashboard"
+                    description="Access all your collections, documentation, and team activity in one centralized workspace."
+                />
+            )}
+            <div className={`transition-all duration-300 w-full h-full ${!isLoggedIn ? 'blur-md pointer-events-none opacity-50' : ''}`}>
                 <ErrorBoundary>
                     <DashboardContent />
                 </ErrorBoundary>
-            </main>
-        </ProtectedRoute>
+            </div>
+        </main>
     );
 }

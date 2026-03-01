@@ -42,16 +42,16 @@ export default function NotesList({ notes, activeId, collapsed, onSelect, onDele
             {notes.map((note) => (
                 <div
                     key={note.id}
-                    className={`note-card ${activeId === note.id ? 'active' : ''}`}
+                    className={`note-card ${activeId === note.id ? 'active' : ''} border border-transparent`}
                     onClick={() => onSelect(note.id)}
                     title={collapsed ? note.title || 'Untitled Note' : undefined}
                 >
-                    <div className="note-card-title flex items-center gap-2">
-                        {note.is_pinned && <Pin size={12} className="text-amber-500 flex-shrink-0" style={{ transform: 'rotate(45deg)' }} />}
-                        <StickyNote size={16} className="note-icon" />
-                        {!collapsed && <span className="text-truncate">{note.title || 'Untitled Note'}</span>}
+                    <div className="note-card-title flex items-center gap-3">
+                        {note.is_pinned && <Pin size={12} className="text-violet-400 flex-shrink-0" style={{ transform: 'rotate(45deg)' }} />}
+                        <StickyNote size={16} className={`note-icon ${activeId === note.id ? 'text-violet-400' : 'text-slate-400'}`} />
+                        {!collapsed && <span className={`text-[14px] font-semibold truncate ${activeId === note.id ? 'text-white' : 'text-slate-300'}`}>{note.title || 'Untitled Note'}</span>}
                     </div>
-                    {!collapsed && <div className="note-card-date">{formatDate(note.updatedAt)}</div>}
+                    {!collapsed && <div className="note-card-date text-[11px] text-slate-500 mt-1 font-medium">{formatDate(note.updatedAt)}</div>}
 
                     {!collapsed && (
                         <div className="note-card-actions">
