@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Copy, Search, X, History, RotateCcw, Clock, Columns2, Rows2, WrapText, FlaskConical, CheckCircle2, XCircle, ChevronDown, ChevronUp, Split, Zap, Sparkles, Loader2, Lightbulb } from 'lucide-react';
+import { Copy, Search, X, History, RotateCcw, Clock, Columns2, Rows2, WrapText, FlaskConical, CheckCircle2, XCircle, ChevronDown, ChevronUp, Split, Zap, Sparkles, Loader2, Lightbulb, AlertCircle } from 'lucide-react';
 import Editor, { DiffEditor } from '@monaco-editor/react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
@@ -10,6 +10,65 @@ import { SocketPanel } from './SocketPanel';
 import { WebsocketMessage, ConnectionStatus } from '@/types';
 
 type PaneLayout = 'horizontal' | 'vertical';
+
+function validateSchema(data: any, schema: any): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    if (!schema || typeof schema !== 'object' || Object.keys(schema).length === 0) return { valid: true, errors: [] };
+
+    const validate = (val: any, s: any, path: string = ''): void => {
+        if (!s) return;
+
+        // Type check
+        if (s.type) {
+            const actualType = Array.isArray(val) ? 'array' : (val === null ? 'null' : typeof val);
+            if (s.type === 'integer') {
+                if (!Number.isInteger(val)) {
+                    errors.push(`${path || 'root'} should be integer, but got ${actualType}`);
+                }
+            } else if (actualType !== s.type) {
+                errors.push(`${path || 'root'} should be ${s.type}, but got ${actualType}`);
+            }
+        }
+
+        // Required properties
+        if (s.required && Array.isArray(s.required)) {
+            if (typeof val !== 'object' || val === null) {
+                errors.push(`${path || 'root'} should be object for required properties`);
+            } else {
+                s.required.forEach((prop: string) => {
+                    if (!(prop in val)) {
+                        errors.push(`${path ? path + '.' : ''}${prop} is required`);
+                    }
+                });
+            }
+        }
+
+        // Object properties
+        if (s.properties && typeof val === 'object' && val !== null) {
+            Object.keys(s.properties).forEach(prop => {
+                if (prop in val) {
+                    validate(val[prop], s.properties[prop], path ? `${path}.${prop}` : prop);
+                }
+            });
+        }
+
+        // Array items
+        if (s.items && Array.isArray(val)) {
+            val.forEach((item, i) => {
+                validate(item, s.items, `${path}[${i}]`);
+            });
+        }
+    };
+
+    try {
+        const schemaObj = typeof schema === 'string' ? JSON.parse(schema) : schema;
+        validate(data, schemaObj);
+    } catch (e: any) {
+        errors.push(`Invalid Schema: ${e.message}`);
+    }
+
+    return { valid: errors.length === 0, errors };
+}
 
 interface ResponsePanelProps {
     response: any;
@@ -68,6 +127,7 @@ export function ResponsePanel({
     const [wrapLines, setWrapLines] = useState(false);
     const [showTestResults, setShowTestResults] = useState(true);
     const [showDiff, setShowDiff] = useState(false);
+    const [showSchemaErrors, setShowSchemaErrors] = useState(false);
     const [isExplaining, setIsExplaining] = useState(false);
     const [explanation, setExplanation] = useState<string | null>(null);
     const [editorInstance, setEditorInstance] = useState<any>(null);
@@ -151,6 +211,24 @@ export function ResponsePanel({
                                     >
                                         <FlaskConical size={9} />
                                         {passed}/{total} tests
+                                    </button>
+                                );
+                            })()}
+
+                            {/* Schema Validation Badge */}
+                            {response && currentReq?.responseSchema && (() => {
+                                const schema = currentReq.responseSchema;
+                                const { valid, errors } = validateSchema(response.data, schema);
+                                return (
+                                    <button
+                                        onClick={() => setShowSchemaErrors(p => !p)}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border transition-colors ${valid
+                                            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
+                                            : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                                            }`}
+                                    >
+                                        <CheckCircle2 size={9} />
+                                        Schema: {valid ? 'Valid' : `${errors.length} Errors`}
                                     </button>
                                 );
                             })()}
@@ -454,6 +532,32 @@ export function ResponsePanel({
                     )}
                 </div>
             )}
+
+            {/* Schema Validation Errors Panel */}
+            {showSchemaErrors && response && currentReq?.responseSchema && (() => {
+                const { valid, errors } = validateSchema(response.data, currentReq.responseSchema);
+                if (valid) return null;
+                return (
+                    <div className={`border-t ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#1a1a2e]' : 'bg-amber-50'}`}>
+                        <div className="flex items-center justify-between px-4 py-2 border-b border-amber-500/20">
+                            <span className="text-[10px] font-bold text-amber-500 flex items-center gap-2">
+                                <AlertCircle size={12} /> SCHEMA VALIDATION FAILED
+                            </span>
+                            <button onClick={() => setShowSchemaErrors(false)} className="text-gray-500 hover:text-white">
+                                <X size={12} />
+                            </button>
+                        </div>
+                        <div className="px-4 py-3 space-y-1.5 max-h-[150px] overflow-y-auto scrollbar-thin">
+                            {errors.map((err, i) => (
+                                <div key={i} className="flex items-start gap-2 text-[10px] font-mono text-amber-400">
+                                    <XCircle size={12} className="mt-0.5 flex-shrink-0" />
+                                    <span>{err}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

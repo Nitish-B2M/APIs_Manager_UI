@@ -102,19 +102,19 @@ export default function TodoGroup({ title, date, items, onUpdate, hideHeader = f
         >
             {/* Header - Optional, can be removed for pure flatness if same date/title */}
             {!hideHeader && (
-                <div className="px-2 pb-1 flex items-center justify-between group/header">
-                    <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{displayDate}</h3>
-                    <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity duration-200">
+                <div className="px-2 pb-3 mb-2 flex items-center justify-between group/header border-b border-white/5">
+                    <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px]">{displayDate}</h3>
+                    <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300">
                         <button
                             onClick={handleCopyMarkdown}
-                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 p-1 cursor-pointer"
+                            className="text-slate-500 hover:text-violet-400 p-1.5 cursor-pointer hover:bg-white/5 rounded-lg transition-all"
                             title="Copy as Markdown"
                         >
                             <FileText size={16} />
                         </button>
                         <button
                             onClick={handleCopyScreenshot}
-                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 p-1 cursor-pointer"
+                            className="text-slate-500 hover:text-violet-400 p-1.5 cursor-pointer hover:bg-white/5 rounded-lg transition-all"
                             title="Copy screenshot to clipboard"
                         >
                             <Copy size={16} />
@@ -124,7 +124,7 @@ export default function TodoGroup({ title, date, items, onUpdate, hideHeader = f
             )}
 
             <div
-                className="flex flex-col shadow-sm rounded-xl bg-white dark:bg-gray-800/50 dark:shadow-none border border-transparent dark:border-gray-700/50 overflow-hidden"
+                className="flex flex-col rounded-2xl bg-white/[0.01] border border-white/5 overflow-hidden"
             >
                 <SortableContext
                     items={items.map(t => t.id)}

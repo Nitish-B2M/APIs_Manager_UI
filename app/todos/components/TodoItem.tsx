@@ -147,18 +147,18 @@ export default function TodoItem({ todo, onUpdate, showTimestamp = false }: Todo
             style={style}
             {...attributes}
             {...listeners}
-            className="group flex items-center justify-between py-4 px-4 rounded-xl transition-all duration-300 ease-in-out cursor-default odd:bg-white even:bg-gray-50/80 dark:odd:bg-gray-800/30 dark:even:bg-gray-800/60
-            hover:bg-orange-500/20 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
+            className="group flex items-center justify-between py-5 px-6 rounded-2xl transition-all duration-300 ease-in-out cursor-default odd:bg-white/[0.02] even:bg-transparent
+            hover:bg-white/[0.03] hover:shadow-2xl hover:border-violet-500/20 border border-transparent"
         >
             <div className="flex items-center gap-4 flex-1 min-w-0" onClick={() => toggleComplete(todo)}>
                 {/* Custom Checkbox */}
                 <div
-                    className={`w-5 h-5 min-w-5 min-h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors duration-200 ${todo.is_completed
-                        ? 'bg-orange-500 border-orange-500'
-                        : 'bg-transparent border-gray-300 dark:border-gray-500 group-hover:border-orange-400'
+                    className={`w-5 h-5 min-w-5 min-h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all duration-300 ${todo.is_completed
+                        ? 'bg-[#8B5CF6] border-[#8B5CF6] shadow-[0_0_10px_rgba(139,92,246,0.5)]'
+                        : 'bg-transparent border-white/20 group-hover:border-violet-400'
                         }`}
                 >
-                    {todo.is_completed && <Check size={12} className="text-white" strokeWidth={4} />}
+                    {todo.is_completed && <Check size={10} className="text-white" strokeWidth={5} />}
                 </div>
 
                 {/* Text & Timestamp */}
@@ -202,24 +202,24 @@ export default function TodoItem({ todo, onUpdate, showTimestamp = false }: Todo
                         <>
                             <div className="flex items-center gap-2">
                                 {todo.priority && (
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase ${todo.priority === 'high' ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' :
-                                        todo.priority === 'medium' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' :
-                                            'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400'
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${todo.priority === 'high' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                        todo.priority === 'medium' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                            'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                         }`}>
                                         {todo.priority}
                                     </span>
                                 )}
                                 <span
-                                    className={`text-base font-medium cursor-pointer select-none truncate transition-colors duration-200 ${todo.is_completed
-                                        ? 'text-gray-400 line-through decoration-gray-300'
-                                        : 'text-gray-800 dark:text-gray-100'
+                                    className={`text-[14px] font-semibold cursor-pointer select-none truncate transition-colors duration-300 ${todo.is_completed
+                                        ? 'text-slate-500 line-through decoration-slate-600'
+                                        : 'text-white'
                                         }`}
                                 >
                                     {todo.title}
                                 </span>
                             </div>
                             {todo.description && (
-                                <span className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                                <span className="text-[12px] text-slate-500 truncate mt-1">
                                     {todo.description}
                                 </span>
                             )}
@@ -265,10 +265,10 @@ export default function TodoItem({ todo, onUpdate, showTimestamp = false }: Todo
                         </button>
                         <button
                             onClick={handleCopy}
-                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 p-2 transition-colors duration-200"
+                            className="text-slate-500 hover:text-violet-400 p-2 transition-all duration-200 hover:bg-violet-500/10 rounded-lg"
                             title="Copy task text"
                         >
-                            <Copy size={18} />
+                            <Copy size={16} />
                         </button>
                         <button
                             onClick={handleDelete}

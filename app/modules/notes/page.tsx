@@ -13,12 +13,15 @@ import {
     NoteListItem, NoteDetail,
 } from './utils/api';
 import './notes.css';
+import { useAuth } from '../../../context/AuthContext';
+import { DemoOverlay } from '../../components/DemoOverlay';
 
 function isNoteDetail(note: NoteDetail | { id: string; title: string } | null): note is NoteDetail {
     return note !== null && 'content_json' in note;
 }
 
 export default function NotesPage() {
+    const { isLoggedIn } = useAuth();
     const [notes, setNotes] = useState<NoteListItem[]>([]);
     const [openNotes, setOpenNotes] = useState<(NoteDetail | { id: string; title: string; })[]>([]);
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
@@ -59,15 +62,20 @@ export default function NotesPage() {
         }
 
         // 2. Fetch all notes list
-        fetchNotes().then(data => {
-            setNotes(data);
+        if (isLoggedIn) {
+            fetchNotes().then(data => {
+                setNotes(data);
+                setLoading(false);
+            }).catch(() => {
+                toast.error('Failed to load notes');
+                setLoading(false);
+            });
+        } else {
             setLoading(false);
-        }).catch(() => {
-            toast.error('Failed to load notes');
-            setLoading(false);
-        });
+        }
 
         // 3. Restore Open Tabs
+        if (!isLoggedIn) return;
         const savedOpenIds = localStorage.getItem('notes_open_tabs');
         const savedActiveId = localStorage.getItem('notes_active_id');
 
@@ -379,7 +387,14 @@ export default function NotesPage() {
     };
 
     return (
-        <div className="notes-module">
+        <div className="notes-module relative overflow-hidden">
+            {!isLoggedIn && (
+                <DemoOverlay
+                    title="Developer Notes"
+                    description="Capture ideas, snippets, and documentation with our distraction-free markdown editor."
+                />
+            )}
+
             {/* Delete Confirmation Modal */}
             <DeleteConfirmationModal
                 isOpen={deleteModal.isOpen}
@@ -388,9 +403,9 @@ export default function NotesPage() {
                 onConfirm={handleConfirmDelete}
             />
 
-            <div className="notes-layout">
+            <div className={`notes-layout transition-all duration-300 w-full h-full ${!isLoggedIn ? 'blur-md pointer-events-none opacity-50' : ''}`}>
                 {/* Sidebar */}
-                <div className={`notes-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+                <div className={`notes-sidebar bg-background/90 border-glass-border ${isSidebarCollapsed ? 'collapsed' : ''}`}>
                     <div className="notes-sidebar-header">
                         <div className="gap-2 flex items-center">
                             {/* Collapse Toggle */}

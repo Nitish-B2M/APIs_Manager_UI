@@ -51,17 +51,17 @@ export default function ChangelogPage() {
         return processed;
     };
 
-    const mainBg = theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-[#F9FAFB] text-gray-900';
-    const cardBg = theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.03)]';
-    const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
-    const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+    const mainBg = theme === 'dark' ? 'bg-[#0B0A0F] text-white' : 'bg-[#F9FAFB] text-gray-900';
+    const cardBg = theme === 'dark' ? 'bg-white/[0.02] border-white/5 shadow-2xl backdrop-blur-md' : 'bg-white border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.03)]';
+    const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+    const subTextColor = theme === 'dark' ? 'text-slate-400' : 'text-gray-500';
 
     if (isLoading) {
         return (
             <div className={`min-h-screen ${mainBg} flex items-center justify-center`}>
                 <div className="flex flex-col items-center gap-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent shadow-lg" />
-                    <p className={`${subTextColor} font-medium`}>Fetching API Lifecycle Data...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-500 border-t-transparent shadow-[0_0_15px_rgba(139,92,246,0.5)]" />
+                    <p className={`${subTextColor} font-medium tracking-wide`}>Fetching API Lifecycle Data...</p>
                 </div>
             </div>
         );
@@ -103,11 +103,11 @@ export default function ChangelogPage() {
     return (
         <div className={`min-h-screen ${mainBg} pb-20 transition-colors duration-300`}>
             {/* Hero Section */}
-            <div className={`${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b py-12 px-6 mb-8`}>
+            <div className={`${theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-white border-gray-200'} border-b py-12 px-6 mb-8`}>
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
-                            <Clock className="text-indigo-500" size={24} />
+                        <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.15)] border border-violet-500/20' : 'bg-violet-50'}`}>
+                            <Clock className="text-violet-500" size={24} />
                         </div>
                         <h1 className={`text-3xl font-extrabold ${textColor} tracking-tight`}>API Changelog</h1>
                     </div>
@@ -122,20 +122,20 @@ export default function ChangelogPage() {
                 <div className={`${cardBg} rounded-xl border overflow-hidden`}>
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className={`${theme === 'dark' ? 'bg-gray-800/50 border-gray-800' : 'bg-gray-50/50 border-gray-100'} border-b`}>
-                                <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-widest w-48">Collection</th>
-                                <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-widest w-76">Endpoint</th>
-                                <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-widest">Resolved URL</th>
-                                <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-widest w-36">Last Sync</th>
-                                <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-widest w-24 text-center">Action</th>
+                            <tr className={`${theme === 'dark' ? 'bg-white/[0.02] border-white/5' : 'bg-gray-50/50 border-gray-100'} border-b`}>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest w-48">Collection</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest w-76">Endpoint</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest">Resolved URL</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest w-36">Last Sync</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest w-24 text-center">Action</th>
                             </tr>
                         </thead>
-                        <tbody className={`divide-y ${theme === 'dark' ? 'divide-gray-800' : 'divide-gray-50'}`}>
+                        <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-gray-50'}`}>
                             {changelog.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center text-gray-400">
-                                        <Package size={48} className="mx-auto mb-4 opacity-20" />
-                                        <p className="text-sm">No API endpoints detected yet.</p>
+                                    <td colSpan={5} className="px-6 py-20 text-center text-slate-500">
+                                        <Package size={48} className="mx-auto mb-4 opacity-20 text-violet-500" />
+                                        <p className="text-sm font-medium tracking-wide">No API endpoints detected yet.</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -158,7 +158,7 @@ export default function ChangelogPage() {
                                                         }`}>
                                                         {item.method}
                                                     </span>
-                                                    <span className={`font-bold ${textColor} text-sm group-hover:text-indigo-500 transition-colors`}>
+                                                    <span className={`font-bold ${textColor} text-[14px] group-hover:text-violet-400 transition-colors duration-300`}>
                                                         {item.apiName}
                                                     </span>
                                                 </div>
@@ -166,8 +166,8 @@ export default function ChangelogPage() {
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-2 group/url">
-                                                <Link2 size={12} className="text-gray-500" />
-                                                <code className={`text-xs ${theme === 'dark' ? 'text-gray-400 bg-gray-950 border-gray-800' : 'text-gray-500 bg-gray-50 border-gray-100'} px-2 py-1 rounded border truncate max-w-md font-mono`} title={item.actualUrl}>
+                                                <Link2 size={12} className="text-slate-500" />
+                                                <code className={`text-xs ${theme === 'dark' ? 'text-slate-400 bg-white/[0.02] border-white/5' : 'text-gray-500 bg-gray-50 border-gray-100'} px-2 py-1 rounded border truncate max-w-md font-mono`} title={item.actualUrl}>
                                                     {item.actualUrl}
                                                 </code>
                                             </div>
@@ -180,7 +180,7 @@ export default function ChangelogPage() {
                                         <td className="px-6 py-5 text-center">
                                             <Link
                                                 href={`/docs/${item.id}`}
-                                                className={`inline-flex p-2 ${theme === 'dark' ? 'text-gray-500 hover:text-indigo-500 hover:bg-gray-800 border-transparent hover:border-gray-700' : 'text-gray-400 hover:text-indigo-600 hover:bg-white border-transparent hover:border-gray-200'} rounded-lg border shadow-none hover:shadow-sm transition-all`}
+                                                className={`inline-flex p-2 ${theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent hover:border-white/10' : 'text-gray-400 hover:text-violet-600 hover:bg-white border-transparent hover:border-gray-200'} rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50`}
                                             >
                                                 <ExternalLink size={16} />
                                             </Link>

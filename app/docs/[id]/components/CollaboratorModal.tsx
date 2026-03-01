@@ -3,19 +3,34 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../utils/api';
-import { X, Users, UserPlus, Shield, Trash2, Mail, Loader2, Check, ExternalLink, Clock, ChevronDown } from 'lucide-react';
+import { X, Users, UserPlus, Shield, Trash2, Mail, Loader2, Check, ExternalLink, Clock, ChevronDown, Globe, Copy } from 'lucide-react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 import { toast } from 'react-hot-toast';
 import { UserRole } from '../../../../types';
+import { Outfit } from 'next/font/google';
+
+const outfit = Outfit({ subsets: ['latin'] });
 
 interface CollaboratorModalProps {
     isOpen: boolean;
     onClose: () => void;
     documentationId: string;
+    isPublic?: boolean;
+    slug?: string | null;
+    onTogglePublic?: () => void;
+    onSlugUpdate?: (slug: string) => void;
 }
 
-export function CollaboratorModal({ isOpen, onClose, documentationId }: CollaboratorModalProps) {
+export function CollaboratorModal({
+    isOpen,
+    onClose,
+    documentationId,
+    isPublic,
+    slug,
+    onTogglePublic,
+    onSlugUpdate
+}: CollaboratorModalProps) {
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
     const queryClient = useQueryClient();
@@ -83,7 +98,7 @@ export function CollaboratorModal({ isOpen, onClose, documentationId }: Collabor
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 ${outfit.className}`}>
             <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${theme === 'dark' ? 'bg-[#1a1a2e] border-indigo-500/30' : 'bg-white border-gray-200'
                 }`}>
                 {/* Header with Premium Gradient */}
@@ -119,6 +134,58 @@ export function CollaboratorModal({ isOpen, onClose, documentationId }: Collabor
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+                    {/* Public Access Section */}
+                    <div className={`p-6 rounded-2xl border transition-all ${isPublic ? (theme === 'dark' ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200') : (theme === 'dark' ? 'bg-gray-800/20 border-white/5' : 'bg-gray-50 border-gray-100')}`}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPublic ? 'bg-green-500 text-white' : 'bg-gray-500/20 text-gray-500'}`}>
+                                    <Globe size={20} />
+                                </div>
+                                <div>
+                                    <h3 className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Public Documentation</h3>
+                                    <p className="text-[10px] font-medium text-gray-500">Make this collection accessible via a public link.</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onTogglePublic}
+                                className={`w-12 h-6 rounded-full transition-all relative ${isPublic ? 'bg-green-600' : 'bg-gray-600'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
+                            </button>
+                        </div>
+
+                        {isPublic && slug && (
+                            <div className={`mt-4 p-4 rounded-xl border animate-in slide-in-from-top-2 duration-300 ${theme === 'dark' ? 'bg-black/20 border-white/10' : 'bg-white border-gray-200'}`}>
+                                <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Public Link</label>
+                                <div className="flex items-center gap-2">
+                                    <div className={`flex-1 px-3 py-2 rounded-lg font-mono text-[11px] truncate ${theme === 'dark' ? 'bg-gray-900/50 text-indigo-400' : 'bg-gray-50 text-indigo-600'}`}>
+                                        /public/{slug}
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const url = `${window.location.origin}/public/${slug}`;
+                                            navigator.clipboard.writeText(url);
+                                            toast.success('Public link copied!');
+                                        }}
+                                        className="p-2 hover:bg-indigo-500/10 rounded-lg text-indigo-500 transition-all"
+                                        title="Copy Link"
+                                    >
+                                        <Copy size={16} />
+                                    </button>
+                                    <a
+                                        href={`/public/${slug}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-2 hover:bg-green-500/10 rounded-lg text-green-500 transition-all"
+                                        title="View Page"
+                                    >
+                                        <ExternalLink size={16} />
+                                    </a>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Invite Section */}
                     <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-gray-50 border-gray-200'
                         }`}>
@@ -272,27 +339,27 @@ export function CollaboratorModal({ isOpen, onClose, documentationId }: Collabor
                                 <label className={`text-[10px] font-black uppercase tracking-[0.2em] ${themeClasses.subTextColor}`}>Pending Invites ({invitations.length})</label>
                                 <div className={`h-px flex-1 mx-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-100'}`} />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-3">
                                 {invitations.map((invite: any) => (
-                                    <div key={invite.id} className={`p-4 rounded-2xl border border-dashed transition-all hover:border-indigo-500/30 ${theme === 'dark' ? 'bg-white/2 border-white/5' : 'bg-gray-50 border-gray-200'
+                                    <div key={invite.id} className={`p-4 rounded-md border backdrop-blur-md transition-all ${theme === 'dark' ? 'bg-white/[0.03] border-white/10 hover:bg-white/[0.08]' : 'bg-white/40 border-gray-200 border-b-gray-300 shadow-sm hover:bg-white/80'
                                         }`}>
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-gray-500/10 flex items-center justify-center text-gray-500">
-                                                    <Clock size={20} className="animate-pulse" />
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                <div className="w-10 h-10 rounded-md bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0 shadow-inner">
+                                                    <Clock size={18} className="animate-pulse" />
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <h4 className={`text-xs font-black truncate max-w-[120px] ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                <div className="min-w-0 flex-1 flex flex-col items-start justify-center gap-1">
+                                                    <h4 className={`text-sm font-bold truncate w-full ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`} title={invite.email}>
                                                         {invite.email}
                                                     </h4>
-                                                    <span className="px-2 py-0.5 rounded-md bg-gray-500/10 text-[9px] font-black uppercase tracking-tighter border border-gray-500/10">
+                                                    <span className="px-2 py-0.5 rounded flex items-center justify-center bg-indigo-500/10 text-[10px] font-black uppercase tracking-widest border border-indigo-500/20 text-indigo-500 shadow-sm">
                                                         {invite.role}
                                                     </span>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => cancelInviteMutation.mutate(invite.id)}
-                                                className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-50 text-red-600'
+                                                className={`px-4 py-2 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all border shadow-sm ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400 border-red-500/30 bg-red-500/10' : 'hover:bg-red-50 text-red-600 border-red-200 bg-red-50'
                                                     }`}
                                             >
                                                 Revoke
@@ -312,8 +379,8 @@ export function CollaboratorModal({ isOpen, onClose, documentationId }: Collabor
                         }`}>
                         <Shield size={16} />
                     </div>
-                    <p className={`text-[10px] leading-relaxed font-medium ${themeClasses.subTextColor}`}>
-                        <span className="font-bold text-indigo-500 px-1">Security Node:</span>
+                    <p className={`text-[12px] leading-relaxed font-medium ${themeClasses.subTextColor}`}>
+                        <span className="font-bold text-indigo-500">Security Node: </span>
                         Administrators can manage full team settings and deletions. Editors can modify documentation content and versions.
                     </p>
                 </div>
