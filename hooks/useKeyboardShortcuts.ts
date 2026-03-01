@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useCallback } from 'react';
 
 interface KeyboardShortcut {
@@ -16,9 +18,9 @@ interface UseKeyboardShortcutsProps {
     enabled?: boolean;
 }
 
-export function useKeyboardShortcuts({ 
-    shortcuts, 
-    enabled = true 
+export function useKeyboardShortcuts({
+    shortcuts,
+    enabled = true
 }: UseKeyboardShortcutsProps): void {
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         if (!enabled) return;
