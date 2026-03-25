@@ -31,7 +31,7 @@ export default function TodoGroup({ title, date, items, onUpdate, hideHeader = f
     const handleCopyScreenshot = async () => {
         const element = document.getElementById(`group-${title}-${date}`);
         if (!element) return;
-        const backgroundColor = localStorage.getItem('theme') === 'dark' ? '#0a0a0a' : '#ffffff';
+        const backgroundColor = localStorage.getItem('theme') === 'dark' ? '#ffe1aaff' : '#bbf8fdff';
 
         try {
             // Fetch font CSS manually to embed it
@@ -47,14 +47,15 @@ export default function TodoGroup({ title, date, items, onUpdate, hideHeader = f
                 cacheBust: true,
                 backgroundColor: backgroundColor,
                 style: {
-                    fontFamily: 'Poppins, sans-serif',
+                    fontFamily: "'Poppins', sans-serif",
+                    padding: '40px', // Extra padding for the absolute badges
                 },
-                fontEmbedCSS: fontCss, // Pass the actual CSS text, not the URL
+                fontEmbedCSS: fontCss,
                 filter: (node) => {
-                    // Exclude the copy buttons from the screenshot
-                    if (node.tagName === 'BUTTON' && (
-                        node.getAttribute('title') === 'Copy screenshot to clipboard' ||
-                        node.getAttribute('title') === 'Copy as Markdown'
+                    // Exclude any button or element with copy title from the screenshot
+                    if (node instanceof HTMLElement && (
+                        node.tagName === 'BUTTON' ||
+                        node.getAttribute('title')?.includes('Copy')
                     )) {
                         return false;
                     }
@@ -98,34 +99,44 @@ export default function TodoGroup({ title, date, items, onUpdate, hideHeader = f
         <div
             id={`group-${title}-${date}`}
             ref={setNodeRef}
-            className="flex flex-col gap-2 p-4"
+            className="flex flex-col gap-4 p-8"
         >
-            {/* Header - Optional, can be removed for pure flatness if same date/title */}
+            {/* Header */}
             {!hideHeader && (
-                <div className="px-2 pb-3 mb-2 flex items-center justify-between group/header border-b border-white/5">
-                    <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[3px]">{displayDate}</h3>
-                    <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300">
+                <div className="px-6 pb-4 mb-4 flex items-center justify-between group/header border-b-[3px] border-[#2D3436]/10">
+                    <div className="flex items-center gap-4">
+                        <div className="w-4 h-12 bg-[#FF7F50] rounded-full border-[3px] border-[#2D3436] flex items-center justify-center shadow-[4px_4px_0px_#2D3436]">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white border border-[#2D3436]"></div>
+                        </div>
+                        <div className="flex flex-col -space-y-1 min-w-max">
+                            <h3 className="text-[10px] font-black text-[#2D3436] uppercase tracking-[0.2em] opacity-60 whitespace-nowrap uppercase">
+                                {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'short' }).replace(',', '')}
+                            </h3>
+                            <span className="text-2xl font-black text-[#2D3436] tracking-tighter whitespace-nowrap">
+                                {new Date(date).getDate()}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300">
                         <button
                             onClick={handleCopyMarkdown}
-                            className="text-slate-500 hover:text-violet-400 p-1.5 cursor-pointer hover:bg-white/5 rounded-lg transition-all"
+                            className="bg-white border-2 border-[#2D3436] p-1.5 rounded-xl hover:bg-[#D1E8FF] transition-all"
                             title="Copy as Markdown"
                         >
-                            <FileText size={16} />
+                            <FileText size={14} className="text-[#2D3436]" />
                         </button>
                         <button
                             onClick={handleCopyScreenshot}
-                            className="text-slate-500 hover:text-violet-400 p-1.5 cursor-pointer hover:bg-white/5 rounded-lg transition-all"
+                            className="bg-white border-2 border-[#2D3436] p-1.5 rounded-xl hover:bg-[#FFE27D] transition-all"
                             title="Copy screenshot to clipboard"
                         >
-                            <Copy size={16} />
+                            <Copy size={14} className="text-[#2D3436]" />
                         </button>
                     </div>
                 </div>
             )}
 
-            <div
-                className="flex flex-col rounded-2xl bg-white/[0.01] border border-white/5 overflow-hidden"
-            >
+            <div className="flex flex-col gap-6">
                 <SortableContext
                     items={items.map(t => t.id)}
                     strategy={verticalListSortingStrategy}

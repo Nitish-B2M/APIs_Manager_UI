@@ -173,7 +173,7 @@ export default function LoginPage() {
 
                     <div className="mt-8 pt-8 border-t border-gray-500/10 text-center">
                         <p className={`${subTextColor} text-sm font-medium`}>
-                            New to PostmanClone?{' '}
+                            New to DevManusClone?{' '}
                             <button
                                 onClick={() => router.push('/register')}
                                 className="text-indigo-600 hover:text-indigo-500 font-bold transition-colors cursor-pointer"

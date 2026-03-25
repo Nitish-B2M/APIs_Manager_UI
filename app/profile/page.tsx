@@ -73,6 +73,26 @@ export default function ProfilePage() {
         } catch (err) { }
     };
 
+    const handleToggleCopySingleLine = async () => {
+        const newSettings = {
+            ...(me?.settings || {}),
+            copySingleLine: !me?.settings?.copySingleLine
+        };
+        try {
+            await updateMutation.mutateAsync({ settings: newSettings });
+        } catch (err) { }
+    };
+
+    const handleToggleLivePresence = async () => {
+        const newSettings = {
+            ...(me?.settings || {}),
+            enableLivePresence: me?.settings?.enableLivePresence === false ? true : false
+        };
+        try {
+            await updateMutation.mutateAsync({ settings: newSettings });
+        } catch (err) { }
+    };
+
     const sections = [
         { id: 'personal-info', label: 'Personal Info', icon: <UserIcon size={16} /> },
         { id: 'preferences', label: 'Preferences', icon: <Clock size={16} /> },
@@ -235,6 +255,36 @@ export default function ProfilePage() {
                                             >
                                                 <span
                                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${me?.settings?.showFlipClock ? 'translate-x-6' : 'translate-x-1'}`}
+                                                />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-indigo-500/30 transition-all">
+                                            <div className="flex-1">
+                                                <p className="font-bold text-sm">Copy as Single Line</p>
+                                                <p className={`text-xs ${subTextColor}`}>Remove all whitespace when copying request URL, body, docs, or response to clipboard</p>
+                                            </div>
+                                            <button
+                                                onClick={handleToggleCopySingleLine}
+                                                disabled={updateMutation.isPending}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${me?.settings?.copySingleLine ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                                            >
+                                                <span
+                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${me?.settings?.copySingleLine ? 'translate-x-6' : 'translate-x-1'}`}
+                                                />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-indigo-500/30 transition-all">
+                                            <div className="flex-1">
+                                                <p className="font-bold text-sm">Live Collaboration & Cursors</p>
+                                                <p className={`text-xs ${subTextColor}`}>See who else is viewing the workspace and show your active field to team members</p>
+                                            </div>
+                                            <button
+                                                onClick={handleToggleLivePresence}
+                                                disabled={updateMutation.isPending}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${me?.settings?.enableLivePresence !== false ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                                            >
+                                                <span
+                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${me?.settings?.enableLivePresence !== false ? 'translate-x-6' : 'translate-x-1'}`}
                                                 />
                                             </button>
                                         </div>

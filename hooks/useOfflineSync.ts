@@ -60,10 +60,23 @@ export function useOfflineSync(documentationId: string, apiToken?: string) {
 
                 if (item.type === 'saveRequest') {
                     const req: Endpoint = item.data;
-                    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/documentation/${documentationId}/requests/${req.id}`, {
-                        method: 'PUT',
+                    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001'}/api/documentation/request/${req.id}`, {
+                        method: 'PATCH',
                         headers,
                         body: JSON.stringify(req),
+                    });
+                } else if (item.type === 'saveNote') {
+                    const note = item.data;
+                    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001'}/api/notes/${note.id}`, {
+                        method: 'PUT',
+                        headers,
+                        body: JSON.stringify(note),
+                    });
+                } else if (item.type === 'createNote') {
+                    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001'}/api/notes`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify(item.data),
                     });
                 }
                 // Handle create/delete similarly if we want full offline mutations
@@ -86,7 +99,7 @@ export function useOfflineSync(documentationId: string, apiToken?: string) {
         }
     }, [isOnline, flushQueue]);
 
-    const queueMutation = async (type: 'saveRequest' | 'createRequest' | 'deleteRequest', data: any) => {
+    const queueMutation = async (type: 'saveRequest' | 'createRequest' | 'deleteRequest' | 'saveNote' | 'createNote' | 'deleteNote', data: any) => {
         if (isOnline) {
             return false; // Indicates it was not queued, caller should perform standard API call
         }
