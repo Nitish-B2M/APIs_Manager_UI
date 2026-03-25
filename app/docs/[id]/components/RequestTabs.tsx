@@ -1,16 +1,26 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, memo } from 'react';
 import { Trash2, Plus, Copy, CheckCircle2, Sparkles, WrapText, Search } from 'lucide-react';
 import CodeSnippets from './CodeSnippets';
 import { AuthTab } from './AuthTab';
 import { FormDataEditor } from './FormDataEditor';
 import { TestsTab } from './TestsTab';
 import { MockTab } from './MockTab';
-import Editor from '@monaco-editor/react';
+import dynamic from 'next/dynamic';
 import { SchemaEditor } from './SchemaEditor';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
+import toast from 'react-hot-toast';
+
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex items-center justify-center bg-black/10 min-h-[200px]">
+            <Search size={20} className="animate-spin text-indigo-500" />
+        </div>
+    )
+});
 
 type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'code' | 'mocking';
 
@@ -27,6 +37,7 @@ interface RequestTabsProps {
     onAiGenerate: () => void;
     onFormatJson: () => void;
     onCopyBody: () => void;
+    onCopyTitle: () => void;
     onCopyMarkdown: () => void;
     onSelection: () => void;
     onContextMenu: (e: React.MouseEvent) => void;
@@ -34,7 +45,7 @@ interface RequestTabsProps {
     onAiGenerateTests?: () => void;
 }
 
-export function RequestTabs({
+export const RequestTabs = memo(({
     currentReq,
     variables,
     activeTab,
@@ -47,12 +58,13 @@ export function RequestTabs({
     onAiGenerate,
     onFormatJson,
     onCopyBody,
+    onCopyTitle,
     onCopyMarkdown,
     onSelection,
     onContextMenu,
     aiEnabled,
     onAiGenerateTests,
-}: RequestTabsProps) {
+}: RequestTabsProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const textColor = isDark ? 'text-white' : 'text-gray-900';
@@ -79,7 +91,7 @@ export function RequestTabs({
             default:
                 return allTabs;
         }
-    }, [currentReq?.protocol, allTabs]);
+    }, [currentReq?.protocol]);
 
     React.useEffect(() => {
         if (!tabs.includes(activeTab)) {
@@ -294,7 +306,7 @@ export function RequestTabs({
                                                 language={detectLanguage(responseText)}
                                                 value={responseText}
                                                 theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                                onChange={(value) => onRequestChange({ body: { ...currentReq.body, raw: value || '' } })}
+                                                onChange={(value) => onRequestChange({ body: { ...currentReq.body, mode: currentReq.body?.mode || 'raw', raw: value || '' } })}
                                                 options={{
                                                     readOnly: !canEdit,
                                                     fontSize: 13,
@@ -411,7 +423,7 @@ export function RequestTabs({
                 {activeTab === 'docs' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-top-1 duration-300 max-w-3xl">
                         <div className="flex justify-between items-end gap-4">
-                            <div className="flex-1">
+                            <div className="flex-1 relative">
                                 <label className={`text-[10px] font-black ${textColor} opacity-40 uppercase mb-2 block tracking-widest`}>REQUEST NAME</label>
                                 <input
                                     value={currentReq.name}
@@ -419,10 +431,20 @@ export function RequestTabs({
                                     onChange={(e) => onRequestChange({ name: e.target.value })}
                                     className={`w-full text-lg font-bold px-4 py-2.5 ${inputBg} border ${borderCol} ${textColor} rounded-xl focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all ${!canEdit ? 'bg-transparent border-transparent px-0 text-2xl' : ''}`}
                                 />
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(currentReq.name);
+                                        toast.success('Title copied to clipboard');
+                                    }}
+                                    className="absolute inset-y-0 right-0 top-5 z-20 flex items-center pr-3 cursor-pointer"
+                                    title="Copy Title"
+                                >
+                                    <Copy size={14} />
+                                </button>
                             </div>
                             <button
                                 onClick={onCopyMarkdown}
-                                className="mb-0.5 p-2.5 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 rounded-xl flex items-center gap-2 font-black text-[10px] transition-all border border-indigo-500/20 active:scale-95 uppercase tracking-widest"
+                                className="mb-0.5 p-2.5 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 rounded-xl flex items-center gap-2 font-black text-[10px] transition-all border border-indigo-500/20 active:scale-95 uppercase tracking-widest cursor-pointer"
                                 title="Copy as Markdown"
                             >
                                 <Copy size={16} /> COPY MKD
@@ -539,4 +561,6 @@ export function RequestTabs({
             </div>
         </div>
     );
-}
+});
+
+RequestTabs.displayName = 'RequestTabs';
