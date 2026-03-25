@@ -49,59 +49,58 @@ export default function NotesPage() {
 
     // --- Load Persistence & Notes ---
     useEffect(() => {
-        // 1. Load AutoSave Preference
-        const savedAutoSave = localStorage.getItem('notes_autosave');
-        if (savedAutoSave !== null) {
-            setAutoSaveEnabled(savedAutoSave === 'true');
-        }
-
-        // Load Sidebar Preference
-        const savedCollapsed = localStorage.getItem('notes_sidebar_collapsed');
-        if (savedCollapsed !== null) {
-            setIsSidebarCollapsed(savedCollapsed === 'true');
-        }
-
-        // 2. Fetch all notes list
-        if (isLoggedIn) {
-            fetchNotes().then(data => {
-                setNotes(data);
-                setLoading(false);
-            }).catch(() => {
-                toast.error('Failed to load notes');
-                setLoading(false);
-            });
-        } else {
+        if (!isLoggedIn) {
             setLoading(false);
+            return;
         }
 
-        // 3. Restore Open Tabs
-        if (!isLoggedIn) return;
-        const savedOpenIds = localStorage.getItem('notes_open_tabs');
-        const savedActiveId = localStorage.getItem('notes_active_id');
+        // 1. Load Preferences
+        const savedAutoSave = localStorage.getItem('notes_autosave');
+        if (savedAutoSave !== null) setAutoSaveEnabled(savedAutoSave === 'true');
 
-        if (savedOpenIds) {
+        const savedCollapsed = localStorage.getItem('notes_sidebar_collapsed');
+        if (savedCollapsed !== null) setIsSidebarCollapsed(savedCollapsed === 'true');
+
+        const initializeData = async () => {
+            setLoading(true);
             try {
-                const ids = JSON.parse(savedOpenIds) as string[];
-                if (Array.isArray(ids) && ids.length > 0) {
-                    // Fetch details for these notes
-                    Promise.all(ids.map(id => fetchNote(id)))
-                        .then(details => {
-                            setOpenNotes(details);
-                            if (savedActiveId && ids.includes(savedActiveId)) {
+                // 2. Fetch all notes list
+                const listData = await fetchNotes();
+                setNotes(listData);
+
+                // 3. Restore Open Tabs
+                const savedOpenIds = localStorage.getItem('notes_open_tabs');
+                const savedActiveId = localStorage.getItem('notes_active_id');
+
+                if (savedOpenIds) {
+                    const ids = JSON.parse(savedOpenIds) as string[];
+                    if (Array.isArray(ids) && ids.length > 0) {
+                        // Use allSettled to be resilient if some notes were deleted
+                        const results = await Promise.allSettled(ids.map(id => fetchNote(id)));
+                        const validDetails = results
+                            .filter((r): r is PromiseFulfilledResult<NoteDetail> => r.status === 'fulfilled')
+                            .map(r => r.value);
+
+                        if (validDetails.length > 0) {
+                            setOpenNotes(validDetails);
+                            if (savedActiveId && validDetails.some(n => n.id === savedActiveId)) {
                                 setActiveNoteId(savedActiveId);
-                            } else if (details.length > 0) {
-                                setActiveNoteId(details[0].id);
+                            } else {
+                                setActiveNoteId(validDetails[0].id);
                             }
-                        })
-                        .catch(() => {
-                            console.warn('Failed to restore some open tabs');
-                        });
+                        }
+                    }
                 }
-            } catch (e) {
-                console.error('Failed to parse saved tabs', e);
+            } catch (error) {
+                console.error('Notes initialization failed:', error);
+                toast.error('Failed to load notes');
+            } finally {
+                setLoading(false);
             }
-        }
-    }, []);
+        };
+
+        initializeData();
+    }, [isLoggedIn]);
 
     // --- Persist Tabs on Change ---
     useEffect(() => {

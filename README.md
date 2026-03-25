@@ -1,4 +1,4 @@
-# Postman Documentation Generator - Client
+# DevManus Documentation Generator - Client
 
 Frontend application for the API Documentation Generator built with Next.js 16, React 19, and TypeScript.
 
@@ -114,10 +114,10 @@ NEXT_PUBLIC_API_URL=http://localhost:4001/api
 
 ```bash
 # Build the image
-docker build -t postman-docs-client .
+docker build -t devmanus-docs-client .
 
 # Run the container
-docker run -p 3000:3000 postman-docs-client
+docker run -p 3000:3000 devmanus-docs-client
 ```
 
 ### Docker Compose

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, Settings, Users, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, Users, MessageSquare, ChevronLeft, ChevronRight, Terminal } from 'lucide-react';
 import { GlassCard, TextGradient } from '../../components/UIComponents';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { label: 'Overview', href: '/admin', icon: <LayoutDashboard size={18} /> },
         { label: 'Templates', href: '/admin/templates', icon: <FileText size={18} /> },
         { label: 'Contacts & Inquiries', href: '/admin/contacts', icon: <MessageSquare size={18} /> },
+        { label: 'System Logs', href: '/admin/logs', icon: <Terminal size={18} /> },
         { label: 'Users', href: '/admin/users', icon: <Users size={18} /> },
         { label: 'Settings', href: '/admin/settings', icon: <Settings size={18} /> },
     ];

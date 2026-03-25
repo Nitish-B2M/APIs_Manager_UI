@@ -9,7 +9,7 @@ import { UploadCloud, FileJson, Zap } from 'lucide-react';
 import { ProtectedRoute } from '../../components/AuthGuard';
 import { parseOpenApi } from '../../utils/openApiParser';
 
-type ImportFormat = 'POSTMAN' | 'OPENAPI' | 'AUTO';
+type ImportFormat = 'DevManus' | 'OPENAPI' | 'AUTO';
 
 export default function ImportPage() {
     const [title, setTitle] = useState('');
@@ -33,8 +33,8 @@ export default function ImportPage() {
         try {
             const json = JSON.parse(content);
 
-            // Postman Check
-            if (json.info && json.item && (json.info.schema || "").includes("postman")) {
+            // DevManus Check
+            if (json.info && json.item && (json.info.schema || "").includes("devmanus")) {
                 return {
                     title: json.info.name || '',
                     data: json
@@ -76,10 +76,12 @@ export default function ImportPage() {
                 const content = event.target?.result as string;
                 setFileContent(content);
 
-                const result = detectAndParse(content);
-                if (result) {
-                    if (!title) setTitle(result.title);
-                    toast.success(`Detected ${result.data.openapi ? 'OpenAPI' : 'Postman'} format`);
+                if (format === 'AUTO') {
+                    const result = detectAndParse(content);
+                    if (result) {
+                        if (!title) setTitle(result.title);
+                        toast.success(`Detected ${result.data.openapi ? 'OpenAPI' : 'DevManus/Postman'} format`);
+                    }
                 }
             };
             reader.readAsText(file);
@@ -143,8 +145,21 @@ export default function ImportPage() {
                         </div>
 
                         <div>
+                            <label className={`block mb-1.5 text-sm font-bold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Import Format</label>
+                            <select
+                                value={format}
+                                onChange={(e) => setFormat(e.target.value as ImportFormat)}
+                                className={`w-full px-4 py-2.5 rounded-lg border focus:outline-none transition-all ${inputClasses}`}
+                            >
+                                <option value="AUTO">Auto-detect Type (Recommended)</option>
+                                <option value="DevManus">Postman / DevManus JSON</option>
+                                <option value="OPENAPI">OpenAPI 3.1 / 3.0</option>
+                            </select>
+                        </div>
+
+                        <div>
                             <label className={`block mb-1.5 text-sm font-bold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                                Select File (Postman or OpenAPI)
+                                Select File (DevManus or OpenAPI)
                             </label>
                             <div className={`relative group border-2 border-dashed rounded-xl p-8 text-center transition-all ${theme === 'dark' ? 'border-gray-700 bg-gray-900/50 hover:border-indigo-500/50' : 'border-gray-200 bg-gray-50 hover:border-indigo-500'}`}>
                                 <input
@@ -163,7 +178,7 @@ export default function ImportPage() {
                                             {fileContent ? '✓ File Uploaded' : 'Drag & Drop your JSON'}
                                         </p>
                                         <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-tighter">
-                                            Supports Postman v2.1+ and OpenAPI 3.0/3.1
+                                            Supports DevManus v2.1+ and OpenAPI 3.0/3.1
                                         </p>
                                     </div>
                                 </div>
@@ -185,7 +200,7 @@ export default function ImportPage() {
                         </p>
                         <div className="flex justify-center gap-4">
                             <div className="flex items-center gap-1.5 grayscale opacity-50">
-                                <span className={`text-[11px] font-bold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>POSTMAN</span>
+                                <span className={`text-[11px] font-bold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>DevManus</span>
                             </div>
                             <div className="flex items-center gap-1.5 grayscale opacity-50">
                                 <span className={`text-[11px] font-bold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>OPENAPI 3.x</span>

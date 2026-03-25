@@ -1,10 +1,19 @@
 'use client';
 
-import React from 'react';
-import { FileText, Copy, Download, Globe, ExternalLink } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import React, { useState } from 'react';
+import { X, Users, UserPlus, Shield, Trash2, Mail, Loader2, Check, ExternalLink, Clock, ChevronDown, Globe, Copy, Save, Download, FileText, Zap, Sparkles } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { Endpoint, Documentation } from '@/types';
 import { getThemeClasses } from '../utils/theme';
+
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex items-center justify-center bg-black/10 min-h-[200px]">
+            <Loader2 size={20} className="animate-spin text-indigo-500" />
+        </div>
+    )
+});
 
 interface DocumentationViewProps {
     doc: Documentation | null;
@@ -14,9 +23,12 @@ interface DocumentationViewProps {
     onCopyMarkdown: () => void;
     onDownloadMarkdown: () => void;
     onDownloadPdf: () => void;
+    onGenerateAiReadme: () => Promise<void>;
     resolveUrl: (ep: any) => string;
     resolveAll: (text: string, ep?: any) => string;
     publicSlug?: string | null;
+    onExportPostman?: () => void;
+    onExportOpenApi?: () => void;
 }
 
 export function DocumentationView({
@@ -27,11 +39,24 @@ export function DocumentationView({
     onCopyMarkdown,
     onDownloadMarkdown,
     onDownloadPdf,
+    onGenerateAiReadme,
     resolveUrl,
     resolveAll,
-    publicSlug
+    publicSlug,
+    onExportPostman,
+    onExportOpenApi
 }: DocumentationViewProps) {
     const themeClasses = getThemeClasses(theme);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleGenerateAiReadme = async () => {
+        setIsGenerating(true);
+        try {
+            await onGenerateAiReadme();
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     return (
         <div className="flex-1 flex overflow-hidden h-full">
@@ -77,12 +102,32 @@ export function DocumentationView({
                                     <Globe size={12} /> View Public
                                 </a>
                             )}
+                            <button
+                                onClick={handleGenerateAiReadme}
+                                disabled={isGenerating}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-[10px] font-bold hover:bg-purple-600/30 transition-all shadow-sm disabled:opacity-50`}
+                            >
+                                {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                AI README
+                            </button>
                             <button onClick={onCopyMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
                                 <Copy size={12} /> COPY MD
                             </button>
                             <button onClick={onDownloadMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
                                 <Download size={12} /> MD
                             </button>
+
+                            {onExportPostman && (
+                                <button onClick={onExportPostman} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-amber-600 hover:text-white hover:border-amber-600 transition-all shadow-sm`}>
+                                    <Download size={12} /> POSTMAN
+                                </button>
+                            )}
+
+                            {onExportOpenApi && (
+                                <button onClick={onExportOpenApi} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
+                                    <Zap size={12} /> OPENAPI 3.1
+                                </button>
+                            )}
                             <button onClick={onDownloadPdf} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-md">
                                 <FileText size={12} /> PDF
                             </button>

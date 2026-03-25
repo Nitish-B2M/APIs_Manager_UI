@@ -5,7 +5,7 @@ import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, u
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import TodoGroup from './TodoGroup';
 import TodoFilters from './TodoFilters';
-import { Loader2, LayoutList, Columns, Copy, Clock } from 'lucide-react';
+import { Loader2, LayoutList, Columns, Copy, Clock, Rocket, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { toBlob } from 'html-to-image';
 import { API_URL } from '../../../utils/api';
@@ -152,18 +152,37 @@ export default function TodoBoard() {
     };
 
     const handleCopyScreenshot = async (mainTitle: string, date: string) => {
+        console.log('mainTitle', mainTitle, 'date', date);
         const element = document.getElementById(`group-${mainTitle}-${date}`);
         if (!element) return;
         // get background color of the element
-        const backgroundColor = localStorage.getItem('theme') === 'dark' ? '#0a0a0a' : '#ffffff';
+        const backgroundColor = localStorage.getItem('theme') === 'dark' ? '#ffe1aaff' : '#bbf8fdff';
+        console.log('background color', backgroundColor, element);
+
         try {
+            // Fetch font CSS manually to embed it
+            let fontCss = '';
+            try {
+                const res = await fetch('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+                fontCss = await res.text();
+            } catch (e) {
+                console.warn('Failed to fetch font CSS for screenshot', e);
+            }
+
             const blob = await toBlob(element, {
                 cacheBust: true,
                 backgroundColor: backgroundColor,
-                fontEmbedCSS: '', // Skip font embedding to avoid "font is undefined" error
+                style: {
+                    fontFamily: "'Poppins', sans-serif",
+                    padding: '40px',
+                },
+                fontEmbedCSS: fontCss,
                 filter: (node) => {
-                    // Exclude the copy button from the screenshot
-                    if (node.tagName === 'BUTTON' && node.getAttribute('title') === 'Copy screenshot to clipboard') {
+                    // Exclude the copy and action buttons from the screenshot
+                    if (node instanceof HTMLElement && (
+                        node.getAttribute('title') === 'Copy screenshot to clipboard' ||
+                        node.tagName === 'BUTTON'
+                    )) {
                         return false;
                     }
                     return true;
@@ -197,7 +216,7 @@ export default function TodoBoard() {
     }, {} as Record<string, Todo[]>);
 
     if (isLoading) {
-        return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-violet-500" /></div>;
+        return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-[#FF7F50]" /></div>;
     }
 
     return (
@@ -205,26 +224,25 @@ export default function TodoBoard() {
 
             {/* Input Section - Matches design */}
             <div className="relative">
-                <form onSubmit={handleAddTodo} className="flex bg-white/5 rounded-2xl overflow-hidden border border-white/5 focus-within:border-violet-500/50 shadow-2xl transition-all duration-300">
+                <form onSubmit={handleAddTodo} className="flex bg-white/5 rounded-2xl overflow-hidden border border-white/5 focus-within:border-violet-500/50 shadow-lg transition-all duration-300">
                     <input
                         type="text"
                         value={newTaskTitle}
                         onChange={(e) => setNewTaskTitle(e.target.value)}
                         placeholder="Add a new high-priority task..."
-                        className="flex-1 bg-transparent px-8 py-5 text-white outline-none placeholder:text-slate-500 transition-colors duration-200 font-medium"
+                        className="flex-1 bg-transparent px-8 py-5 text-black outline-none placeholder:text-black transition-colors duration-200 font-medium"
                     />
                     <button
                         type="submit"
-                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-black px-12 py-5 transition-all duration-300 active:scale-95 uppercase tracking-widest text-xs"
+                        className="bg-[#FFE5B4] hover:bg-[#7C3AED] text-[#2D3436] font-black px-12 py-5 transition-all duration-300 active:scale-95 uppercase tracking-widest text-xs"
                     >
                         Create
                     </button>
                 </form>
             </div>
 
-            {/* Filters & View Toggle */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full">
-                {/* Hide status filters in split mode as it shows both */}
+            {/* Filters & View Toggle - Subtle integration */}
+            <div className="flex flex-col sm:flex-row justify-end items-center gap-4 w-full">
                 {viewMode === 'list' && (
                     <TodoFilters
                         current={filter}
@@ -234,44 +252,29 @@ export default function TodoBoard() {
                     />
                 )}
 
-                {viewMode === 'split' && (
-                    <div className="flex items-center gap-2 bg-white dark:bg-gray-700 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 w-full sm:w-auto transition-colors duration-200">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date Filter</span>
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="bg-transparent border-none outline-none text-sm text-gray-700 dark:text-gray-200 p-0"
-                        />
-                        {selectedDate && (
-                            <button onClick={() => setSelectedDate('')} className="text-red-500 hover:text-red-600 transition-colors duration-200 text-xs">Clear</button>
-                        )}
-                    </div>
-                )}
-
                 {/* View Toggle */}
-                <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/5">
+                <div className="bg-white p-1 rounded-2xl flex gap-1 border-[2.5px] border-[#2D3436] shadow-[4px_4px_0px_#2D3436]">
                     <button
                         onClick={() => setShowTimestamp(!showTimestamp)}
-                        className={`p-2 rounded-lg transition-all duration-200 ${showTimestamp ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'text-slate-400 hover:text-white'}`}
+                        className={`p-2 rounded-xl transition-all duration-200 ${showTimestamp ? 'bg-[#FFE27D] text-[#2D3436]' : 'text-slate-400 hover:text-[#2D3436]'}`}
                         title="Toggle Timestamp"
                     >
-                        <Clock size={18} />
+                        <Clock size={16} />
                     </button>
-                    <div className="w-px bg-white/5 mx-1 self-stretch"></div>
+                    <div className="w-[2px] bg-[#2D3436] mx-1 self-stretch my-1 opacity-20"></div>
                     <button
                         onClick={() => setViewMode('list')}
-                        className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'text-slate-400 hover:text-white'}`}
+                        className={`p-2 rounded-xl transition-all duration-200 ${viewMode === 'list' ? 'bg-[#D4F3F5] text-[#2D3436]' : 'text-slate-400 hover:text-[#2D3436]'}`}
                         title="List View"
                     >
-                        <LayoutList size={18} />
+                        <LayoutList size={16} />
                     </button>
                     <button
                         onClick={() => setViewMode('split')}
-                        className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'split' ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'text-slate-400 hover:text-white'}`}
+                        className={`p-2 rounded-xl transition-all duration-200 ${viewMode === 'split' ? 'bg-[#D1E8FF] text-[#2D3436]' : 'text-slate-400 hover:text-[#2D3436]'}`}
                         title="Split View"
                     >
-                        <Columns size={18} />
+                        <Columns size={16} />
                     </button>
                 </div>
             </div>
@@ -342,23 +345,40 @@ export default function TodoBoard() {
                             });
 
                             return (
-                                <div key={key} className="flex flex-col gap-4 p-4" id={`group-${mainTitle}-${date}`}>
+                                <div key={key} className="flex flex-col gap-6 p-4" id={`group-${mainTitle}-${date}`}>
                                     {/* Unified Header for Split View */}
-                                    <div className="px-2 pt-4 pb-1 flex items-center justify-between group/header border-b border-gray-200 dark:border-gray-700">
-                                        <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest pb-2">{displayDate}</h3>
+                                    <div className="px-6 py-4 flex items-center justify-between group/header border-[3px] border-[#2D3436] rounded-3xl bg-white shadow-[6px_6px_0px_#2D3436] mb-8">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-4 h-12 bg-[#FFE27D] rounded-full border-[3px] border-[#2D3436] flex items-center justify-center shadow-[4px_4px_0px_#2D3436]">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-white border border-[#2D3436]"></div>
+                                            </div>
+                                            <div className="flex flex-col -space-y-1 min-w-max">
+                                                <h3 className="text-[10px] font-black text-[#2D3436] uppercase tracking-[0.2em] opacity-60 whitespace-nowrap uppercase">
+                                                    {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'short' }).replace(',', '')}
+                                                </h3>
+                                                <span className="text-2xl font-black text-[#2D3436] tracking-tighter whitespace-nowrap">
+                                                    {new Date(date).getDate()}
+                                                </span>
+                                            </div>
+                                        </div>
                                         <button
                                             onClick={() => handleCopyScreenshot(mainTitle, date)}
-                                            className="text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 p-1"
+                                            className="bg-[#D1E8FF] border-2 border-[#2D3436] p-2 rounded-xl opacity-0 group-hover/header:opacity-100 transition-opacity hover:translate-y-[-2px]"
                                             title="Copy screenshot to clipboard"
                                         >
-                                            <Copy size={14} />
+                                            <Copy size={16} className="text-[#2D3436]" />
                                         </button>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         {/* Unfinished Column */}
-                                        <div className="flex flex-col gap-2">
-                                            <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider px-2">In Progress ({unfinishedItems.length})</h4>
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-3 px-4 mb-2">
+                                                <div className="w-10 h-10 rounded-xl bg-[#D4F3F5] border-[2.5px] border-[#2D3436] flex items-center justify-center rotate-[-3deg] shadow-[3px_3px_0px_#2D3436]">
+                                                    <span className="text-lg">💡</span>
+                                                </div>
+                                                <h4 className="text-sm font-black text-[#2D3436] uppercase tracking-widest">In Progress ({unfinishedItems.length})</h4>
+                                            </div>
                                             <TodoGroup
                                                 title="Unfinished"
                                                 date={date}
@@ -370,8 +390,13 @@ export default function TodoBoard() {
                                         </div>
 
                                         {/* Completed Column */}
-                                        <div className="flex flex-col gap-2">
-                                            <h4 className="text-xs font-bold text-green-500 uppercase tracking-wider px-2">Completed ({completedItems.length})</h4>
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-3 px-4 mb-2">
+                                                <div className="w-10 h-10 rounded-xl bg-[#FFE27D] border-[2.5px] border-[#2D3436] flex items-center justify-center rotate-[3deg] shadow-[3px_3px_0px_#2D3436]">
+                                                    <span className="text-lg">💰</span>
+                                                </div>
+                                                <h4 className="text-sm font-black text-[#2D3436] uppercase tracking-widest">Completed ({completedItems.length})</h4>
+                                            </div>
                                             <TodoGroup
                                                 title="Completed"
                                                 date={date}

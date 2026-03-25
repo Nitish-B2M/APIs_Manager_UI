@@ -1,11 +1,16 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
-export async function apiFetch(path: string, options: RequestInit = {}) {
+export function getHeaders() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-    const headers = {
+    return {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+}
+
+export async function apiFetch(path: string, options: RequestInit = {}) {
+    const headers = {
+        ...getHeaders(),
         ...options.headers,
     };
 
@@ -28,29 +33,30 @@ export const api = {
         register: (data: any) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
         me: () => apiFetch('/auth/me'),
         updateProfile: (data: { name?: string; avatarUrl?: string | null; settings?: Record<string, any> }) => apiFetch('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
-        forgotPassword: (email: string) => apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
         resetPassword: (token: string, password: string) => apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
+        forgotPassword: (email: string) => apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+        getPresence: (docId: string) => apiFetch(`/collaboration/presence/${docId}`),
     },
     documentation: {
         list: () => apiFetch('/documentation/list'),
-        getById: (id: string) => apiFetch(`/documentation/${id}`),
         create: (data: any) => apiFetch('/documentation/create', { method: 'POST', body: JSON.stringify(data) }),
         createEmpty: (data: any) => apiFetch('/documentation/create-empty', { method: 'POST', body: JSON.stringify(data) }),
-        update: (id: string, content: any) => apiFetch(`/documentation/${id}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
-        updateRequest: (requestId: string, data: any) => apiFetch(`/documentation/request/${requestId}`, { method: 'PATCH', body: JSON.stringify(data) }),
-        createRequest: (id: string, data: any = {}) => apiFetch(`/documentation/${id}/request`, { method: 'POST', body: JSON.stringify(data) }),
-        deleteRequest: (requestId: string) => apiFetch(`/documentation/request/${requestId}`, { method: 'DELETE' }),
-        reorderRequests: (id: string, requests: { id: string; order: number }[]) =>
-            apiFetch(`/documentation/${id}/requests/reorder`, { method: 'PATCH', body: JSON.stringify({ requests }) }),
-        bulkDeleteRequests: (requestIds: string[]) =>
-            apiFetch('/documentation/request/bulk-delete', { method: 'POST', body: JSON.stringify({ requestIds }) }),
-        bulkMoveRequests: (requestIds: string[], folderId: string | null) =>
-            apiFetch('/documentation/request/bulk-move', { method: 'PATCH', body: JSON.stringify({ requestIds, folderId }) }),
+        getById: (id: string) => apiFetch(`/documentation/${id}`),
+        update: (id: string, content: any) => apiFetch(`/documentation/${id}`, { method: 'PATCH', body: typeof content === 'string' ? content : JSON.stringify(content) }),
         delete: (id: string) => apiFetch(`/documentation/${id}`, { method: 'DELETE' }),
+        createRequest: (id: string, data: any) => apiFetch(`/documentation/${id}/request`, { method: 'POST', body: JSON.stringify(data) }),
+        updateRequest: (requestId: string, content: any) => apiFetch(`/documentation/request/${requestId}`, { method: 'PATCH', body: JSON.stringify(content) }),
+        deleteRequest: (requestId: string) => apiFetch(`/documentation/request/${requestId}`, { method: 'DELETE' }),
+        bulkDeleteRequests: (requestIds: string[]) => apiFetch(`/documentation/request/bulk-delete`, { method: 'POST', body: JSON.stringify({ requestIds }) }),
+        bulkMoveRequests: (requestIds: string[], folderId: string | null) => apiFetch(`/documentation/request/bulk-move`, { method: 'PATCH', body: JSON.stringify({ requestIds, folderId }) }),
+        reorderRequests: (id: string, requests: any[]) => apiFetch(`/documentation/${id}/requests/reorder`, { method: 'PATCH', body: JSON.stringify({ requests }) }),
         togglePublic: (id: string, isPublic: boolean) => apiFetch(`/documentation/${id}/toggle-public`, { method: 'PATCH', body: JSON.stringify({ isPublic }) }),
         getSnippets: (requestId: string) => apiFetch(`/documentation/request/${requestId}/snippets`),
         getPublic: (slug: string) => fetch(`${API_URL}/api/documentation/public/${slug}`).then(r => r.json()),
         updateSlug: (id: string, slug: string) => apiFetch(`/documentation/${id}/slug`, { method: 'PATCH', body: JSON.stringify({ slug }) }),
+        exportPostman: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/postman`, { headers: getHeaders() }).then(r => r.blob()),
+        exportOpenApi: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/openapi`, { headers: getHeaders() }).then(r => r.blob()),
+        getAuditLogs: (id: string) => apiFetch(`/documentation/${id}/audit-logs`),
     },
     folders: {
         list: (documentationId: string) => apiFetch(`/documentation/${documentationId}/folders`),
@@ -84,69 +90,93 @@ export const api = {
             apiFetch('/documentation/global/set-active', { method: 'PATCH', body: JSON.stringify({ environmentId }) }),
     },
     ai: {
-        generateDocs: (data: any) => apiFetch('/ai/generate-docs', { method: 'POST', body: JSON.stringify(data) }),
-        generateTests: (data: { method: string; url: string; response: any }) => apiFetch('/ai/generate-tests', { method: 'POST', body: JSON.stringify(data) }),
+        generateDocs: (data: any) => apiFetch('/ai/generate', { method: 'POST', body: JSON.stringify(data) }),
+        generateTests: (data: any) => apiFetch('/ai/generate-tests', { method: 'POST', body: JSON.stringify(data) }),
         generateRequest: (prompt: string) => apiFetch('/ai/generate-request', { method: 'POST', body: JSON.stringify({ prompt }) }),
-        explainError: (data: { method: string; url: string; error: any }) => apiFetch('/ai/explain-error', { method: 'POST', body: JSON.stringify(data) }),
+        explainError: (data: any) => apiFetch('/ai/explain-error', { method: 'POST', body: JSON.stringify(data) }),
+        generateReadme: (data: { title: string; endpoints: any[] }) => apiFetch('/ai/generate-readme', { method: 'POST', body: JSON.stringify(data) }),
+    },
+    collaboration: {
+        listCollaborators: (docId: string) => apiFetch(`/collaboration/documentation/${docId}/collaborators`),
+        addCollaborator: (docId: string, email: string, role: string) => apiFetch(`/collaboration/documentation/${docId}/collaborators`, { method: 'POST', body: JSON.stringify({ email, role }) }),
+        updateCollaborator: (docId: string, collabId: string, role: string) => apiFetch(`/collaboration/documentation/${docId}/collaborators/${collabId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+        removeCollaborator: (id: string) => apiFetch(`/collaboration/collaborator/${id}`, { method: 'DELETE' }),
+        updatePresence: (docId: string, metadata: any) => apiFetch(`/collaboration/presence/${docId}`, { method: 'POST', body: JSON.stringify({ metadata }) }),
+        invite: (data: any) => apiFetch('/collaboration/invite', { method: 'POST', body: JSON.stringify(data) }),
+        updateRole: (id: string, role: string) => apiFetch(`/collaboration/collaborator/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+        cancelInvite: (id: string) => apiFetch(`/collaboration/invite/${id}`, { method: 'DELETE' }),
+        listMyInvitations: () => apiFetch('/collaboration/invitations/me'),
+        acceptInvite: (token: string) => apiFetch(`/collaboration/invite/${token}/accept`, { method: 'POST' }),
+        rejectInvite: (token: string) => apiFetch(`/collaboration/invite/${token}/reject`, { method: 'POST' }),
+    },
+    monitor: {
+        create: (data: any) => apiFetch('/monitor/create', { method: 'POST', body: JSON.stringify(data) }),
+        list: (documentationId: string) => apiFetch(`/monitor/list?documentationId=${documentationId}`),
+        getHistory: (monitorId: string) => apiFetch(`/monitor/history/${monitorId}`),
+        update: (monitorId: string, data: any) => apiFetch(`/monitor/${monitorId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (monitorId: string) => apiFetch(`/monitor/${monitorId}`, { method: 'DELETE' }),
+        trigger: (monitorId: string) => apiFetch(`/monitor/trigger/${monitorId}`, { method: 'POST' }),
+        heatmap: (monitorId: string) => apiFetch(`/monitor/${monitorId}/heatmap`),
+        getPublicStatus: (slug: string) => fetch(`${API_URL}/api/monitor/public/${slug}`).then(r => r.json()),
+        history: (monitorId: string, limit: number) => apiFetch(`/monitor/${monitorId}/history?limit=${limit}`),
+        check: (monitorId: string) => apiFetch(`/monitor/${monitorId}/check`, { method: 'POST' }),
+    },
+    admin: {
+        getStats: () => apiFetch('/admin/stats'),
+        getUsers: () => apiFetch('/admin/users'),
+        getLogs: () => apiFetch('/admin/logs'),
+        listTemplates: () => apiFetch('/admin/templates'),
+        listLogs: () => apiFetch('/admin/logs'),
+        deleteTemplate: (id: string) => apiFetch(`/admin/templates/${id}`, { method: 'DELETE' }),
+        updateTemplate: (id: string, data: any) => apiFetch(`/admin/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        createTemplate: (data: any) => apiFetch('/admin/templates', { method: 'POST', body: JSON.stringify(data) }),
+    },
+    snapshot: {
+        list: (id: string) => apiFetch(`/documentation/${id}/snapshots`),
+        create: (data: { documentationId: string; name: string }) => apiFetch('/documentation/snapshots', { method: 'POST', body: JSON.stringify(data) }),
+        restore: (id: string) => apiFetch(`/documentation/snapshots/${id}/restore`, { method: 'POST' }),
+        delete: (id: string) => apiFetch(`/documentation/snapshots/${id}`, { method: 'DELETE' }),
+        getOne: (id: string) => apiFetch(`/documentation/snapshots/${id}`),
+    },
+    todos: {
+        list: () => apiFetch('/todos'),
+        create: (data: any) => apiFetch('/todos', { method: 'POST', body: JSON.stringify(data) }),
+        update: (id: string, data: any) => apiFetch(`/todos/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id: string) => apiFetch(`/todos/${id}`, { method: 'DELETE' }),
+        toggle: (id: string) => apiFetch(`/todos/${id}/toggle`, { method: 'PATCH' }),
+    },
+    notes: {
+        list: () => apiFetch('/notes'),
+        create: (data: any) => apiFetch('/notes', { method: 'POST', body: JSON.stringify(data) }),
+        update: (id: string, data: any) => apiFetch(`/notes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id: string) => apiFetch(`/notes/${id}`, { method: 'DELETE' }),
+    },
+    scheduler: {
+        getTasks: () => apiFetch('/scheduler/tasks'),
+        getHabits: () => apiFetch('/scheduler/habits'),
+        getEvents: (start: string, end: string) => apiFetch('/scheduler/events', { method: 'POST', body: JSON.stringify({ start, end }) }),
+        optimize: () => apiFetch('/scheduler/optimize', { method: 'POST' }),
+        createTask: (data: any) => apiFetch('/scheduler/tasks', { method: 'POST', body: JSON.stringify(data) }),
+        updateTask: (id: string, data: any) => apiFetch(`/scheduler/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        deleteTask: (id: string) => apiFetch(`/scheduler/tasks/${id}`, { method: 'DELETE' }),
+        createHabit: (data: any) => apiFetch('/scheduler/habits', { method: 'POST', body: JSON.stringify(data) }),
+    },
+    contact: {
+        submit: (data: any) => apiFetch('/contact/submit', { method: 'POST', body: JSON.stringify(data) }),
+        list: (status?: string) => apiFetch(`/contact/list${status ? `?status=${status}` : ''}`),
+        updateStatus: (id: string, status: string) => apiFetch(`/contact/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+        delete: (id: string) => apiFetch(`/contact/${id}`, { method: 'DELETE' }),
+    },
+    webhooks: {
+        list: (documentationId: string) => apiFetch(`/webhooks?documentationId=${documentationId}`),
+        create: (data: any) => apiFetch('/webhooks', { method: 'POST', body: JSON.stringify(data) }),
+        update: (id: string, data: any) => apiFetch(`/webhooks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id: string) => apiFetch(`/webhooks/${id}`, { method: 'DELETE' }),
+        test: (id: string) => apiFetch(`/webhooks/${id}/test`, { method: 'POST' }),
+        getLogs: (id: string) => apiFetch(`/webhooks/${id}/logs`),
     },
     mock: {
         getConfig: (requestId: string) => apiFetch(`/mock/config/${requestId}`),
         updateConfig: (data: any) => apiFetch('/mock/config', { method: 'POST', body: JSON.stringify(data) }),
-    },
-    snapshot: {
-        create: (data: { documentationId: string, name: string }) => apiFetch('/snapshot/create', { method: 'POST', body: JSON.stringify(data) }),
-        list: (documentationId: string) => apiFetch(`/snapshot/list/${documentationId}`),
-        getOne: (snapshotId: string) => apiFetch(`/snapshot/${snapshotId}`),
-        restore: (snapshotId: string) => apiFetch(`/snapshot/restore/${snapshotId}`, { method: 'POST' }),
-        delete: (snapshotId: string) => apiFetch(`/snapshot/delete/${snapshotId}`, { method: 'DELETE' }),
-    },
-    monitor: {
-        create: (data: any) => apiFetch('/monitor', { method: 'POST', body: JSON.stringify(data) }),
-        list: (documentationId: string) => apiFetch(`/monitor/list/${documentationId}`),
-        history: (monitorId: string, limit = 100) => apiFetch(`/monitor/${monitorId}/history?limit=${limit}`),
-        check: (monitorId: string) => apiFetch(`/monitor/${monitorId}/check`, { method: 'POST' }),
-        update: (monitorId: string, data: any) => apiFetch(`/monitor/${monitorId}`, { method: 'PATCH', body: JSON.stringify(data) }),
-        delete: (monitorId: string) => apiFetch(`/monitor/${monitorId}`, { method: 'DELETE' }),
-    },
-    collaboration: {
-        invite: (data: { email: string; documentationId: string; role: string }) =>
-            apiFetch('/collaboration/invite', { method: 'POST', body: JSON.stringify(data) }),
-        listCollaborators: (documentationId: string) =>
-            apiFetch(`/collaboration/${documentationId}/collaborators`),
-        listMyInvitations: () =>
-            apiFetch('/collaboration/my-invitations'),
-        acceptInvite: (token: string) =>
-            apiFetch('/collaboration/accept', { method: 'POST', body: JSON.stringify({ token }) }),
-        removeCollaborator: (id: string) =>
-            apiFetch(`/collaboration/collaborators/${id}`, { method: 'DELETE' }),
-        updateRole: (id: string, role: string) =>
-            apiFetch(`/collaboration/collaborators/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
-        cancelInvite: (id: string) =>
-            apiFetch(`/collaboration/invitations/${id}`, { method: 'DELETE' }),
-    },
-    admin: {
-        listTemplates: () => apiFetch('/admin/templates'),
-        getTemplate: (id: string) => apiFetch(`/admin/templates/${id}`),
-        createTemplate: (data: any) => apiFetch('/admin/templates', { method: 'POST', body: JSON.stringify(data) }),
-        updateTemplate: (id: string, data: any) => apiFetch(`/admin/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-        deleteTemplate: (id: string) => apiFetch(`/admin/templates/${id}`, { method: 'DELETE' }),
-        listLogs: () => apiFetch('/admin/logs'),
-    },
-    scheduler: {
-        getTasks: () => apiFetch('/scheduler/tasks'),
-        createTask: (data: any) => apiFetch('/scheduler/tasks', { method: 'POST', body: JSON.stringify(data) }),
-        updateTask: (id: string, data: any) => apiFetch(`/scheduler/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-        deleteTask: (id: string) => apiFetch(`/scheduler/tasks/${id}`, { method: 'DELETE' }),
-        getHabits: () => apiFetch('/scheduler/habits'),
-        createHabit: (data: any) => apiFetch('/scheduler/habits', { method: 'POST', body: JSON.stringify(data) }),
-        getEvents: (start: string, end: string) => apiFetch(`/scheduler/events?start=${start}&end=${end}`),
-        getSettings: () => apiFetch('/scheduler/settings'),
-        optimize: () => apiFetch('/scheduler/optimize', { method: 'POST' }),
-    },
-    contact: {
-        submit: (data: any) => apiFetch('/contact', { method: 'POST', body: JSON.stringify(data) }),
-        list: (status?: string) => apiFetch(`/contact${status ? `?status=${status}` : ''}`),
-        updateStatus: (id: string, status: string) => apiFetch(`/contact/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
-        delete: (id: string) => apiFetch(`/contact/${id}`, { method: 'DELETE' }),
     }
 };
