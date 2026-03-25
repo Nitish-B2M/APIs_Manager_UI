@@ -1,10 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../../../utils/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { Layout, FileText, Copy, X, Download, Keyboard, Search, Clock, Activity, Shield, Users, Trash2, ExternalLink, Plus, AlertTriangle, AlertCircle, Database, HelpCircle, Mail, User, Check } from 'lucide-react';
+import {
+    Layout, FileText, Copy, X, Download, Keyboard, Search, Clock,
+    Activity, Shield, Users, Trash2, ExternalLink, Plus, AlertTriangle,
+    AlertCircle, Database, HelpCircle, Mail, User, Check, RotateCcw, Sparkles,
+    Settings2, Terminal, Zap, Columns2, Rows2, Save, Globe
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { GlassCard, PremiumButton } from '@/components/UIComponents';
 import EnvModal from '../../components/EnvModal';
@@ -12,7 +17,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useKeyboardShortcuts, createCommonShortcuts } from '../../../hooks/useKeyboardShortcuts';
 import { SearchBar } from '../../../components/SearchBar';
 import { KeyboardShortcutsModal } from '../../../components/KeyboardShortcutsModal';
-import { Folder as FolderType } from '../../../types';
+import { Folder as FolderType, Endpoint } from '../../../types';
 import CreateFolderModal from './components/CreateFolderModal';
 import { useFolders } from '../../../hooks/useFolders';
 import { useEnvironments } from '../../../hooks/useEnvironments';
@@ -30,10 +35,11 @@ import { CollectionRunner } from './components/CollectionRunner';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { SnapshotModal } from './components/SnapshotModal';
 import { MonitorDashboard } from './components/MonitorDashboard';
+import { WebhooksTab } from './components/WebhooksTab';
 import { CollaboratorModal } from './components/CollaboratorModal';
 import { getThemeClasses } from './utils/theme';
 import { useSidebarResize, useHorizontalPanelResize, useVerticalPanelResize } from './hooks/useResizable';
-import Editor from '@monaco-editor/react';
+import dynamic from 'next/dynamic';
 import { ProtectedRoute } from '../../../components/AuthGuard';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useSSE } from './hooks/useSSE';
@@ -51,12 +57,51 @@ const deduplicateEndpoints = (eps: any[]) => {
     });
 };
 
+const EMPTY_ARRAY: any[] = [];
+
 function ApiClientContent() {
     const { id } = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
+
+    // State
+    const [endpoints, setEndpoints] = useState<any[]>([]);
+    const [selectedIdx, setSelectedIdx] = useState<number>(0);
+    const [variables, setVariables] = useState<Record<string, string>>({});
+    const [showEnv, setShowEnv] = useState(false);
+    const [currentReq, setCurrentReq] = useState<any>(null);
+    const [response, setResponse] = useState<any>(null);
+    const [reqLoading, setReqLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking'>('params');
+    const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog' | 'monitoring' | 'webhooks'>('client');
+    const [aiCommand, setAiCommand] = useState('Generate a professional name and a simple, clear description explaining what the request does and what the response means.');
+    const [aiEnabled, setAiEnabled] = useState<boolean>(true);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(260);
+    const [paneLayout, setPaneLayout] = useState<'horizontal' | 'vertical'>('horizontal');
+    const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null);
+    const [isDirty, setIsDirty] = useState(false);
+    const [isCollectionDirty, setIsCollectionDirty] = useState(false);
+    const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
+    const [showRunner, setShowRunner] = useState(false);
+    const [showSnapshots, setShowSnapshots] = useState(false);
+    const [showCollaborators, setShowCollaborators] = useState(false);
+    const [showAiBuilder, setShowAiBuilder] = useState(false);
+    const [aiBuilderPrompt, setAiBuilderPrompt] = useState('');
+    const [showFolderModal, setShowFolderModal] = useState(false);
+    const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
+    const [parentFolderForNew, setParentFolderForNew] = useState<FolderType | null>(null);
+    const [pendingDelete, setPendingDelete] = useState<{ type: 'request' | 'folder'; idx?: number; folder?: any; name: string } | null>(null);
+    const [openTabs, setOpenTabs] = useState<any[]>([]);
+    const [activeTabId, setActiveTabId] = useState<string | null>(null);
+    const [selectedText, setSelectedText] = useState('');
+    const [showSaveVarModal, setShowSaveVarModal] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
+    const [isViewingHistory, setIsViewingHistory] = useState(false);
+    const [urlHistory, setUrlHistory] = useState<string[]>([]);
 
     // Queries & Mutations
     const { data: docRes, isLoading, error } = useQuery<any>({
@@ -102,981 +147,352 @@ function ApiClientContent() {
     const aiExplainErrorMutation = useMutation({
         mutationFn: (data: { method: string; url: string; error: any }) => api.ai.explainError(data)
     });
+    const aiGenerateReadmeMutation = useMutation({
+        mutationFn: (data: { title: string; endpoints: any[] }) => api.ai.generateReadme(data)
+    });
     const updateRequestMutation = useMutation({
         mutationFn: (data: { requestId: string, content: any }) => api.documentation.updateRequest(data.requestId, data.content)
+    });
+    const updateSlugMutation = useMutation({
+        mutationFn: (data: { id: string, slug: string }) => api.documentation.updateSlug(data.id, data.slug)
     });
     const createRequestMutation = useMutation({
         mutationFn: (data: { id: string, name?: string }) => api.documentation.createRequest(data.id, data)
     });
-
     const deleteRequestMutation = useMutation({
         mutationFn: (requestId: string) => api.documentation.deleteRequest(requestId)
+    });
+    const bulkDeleteMutation = useMutation({
+        mutationFn: (requestIds: string[]) => api.documentation.bulkDeleteRequests(requestIds)
+    });
+    const bulkMoveMutation = useMutation({
+        mutationFn: (data: { requestIds: string[], folderId: string | null }) => api.documentation.bulkMoveRequests(data.requestIds, data.folderId)
     });
 
     const userRole = doc?.role || (me && doc && me.id === (doc as any).userId ? 'OWNER' : 'VIEWER');
     const canEdit = userRole === 'OWNER' || userRole === 'ADMIN' || userRole === 'EDITOR';
     const canAdmin = userRole === 'OWNER' || userRole === 'ADMIN';
+    const shouldCopySingleLine = me?.settings?.copySingleLine === true;
 
-    // State
-    const [endpoints, setEndpoints] = useState<any[]>([]);
-    const [selectedIdx, setSelectedIdx] = useState<number>(0);
-    const [variables, setVariables] = useState<Record<string, string>>({});
-    const [showEnv, setShowEnv] = useState(false);
-    const [currentReq, setCurrentReq] = useState<any>(null);
-    const [response, setResponse] = useState<any>(null);
-    const [reqLoading, setReqLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking'>('params');
-    const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog' | 'monitoring'>('client');
-    const [aiCommand, setAiCommand] = useState('Generate a professional name and a simple, clear description explaining what the request does and what the response means.');
-    const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('ai_enabled');
-            return saved !== null ? JSON.parse(saved) : true;
-        }
-        return true;
-    });
+    const { activeEnvironment } = useEnvironments({ documentationId: id as string, enabled: !!id });
+    const { activeEnvironment: activeGlobalEnvironment } = useGlobalEnvironments({ enabled: !!id });
 
-    useEffect(() => {
-        localStorage.setItem('ai_enabled', JSON.stringify(aiEnabled));
-    }, [aiEnabled]);
+    const resolvedVariables = useMemo(() => ({ ...activeGlobalEnvironment?.variables, ...activeEnvironment?.variables, ...variables }), [activeGlobalEnvironment, activeEnvironment, variables]);
+    const activeSecrets = useMemo(() => Array.from(new Set([...(activeGlobalEnvironment?.secrets || []), ...(activeEnvironment?.secrets || [])])), [activeGlobalEnvironment, activeEnvironment]);
 
-    // UI State
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [paneLayout, setPaneLayout] = useState<'horizontal' | 'vertical'>('horizontal');
-    const [isViewingHistory, setIsViewingHistory] = useState(false);
-    const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null);
-    const [isDirty, setIsDirty] = useState(false);
-    const [isCollectionDirty, setIsCollectionDirty] = useState(false);
-    const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-    const [showPreview, setShowPreview] = useState(false);
-    const [showRunner, setShowRunner] = useState(false);
-    const [showSnapshots, setShowSnapshots] = useState(false);
-    const [showCollaborators, setShowCollaborators] = useState(false);
-    const [selectedForExport, setSelectedForExport] = useState<Set<string>>(new Set());
-
-    // Automatically select all when preview opens
-    useEffect(() => {
-        if (showPreview) {
-            setSelectedForExport(new Set(endpoints.map((e, i) => e.id || `idx-${i}`)));
-        }
-    }, [showPreview, endpoints]);
-
-    // Environments hooks
-    const { activeEnvironment } = useEnvironments({
-        documentationId: id as string,
-        enabled: !!id
-    });
-
-    const { activeEnvironment: activeGlobalEnvironment } = useGlobalEnvironments({
-        enabled: !!id
-    });
-
-    // --- Deep Link Listener ---
-    useEffect(() => {
-        if (typeof window !== 'undefined' && (window as any).desktopAPI?.onDeepLink) {
-            (window as any).desktopAPI.onDeepLink((url: string) => {
-                try {
-                    const parsedUrl = new URL(url);
-                    const reqId = parsedUrl.searchParams.get('request');
-                    const collId = parsedUrl.searchParams.get('collection');
-
-                    if (collId && collId !== id) {
-                        router.push(`/docs/${collId}?request=${reqId || ''}`);
-                        return;
-                    }
-
-                    if (reqId) {
-                        const epIndex = endpoints.findIndex(e => e.id === reqId);
-                        if (epIndex !== -1) {
-                            setSelectedIdx(epIndex);
-                            const ep = endpoints[epIndex];
-                            setOpenTabs(prev => {
-                                if (!prev.find(t => t.id === ep.id)) {
-                                    return [...prev, ep];
-                                }
-                                return prev;
-                            });
-                            setActiveTabId(ep.id);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Failed to parse deep link', e);
-                }
-            });
-
-            return () => {
-                (window as any).desktopAPI?.offDeepLink?.();
-            };
-        }
-    }, [id, endpoints, router]);
-
-    // --- WebSocket ---
-    const initialWsMessages = useMemo(() => {
-        if (currentReq?.protocol === 'WS' && currentReq?.lastResponse?.messages) {
-            return currentReq.lastResponse.messages;
-        }
-        return [];
-    }, [currentReq?.id]);
-    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect, sendMessage: wsSendMessage, clearMessages: wsClearMessages } = useWebSocket(initialWsMessages);
-
-    // Sync WebSocket messages back to currentReq.lastResponse
-    useEffect(() => {
-        if (currentReq?.protocol === 'WS' && wsMessages.length > 0 && wsMessages !== currentReq?.lastResponse?.messages) {
-            const updatedReq = {
-                ...currentReq,
-                lastResponse: { ...currentReq.lastResponse, messages: wsMessages }
-            };
-            setCurrentReq(updatedReq);
-            // Sync with endpoints
-            const newEps = [...endpoints];
-            newEps[selectedIdx] = updatedReq;
-            setEndpoints(newEps);
-            // Sync with openTabs
-            setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
-        }
-    }, [wsMessages, currentReq?.id]);
-
-    // --- SSE ---
-    const initialSseMessages = useMemo(() => {
-        if (currentReq?.protocol === 'SSE' && currentReq?.lastResponse?.messages) {
-            return currentReq.lastResponse.messages;
-        }
-        return [];
-    }, [currentReq?.id]);
-    const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect, clearMessages: sseClearMessages } = useSSE(initialSseMessages);
-
-    // Sync SSE messages back to currentReq.lastResponse
-    useEffect(() => {
-        if (currentReq?.protocol === 'SSE' && sseMessages.length > 0 && sseMessages !== currentReq?.lastResponse?.messages) {
-            const updatedReq = {
-                ...currentReq,
-                lastResponse: { ...currentReq.lastResponse, messages: sseMessages }
-            };
-            setCurrentReq(updatedReq);
-            const newEps = [...endpoints];
-            newEps[selectedIdx] = updatedReq;
-            setEndpoints(newEps);
-            setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
-        }
-    }, [sseMessages, currentReq?.id]);
-
-    // Combined variables (collection overrides global)
-    const resolvedVariables = useMemo<Record<string, string>>(() => {
-        const globalVars = activeGlobalEnvironment?.variables || {};
-        const collectionVars = activeEnvironment?.variables || variables; // fallback to local state if no active env
-        return { ...globalVars, ...collectionVars };
-    }, [activeGlobalEnvironment, activeEnvironment, variables]);
-
-    // Combined secrets list
-    const activeSecrets = useMemo<string[]>(() => {
-        const globalSecrets = activeGlobalEnvironment?.secrets || [];
-        const collectionSecrets = activeEnvironment?.secrets || [];
-        return Array.from(new Set([...globalSecrets, ...collectionSecrets]));
-    }, [activeGlobalEnvironment, activeEnvironment]);
-
-    // Helper functions
-    const resolveAll = (text: string, ep?: any, maskSecrets = false) => {
+    const resolveAll = useCallback((text: string, ep?: any, maskSecrets = false) => {
         let result = text || '';
-
-        // Resolve built-in dynamic variables
         const dynamicVars: Record<string, () => string> = {
             '$timestamp': () => String(Math.floor(Date.now() / 1000)),
             '$isoTimestamp': () => new Date().toISOString(),
-            '$randomUUID': () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }),
-            '$randomInt': () => String(Math.floor(Math.random() * 1000)),
-            '$randomBool': () => String(Math.random() > 0.5),
-            '$randomEmail': () => `user${Math.floor(Math.random() * 9999)}@example.com`,
-            '$randomFirstName': () => ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'][Math.floor(Math.random() * 5)],
-            '$randomLastName': () => ['Smith', 'Jones', 'Williams', 'Brown', 'Davis'][Math.floor(Math.random() * 5)],
+            '$randomUUID': () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => (c === 'x' ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0 & 0x3 | 0x8)).toString(16)),
         };
-        Object.entries(dynamicVars).forEach(([key, generate]) => {
-            result = result.replace(new RegExp(`{{\\${key}}}`, 'g'), generate);
-        });
-
+        Object.entries(dynamicVars).forEach(([key, gen]) => result = result.replace(new RegExp(`{{\\${key}}}`, 'g'), gen()));
         Object.entries(resolvedVariables).forEach(([key, value]) => {
             const isSecret = activeSecrets.includes(key);
-            const replacementValue = (maskSecrets && isSecret) ? '••••••••' : String(value);
-            result = result.replace(new RegExp(`{{${key.replace(/[{}]/g, '')}}}`, 'g'), replacementValue);
+            result = result.replace(new RegExp(`{{${key}}}`, 'g'), (maskSecrets && isSecret) ? '••••••••' : String(value));
         });
-        if (ep?.params) {
-            ep.params.forEach((p: any) => {
-                if (p.type === 'path' && p.key) {
-                    result = result.replace(new RegExp(`:${p.key}`, 'g'), p.value || `:${p.key}`);
-                }
-            });
-        }
+        if (ep?.params) ep.params.forEach((p: any) => { if (p.type === 'path' && p.key) result = result.replace(new RegExp(`:${p.key}`, 'g'), p.value || `:${p.key}`); });
         return result;
-    };
+    }, [resolvedVariables, activeSecrets]);
 
-    const resolveUrl = (ep: any, maskSecrets = false) => {
+    const resolveUrl = useCallback((ep: any, maskSecrets = false) => {
         let finalUrl = resolveAll(ep.url, ep, maskSecrets);
         const queryParams = (ep.params || []).filter((p: any) => p.type === 'query' && p.key);
         if (queryParams.length > 0) {
-            try {
-                const [baseUrl, existingQuery = ''] = finalUrl.split('?');
-                const searchParams = new URLSearchParams(existingQuery);
-                queryParams.forEach((p: any) => searchParams.set(p.key, resolveAll(p.value, ep, maskSecrets)));
-                const newQuery = searchParams.toString();
-                finalUrl = newQuery ? `${baseUrl}?${newQuery}` : baseUrl;
-            } catch (e) { }
+            const searchParams = new URLSearchParams();
+            queryParams.forEach((p: any) => searchParams.set(p.key, resolveAll(p.value, ep, maskSecrets)));
+            finalUrl = finalUrl.includes('?') ? `${finalUrl}&${searchParams}` : `${finalUrl}?${searchParams}`;
         }
         return finalUrl;
-    };
+    }, [resolveAll]);
 
-    const previewContent = useMemo(() => {
-        if (!doc) return '';
-        let md = `# ${doc.title}\n\n`;
-        endpoints.filter((ep, i) => selectedForExport.has(ep.id || `idx-${i}`)).forEach(ep => {
-            const resolvedUrl = resolveUrl(ep, true); // Mask secrets in preview
-            md += `## ${ep.name}\n\n**Method:** \`${ep.method}\`  \n**URL:** \`${resolvedUrl}\`\n\n`;
-            if (ep.description) md += `### Description\n> ${ep.description.split('\n').join('\n> ')}\n\n`;
-            if (ep.headers?.length > 0) {
-                md += `### Headers\n| Key | Value |\n|---|---|\n`;
-                ep.headers.forEach((h: any) => md += `| ${h.key} | ${resolveAll(h.value, ep, true)} |\n`);
-            }
-            if (ep.body?.raw) md += `### Request Body\n\`\`\`json\n${resolveAll(ep.body.raw, ep, true)}\n\`\`\`\n\n`;
-            if (ep.lastResponse) md += `### Last Response (${ep.lastResponse.status})\n\`\`\`json\n${JSON.stringify(ep.lastResponse.data, null, 2)}\n\`\`\`\n\n`;
-            md += `\n---\n\n`;
-        });
-        return md;
-    }, [doc, endpoints, resolvedVariables, activeSecrets, selectedForExport]);
-    const [showSearchModal, setShowSearchModal] = useState(false);
-    const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-    const [urlHistory, setUrlHistory] = useState<string[]>([]);
-    const [selectedText, setSelectedText] = useState('');
-    const [showSaveVarModal, setShowSaveVarModal] = useState(false);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
+    const { folders, createFolder, updateFolder, deleteFolder, moveRequestToFolder, reorderFolders } = useFolders({ documentationId: id as string, enabled: !!id });
+    const { handleReorder: onReorderRequests } = useRequestOrdering({ documentationId: id as string, requests: endpoints, setRequests: setEndpoints, selectedIdx, setSelectedIdx, onOrderChange: () => setIsCollectionDirty(true) });
 
-    // Multi-Request Tabs State
-    const [openTabs, setOpenTabs] = useState<any[]>([]);
-    const [activeTabId, setActiveTabId] = useState<string | null>(null);
-    const [showViewSwitcher, setShowViewSwitcher] = useState(false);
-
-    // Folder state
-    const [showFolderModal, setShowFolderModal] = useState(false);
-    const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
-    const [parentFolderForNew, setParentFolderForNew] = useState<FolderType | null>(null);
-
-    // Delete confirm modal state
-    const [pendingDelete, setPendingDelete] = useState<{ type: 'request' | 'folder'; idx?: number; folder?: any; name: string } | null>(null);
-
-    // Resizable hooks
-    const { width: sidebarWidth, isResizing: isSidebarResizing, startResizing: startSidebarResize } = useSidebarResize();
-    const { ratio: mainSplitRatio, isResizing: isResizingMain, startResizing: startMainResize } = useHorizontalPanelResize(sidebarWidth, isSidebarCollapsed);
+    const { width: sidebarResWidth, isResizing: isSidebarResizing, startResizing: startSidebarResize } = useSidebarResize();
+    const { ratio: mainSplitRatio, isResizing: isResizingMain, startResizing: startMainResize } = useHorizontalPanelResize(sidebarResWidth, isSidebarCollapsed);
     const { ratio: verticalSplitRatio, isResizing: isResizingVertical, startResizing: startVerticalResize } = useVerticalPanelResize();
 
-    // Folders hook
-    const { folders, createFolder, updateFolder, deleteFolder, moveRequestToFolder, reorderFolders } = useFolders({
-        documentationId: id as string,
-        enabled: !!id
-    });
+    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect } = useWebSocket(EMPTY_ARRAY);
+    const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect } = useSSE(EMPTY_ARRAY);
 
-    // Sync variables with active environment (historical/local state management)
-    useEffect(() => {
-        if (activeEnvironment) {
-            setVariables(activeEnvironment.variables || {});
-            setIsCollectionDirty(false);
-        }
-    }, [activeEnvironment]);
-
-    // Request ordering hook
-    const { handleReorder: onReorderRequests } = useRequestOrdering({
-        documentationId: id as string,
-        requests: endpoints,
-        setRequests: setEndpoints,
-        selectedIdx,
-        setSelectedIdx,
-        onOrderChange: () => setIsCollectionDirty(true),
-    });
-
-    // Keyboard shortcuts
-    const shortcuts = useMemo(() => createCommonShortcuts({
-        onSend: () => { if (currentReq && !reqLoading) handleSendRequest(); },
-        onSave: () => { if (canEdit && isDirty) handleSaveSingleRequest(); },
-        onNewRequest: () => { if (canEdit) handleAddRequest(); },
-        onSearch: () => setShowSearchModal(true),
-        onToggleTheme: () => { },
-        onShowShortcuts: () => setShowShortcutsModal(true)
-    }), [currentReq, reqLoading, canEdit, isDirty]);
-
-    useKeyboardShortcuts({ shortcuts, enabled: !showSearchModal && !showShortcutsModal });
-
-    // Load URL history
-    useEffect(() => {
-        const saved = localStorage.getItem('urlHistory');
-        if (saved) {
-            try { setUrlHistory(JSON.parse(saved)); } catch (e) { }
-        }
-    }, []);
-
-    const addToUrlHistory = useCallback((url: string) => {
-        if (!url || url.length < 5) return;
-        setUrlHistory(prev => {
-            const filtered = prev.filter(u => u !== url);
-            const newHistory = [url, ...filtered].slice(0, 20);
-            localStorage.setItem('urlHistory', JSON.stringify(newHistory));
-            return newHistory;
-        });
-    }, []);
-
-    // Initialize from doc
-    const [offlineDoc, setOfflineDoc] = useState<any>(null);
-
-    useEffect(() => {
-        if (error && !isOnline) {
-            getCachedCollection(id as string).then(setOfflineDoc);
-        }
-    }, [error, isOnline, id]);
-
-    const activeDoc = doc || offlineDoc;
-
-    useEffect(() => {
-        if (activeDoc) {
-            try {
-                // Background cache update if it was a real fetch
-                if (doc) cacheCollection(id as string, doc);
-
-                let eps = (activeDoc as any).requests || [];
-                if (eps.length === 0 && activeDoc.content) {
-                    let content: any = {};
-                    if (typeof activeDoc.content === 'string' && activeDoc.content.trim().startsWith('{')) {
-                        content = JSON.parse(activeDoc.content);
-                    } else if (typeof activeDoc.content === 'object') {
-                        content = activeDoc.content;
-                    }
-                    eps = content.endpoints || [];
-                }
-                setEndpoints(deduplicateEndpoints(eps).sort((a: any, b: any) => (a.order || 0) - (b.order || 0)));
-
-                if (!activeEnvironment) {
-                    let vars = {};
-                    if (activeDoc.content) {
-                        let content: any = typeof activeDoc.content === 'string' && activeDoc.content.trim().startsWith('{')
-                            ? JSON.parse(activeDoc.content)
-                            : activeDoc.content;
-                        vars = content?.variables || {};
-                    }
-                    setVariables(vars);
-                }
-
-                setIsCollectionDirty(false);
-
-                if (eps.length > 0 && !currentReq) {
-                    setCurrentReq(eps[0]);
-                }
-            } catch (e) { console.warn("Doc content parsing skipped:", e); }
-        }
-    }, [doc, activeDoc, activeEnvironment, id]);
-
-    // Update active tab when selectedIdx changes (for legacy support/initial load)
-    useEffect(() => {
-        const ep = endpoints[selectedIdx];
-        if (ep && !openTabs.find(t => t.id === ep.id)) {
-            setOpenTabs(prev => [...prev, ep]);
-            setActiveTabId(ep.id);
-        } else if (ep) {
-            setActiveTabId(ep.id);
-        }
-    }, [selectedIdx, endpoints.length]);
-
-    // Update currentReq based on activeTabId ONLY when switching tabs
-    const lastActiveTabRef = React.useRef<string | null>(null);
-    useEffect(() => {
-        if (activeTabId === lastActiveTabRef.current) {
-            // Did not switch tabs, just an openTabs update (e.g. typing) - do nothing
-            return;
-        }
-
-        const tab = openTabs.find(t => t.id === activeTabId);
-        if (tab) {
-            setCurrentReq({ ...tab });
-            setResponse(tab.lastResponse || null);
-            setIsDirty(false);
-            lastActiveTabRef.current = activeTabId;
-
-            // Sync selectedIdx for sidebar highlighting
-            const idx = endpoints.findIndex(e => e.id === activeTabId);
-            if (idx !== -1 && idx !== selectedIdx) {
-                setSelectedIdx(idx);
-            }
-        } else if (openTabs.length === 0) {
-            setCurrentReq(null);
-            setResponse(null);
-            lastActiveTabRef.current = null;
-        }
-    }, [activeTabId, openTabs, endpoints, selectedIdx]);
-
-    // Auto-save logic for requests
-    // useEffect(() => {
-    //     if (!isDirty || !currentReq?.id || !canEdit) return;
-
-    //     const timer = setTimeout(() => {
-    //         handleSaveSingleRequest();
-    //     }, 5000); // 5 seconds debounce
-
-    //     return () => clearTimeout(timer);
-    // }, [isDirty, currentReq?.id, canEdit]);
-
-    // Close menus on click
-    useEffect(() => {
-        const handleClick = () => {
-            setOpenMenuIdx(null);
-            setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
-        };
-        window.addEventListener('click', handleClick);
-        return () => window.removeEventListener('click', handleClick);
-    }, []);
-
-    // URL param parsing
-    const parseUrlParams = (url: string) => {
-        const params: { key: string; value: string; type: 'path' | 'query'; isFromUrl?: boolean }[] = [];
-        const pathVars = url.match(/:[a-zA-Z0-9_]+/g);
-        if (pathVars) pathVars.forEach(v => params.push({ key: v.slice(1), value: '', type: 'path', isFromUrl: true }));
-        if (url.includes('?')) {
-            const queryPart = url.split('?')[1];
-            new URLSearchParams(queryPart).forEach((value, key) => params.push({ key, value, type: 'query', isFromUrl: true }));
-        }
-        return params;
-    };
-
-    // Auto-sync params
-    useEffect(() => {
-        if (!currentReq) return;
-        const detected = parseUrlParams(currentReq.url || '');
-        const existing = currentReq.params || [];
-        const pathParams = detected.filter(p => p.type === 'path').map(p => {
-            const match = existing.find((e: any) => e.key === p.key && e.type === 'path');
-            return match ? { ...p, value: match.value, isFromUrl: true } : p;
-        });
-        const queryFromUrl = detected.filter(p => p.type === 'query');
-        const queryParams = queryFromUrl.map(p => {
-            const match = existing.find((e: any) => e.key === p.key && e.type === 'query');
-            return match ? { ...match, value: p.value || match.value, isFromUrl: true } : p;
-        });
-
-        // Only keep parameters that were explicitly added via the Data Grid (no isFromUrl flag)
-        const manualQuery = existing.filter((e: any) => e.type === 'query' && !e.isFromUrl && !queryFromUrl.some(q => q.key === e.key));
-
-        const cleanedParams = [...pathParams, ...queryParams, ...manualQuery];
-        if (JSON.stringify(cleanedParams) !== JSON.stringify(existing)) {
-            setCurrentReq((prev: any) => ({ ...prev, params: cleanedParams }));
-        }
-    }, [currentReq?.url]);
-
-    const handleTabClose = (id: string, e?: React.MouseEvent) => {
+    const handleTabClose = useCallback((tid: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
-        const tabIndex = openTabs.findIndex(t => t.id === id);
-        const newTabs = openTabs.filter(t => t.id !== id);
+        const tabIndex = openTabs.findIndex(t => t.id === tid);
+        const newTabs = openTabs.filter(t => t.id !== tid);
         setOpenTabs(newTabs);
-
-        if (activeTabId === id) {
+        if (activeTabId === tid) {
             if (newTabs.length > 0) {
                 const nextTab = newTabs[Math.max(0, tabIndex - 1)];
                 setActiveTabId(nextTab.id);
+                const newIdx = endpoints.findIndex(e => e.id === nextTab.id);
+                if (newIdx !== -1) setSelectedIdx(newIdx);
             } else {
                 setActiveTabId(null);
+                setCurrentReq(null);
             }
         }
-    };
+    }, [openTabs, activeTabId, endpoints]);
 
-    // Handlers
-    const handleAddRequest = async (initialData?: any) => {
-        try {
-            const name = initialData?.name || 'New Request';
-            const res = await createRequestMutation.mutateAsync({ id: id as string, name });
-            let newReq = res.data;
-
-            if (initialData) {
-                const updatePayload = {
-                    method: initialData.method || 'GET',
-                    url: initialData.url || '',
-                    headers: initialData.headers || [],
-                    body: initialData.body || { mode: 'raw', raw: '' },
-                    protocol: initialData.protocol || 'REST',
-                    name: name
-                };
-
-                const updateRes = await updateRequestMutation.mutateAsync({
-                    requestId: newReq.id,
-                    content: updatePayload
-                });
-                newReq = { ...newReq, ...updateRes.data };
-            }
-
-            const newEps = deduplicateEndpoints([...endpoints, newReq]);
-            setEndpoints(newEps);
-            setSelectedIdx(newEps.length - 1);
-            toast.success('New request added');
-            queryClient.invalidateQueries({ queryKey: ['doc', id] });
-        } catch (e: any) {
-            toast.error(e.message || 'Failed to add request');
-        }
-    };
-
-    const handleSaveSingleRequest = async () => {
-        if (!currentReq?.id) {
-            toast.error('Cannot save: Request not yet created on server');
-            return;
-        }
-
-        const payloadContent = {
-            name: currentReq.name,
-            method: currentReq.method,
-            url: currentReq.url,
-            protocol: currentReq.protocol || 'REST',
-            description: currentReq.description || '',
-            body: currentReq.body,
-            headers: currentReq.headers,
-            params: currentReq.params,
-            lastResponse: currentReq.lastResponse,
-            history: currentReq.history || [],
+    const handleRequestChange = useCallback((updates: Partial<any>) => {
+        if (!currentReq) return;
+        const base = {
+            body: currentReq.body || { mode: 'raw', raw: '' },
+            headers: currentReq.headers || [],
+            params: currentReq.params || [],
             assertions: currentReq.assertions || []
         };
-
-        try {
-            toast.loading('Saving request...', { id: 'save-req' });
-
-            const wasQueued = await queueMutation('saveRequest', { ...payloadContent, id: currentReq.id });
-
-            if (wasQueued) {
-                toast.success('Offline: Request queued for sync!', { id: 'save-req' });
-                setIsDirty(false);
-            } else {
-                const res = await updateRequestMutation.mutateAsync({
-                    requestId: currentReq.id,
-                    content: payloadContent
-                });
-                toast.success(res.message || 'Request saved!', { id: 'save-req' });
-                setIsDirty(false);
-                queryClient.invalidateQueries({ queryKey: ['doc', id] });
-            }
-        } catch (e: any) {
-            toast.error(e.message || 'Failed to save request', { id: 'save-req' });
-        }
-    };
-
-    const handleSaveCollection = async () => {
-        const content = typeof doc?.content === 'string' ? JSON.parse(doc.content) : (doc?.content || {});
-        const updatedContent = {
-            ...content,
-            variables,
-            endpoints
-        };
-
-        try {
-            toast.loading('Saving collection...', { id: 'save-coll' });
-            await updateMutation.mutateAsync({
-                id: id as string,
-                content: updatedContent
-            });
-            toast.success('Collection saved!', { id: 'save-coll' });
-            setIsCollectionDirty(false);
-            await queryClient.invalidateQueries({ queryKey: ['doc', id] });
-        } catch (e: any) {
-            toast.error(e.message || 'Failed to save collection', { id: 'save-coll' });
-        }
-    };
-
-    const handleShare = async () => {
-        if (!doc) return;
-        try {
-            const res = await togglePublicMutation.mutateAsync({ id: id as string, isPublic: !doc.isPublic });
-            toast.success(res.message || (!doc.isPublic ? 'Collection is now Public' : 'Collection is now Private'));
-            queryClient.invalidateQueries({ queryKey: ['doc', id] });
-        } catch (e: any) {
-            toast.error(e.message || 'Failed to update share status');
-        }
-    };
-
-    const handleAiGenerate = async () => {
-        if (!currentReq) return;
-        try {
-            const res = await aiMutation.mutateAsync({
-                method: currentReq.method,
-                url: currentReq.url,
-                body: currentReq.body?.text_array,
-                response: response?.data?.translate,
-                userCommand: aiCommand
-            });
-            const data = res.data;
-            const updatedReq = { ...currentReq, name: data.name || currentReq.name, description: data.description };
-            setCurrentReq(updatedReq);
-            const newEps = [...endpoints];
-            newEps[selectedIdx] = updatedReq;
-            setEndpoints(newEps);
-            setIsDirty(true);
-            toast.success(res.message || 'Documentation updated with AI!');
-        } catch (e: any) {
-            toast.error(e.message || 'AI generation failed');
-        }
-    };
-
-    const handleFormatJson = () => {
-        if (!currentReq?.body?.raw) return;
-        try {
-            const formatted = JSON.stringify(JSON.parse(currentReq.body.raw), null, 2);
-            handleRequestChange({ body: { ...currentReq.body, raw: formatted } });
-            toast.success('JSON Formatted');
-        } catch (e) {
-            toast.error('Invalid JSON');
-        }
-    };
-
-    const handleAiGenerateTests = async () => {
-        if (!currentReq || !currentReq.lastResponse || !currentReq.lastResponse.data) {
-            toast.error('No response data found to generate tests from');
-            return;
-        }
-
-        try {
-            toast.loading('AI is generating tests...', { id: 'ai-tests' });
-            const result = await aiGenerateTestsMutation.mutateAsync({
-                method: currentReq.method,
-                url: currentReq.url,
-                response: currentReq.lastResponse.data
-            });
-
-            if (result.status && Array.isArray(result.data)) {
-                const newAssertions = [...(currentReq.assertions || []), ...result.data];
-                handleRequestChange({ assertions: newAssertions });
-                toast.success(`Generated ${result.data.length} tests`, { id: 'ai-tests' });
-            }
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to generate tests', { id: 'ai-tests' });
-        }
-    };
-
-    const handleAiGenerateRequest = async (prompt: string) => {
-        try {
-            toast.loading('AI is building request...', { id: 'ai-request' });
-            const result = await aiGenerateRequestMutation.mutateAsync(prompt);
-
-            if (result.status && result.data) {
-                const updates: any = {};
-                if (result.data.method) updates.method = result.data.method;
-                if (result.data.url) updates.url = result.data.url;
-                if (result.data.name) updates.name = result.data.name;
-                if (result.data.headers) updates.headers = result.data.headers;
-                if (result.data.body) updates.body = result.data.body;
-
-                handleRequestChange(updates);
-                toast.success('AI Request Generated', { id: 'ai-request' });
-            }
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to generate request', { id: 'ai-request' });
-        }
-    };
-
-    const handleAiExplainError = async (error: any) => {
-        if (!currentReq) return null;
-        try {
-            const result = await aiExplainErrorMutation.mutateAsync({
-                method: currentReq.method,
-                url: currentReq.url,
-                error: error
-            });
-            return result.status ? result.data : null;
-        } catch (error: any) {
-            toast.error('Failed to explain error');
-            return null;
-        }
-    };
-
-    const handleRequestChange = (updates: Partial<any>) => {
-        const protocolChanged = updates.protocol && updates.protocol !== currentReq?.protocol;
-        const updatedReq = { ...currentReq, ...updates };
+        const updatedReq = { ...currentReq, ...base, ...updates };
         setCurrentReq(updatedReq);
-
-        // Sync with endpoints
-        const newEps = [...endpoints];
-        newEps[selectedIdx] = updatedReq;
-        setEndpoints(newEps);
-
-        // Sync with openTabs
+        setEndpoints(prev => prev.map(e => e.id === updatedReq.id ? updatedReq : e));
         setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
+        setIsDirty(true); setIsCollectionDirty(true);
+    }, [currentReq]);
 
-        setIsDirty(true);
-        setIsCollectionDirty(true);
-
-        if (protocolChanged) {
-            setResponse(null);
-            if (wsStatus !== 'disconnected') {
-                wsDisconnect();
-            }
-            if (sseStatus !== 'disconnected') {
-                sseDisconnect();
-            }
-
-            // GraphQL defaults
-            if (updates.protocol === 'GRAPHQL') {
-                updatedReq.method = 'POST';
-                updatedReq.body = {
-                    ...updatedReq.body,
-                    mode: 'graphql',
-                    graphql: updatedReq.body?.graphql || { query: '', variables: '' }
-                };
-                setCurrentReq(updatedReq);
-                newEps[selectedIdx] = updatedReq;
-                setEndpoints(newEps);
-                setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
-            }
-        }
-    };
-
-    const handleSendRequest = async () => {
+    const handleSendRequest = useCallback(async () => {
         if (!currentReq) return;
-
-        if (currentReq.protocol === 'WS') {
-            if (wsStatus === 'connected' || wsStatus === 'connecting') {
-                wsDisconnect();
-            } else {
-                const finalUrl = resolveAll(currentReq.url, currentReq);
-                wsConnect(finalUrl);
-            }
-            return;
-        }
-
-        if (currentReq.protocol === 'SSE') {
-            if (sseStatus === 'connected' || sseStatus === 'connecting') {
-                sseDisconnect();
-            } else {
-                const finalUrl = resolveAll(currentReq.url, currentReq);
-                sseConnect(finalUrl);
-            }
-            return;
-        }
-
-        setReqLoading(true);
-
-        setResponse(null);
+        setReqLoading(true); setResponse(null);
         try {
-            const processContent = (text: string) => resolveAll(text, currentReq);
-            let finalUrl = processContent(currentReq.url);
-            const queryParams = (currentReq.params || []).filter((p: any) => p.type === 'query' && p.key);
-            if (queryParams.length > 0) {
-                const [baseUrl, existingQuery = ''] = finalUrl.split('?');
-                const searchParams = new URLSearchParams(existingQuery);
-                queryParams.forEach((p: any) => searchParams.set(p.key, processContent(p.value)));
-                finalUrl = searchParams.toString() ? `${baseUrl}?${searchParams}` : baseUrl;
-            }
+            const url = resolveUrl(currentReq);
+            const headers = (currentReq.headers || []).reduce((acc: any, h: any) => { if (h.key) acc[h.key] = resolveAll(h.value, currentReq); return acc; }, {});
+            const body = currentReq.body?.raw ? resolveAll(currentReq.body.raw, currentReq) : undefined;
+            const start = Date.now();
+            const res = await fetch(url, { method: currentReq.method, headers, body });
+            const data = await res.json().catch(() => res.text());
+            setResponse({ status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 });
+        } catch (e: any) { setResponse({ error: true, message: e.message }); }
+        finally { setReqLoading(false); }
+    }, [currentReq, resolveUrl, resolveAll]);
 
-            const headers = (currentReq.headers || []).reduce((acc: any, h: any) => {
-                if (h.key) acc[h.key] = processContent(h.value);
-                return acc;
-            }, {});
+    const handleSaveSingleRequest = useCallback(async () => {
+        if (!currentReq?.id) return;
+        try {
+            await updateRequestMutation.mutateAsync({ requestId: currentReq.id, content: currentReq });
+            setIsDirty(false); queryClient.invalidateQueries({ queryKey: ['doc', id] });
+            toast.success('Request saved');
+        } catch (e) { toast.error('Failed to save'); }
+    }, [id, currentReq, updateRequestMutation, queryClient]);
 
-            const rawBody = currentReq.body?.raw || '';
-            let finalBody: any = rawBody ? processContent(rawBody) : undefined;
+    const handleAddRequest = useCallback(async (data?: any) => {
+        try {
+            const res = await createRequestMutation.mutateAsync({ id: id as string, name: data?.name || 'New Request' });
+            const initializedReq = { ...res.data, body: res.data.body || { mode: 'raw', raw: '' }, headers: res.data.headers || [], params: res.data.params || [], assertions: res.data.assertions || [] };
+            setEndpoints(prev => [...prev, initializedReq]);
+            setSelectedIdx(endpoints.length);
+            setCurrentReq(initializedReq);
+            setOpenTabs(prev => [...prev, initializedReq]);
+            setActiveTabId(initializedReq.id);
+            return initializedReq;
+        } catch (e) { toast.error('Failed to add'); return null; }
+    }, [id, endpoints.length, createRequestMutation]);
 
-            if (currentReq.body?.mode === 'graphql' && currentReq.body.graphql) {
-                const gqlQuery = processContent(currentReq.body.graphql.query);
-                const gqlVarsStr = currentReq.body.graphql.variables ? processContent(currentReq.body.graphql.variables) : '{}';
-
-                let gqlVars = {};
-                try {
-                    gqlVars = JSON.parse(gqlVarsStr);
-                } catch (e) {
-                    console.error('Invalid JSON for GraphQL variables');
-                }
-
-                finalBody = JSON.stringify({
-                    query: gqlQuery,
-                    variables: gqlVars
-                });
-
-                if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
-                // Most GraphQL APIs expect POST
-                if (currentReq.method === 'GET') {
-                    // We don't force it here, but typically it should be POST.
-                }
-            } else if (finalBody && !headers['Content-Type']) {
-                headers['Content-Type'] = 'application/json';
-            }
-
-            const startTime = Date.now();
-            const res = await fetch(finalUrl, {
-                method: currentReq.method,
-                headers,
-                body: ['GET', 'HEAD'].includes(currentReq.method) ? undefined : finalBody
-            });
-
-            const textData = await res.text();
-            let responseData;
-            try { responseData = JSON.parse(textData); } catch { responseData = textData; }
-
-            const responseObj = {
-                status: res.status,
-                statusText: res.statusText,
-                time: Date.now() - startTime,
-                data: responseData,
-                timestamp: new Date().toISOString()
-            };
-
-            // Run assertions against the response
-            const assertions = currentReq.assertions || [];
-            const testResults = assertions.map((assertion: any) => {
-                try {
-                    switch (assertion.type) {
-                        case 'status_code': {
-                            const expected = parseInt(assertion.expected, 10);
-                            const passed = responseObj.status === expected;
-                            return { assertionId: assertion.id, name: `Status code is ${assertion.expected}`, passed, message: passed ? `Status code is ${responseObj.status} ✓` : `Expected ${assertion.expected}, got ${responseObj.status}` };
-                        }
-                        case 'response_time': {
-                            const limit = parseInt(assertion.expected, 10);
-                            const passed = responseObj.time < limit;
-                            return { assertionId: assertion.id, name: `Response time < ${assertion.expected}ms`, passed, message: passed ? `Response time ${responseObj.time}ms is within ${limit}ms ✓` : `Response time ${responseObj.time}ms exceeded ${limit}ms` };
-                        }
-                        case 'body_contains': {
-                            const bodyStr = typeof responseObj.data === 'string' ? responseObj.data : JSON.stringify(responseObj.data);
-                            const passed = bodyStr.includes(assertion.expected);
-                            return { assertionId: assertion.id, name: `Body contains "${assertion.expected}"`, passed, message: passed ? `Body contains "${assertion.expected}" ✓` : `Body does not contain "${assertion.expected}"` };
-                        }
-                        case 'json_value': {
-                            const path = assertion.property || '';
-                            const keys = path.split('.').filter(Boolean);
-                            let actual: unknown = responseObj.data;
-                            for (const key of keys) {
-                                if (actual === null || typeof actual !== 'object') { actual = undefined; break; }
-                                actual = (actual as Record<string, unknown>)[key];
-                            }
-                            const actualStr = String(actual ?? '');
-                            const passed = actualStr === assertion.expected;
-                            return { assertionId: assertion.id, name: `${path || 'JSON'} equals "${assertion.expected}"`, passed, message: passed ? `${path} is "${actualStr}" ✓` : `Expected "${assertion.expected}", got "${actualStr}"` };
-                        }
-                        default: return { assertionId: assertion.id, name: 'Unknown', passed: false, message: 'Unknown assertion type' };
-                    }
-                } catch { return { assertionId: assertion.id, name: assertion.type, passed: false, message: 'Error evaluating assertion' }; }
-            });
-
-            const responseWithTests = { ...responseObj, testResults };
-            setResponse(responseWithTests);
-            addToUrlHistory(finalUrl);
-
-            const historyItem = { ...currentReq, lastResponse: responseObj, timestamp: responseObj.timestamp };
-            const updatedHistory = [historyItem, ...(currentReq.history || [])].slice(0, 10);
-            const updatedReq = { ...currentReq, lastResponse: responseObj, history: updatedHistory };
-            setCurrentReq(updatedReq);
-            const newEps = [...endpoints];
-            newEps[selectedIdx] = updatedReq;
-            setEndpoints(newEps);
-            setIsViewingHistory(false);
-        } catch (e: any) {
-            setResponse({ error: true, message: e.message });
-        } finally {
-            setReqLoading(false);
-        }
-    };
-
-    const getMarkdownForEndpoint = (ep: any) => {
+    const getMarkdownForEndpoint = useCallback((ep: any) => {
         const resolvedUrl = resolveUrl(ep);
-        let md = `## ${ep.name}\n\n**Method:** \`${ep.method}\`  \n**URL:** \`${resolvedUrl}\`\n\n`;
-        if (ep.description) md += `### Description\n> ${ep.description.split('\n').join('\n> ')}\n\n`;
-        if (ep.headers?.length > 0) {
-            md += `### Headers\n| Key | Value |\n|---|---|\n`;
-            ep.headers.forEach((h: any) => md += `| ${h.key} | ${resolveAll(h.value, ep)} |\n`);
-        }
-        if (ep.body?.raw) md += `### Request Body\n\`\`\`json\n${resolveAll(ep.body.raw, ep)}\n\`\`\`\n\n`;
-        if (ep.lastResponse) md += `### Last Response (${ep.lastResponse.status})\n\`\`\`json\n${JSON.stringify(ep.lastResponse.data, null, 2)}\n\`\`\`\n\n`;
-        return md + `\n---\n\n`;
-    };
+        return `## ${ep.name}\n**${ep.method}** ${resolvedUrl}\n\n`;
+    }, [resolveUrl]);
 
-    const handleCopyMarkdown = (ep: any) => {
-        navigator.clipboard.writeText(getMarkdownForEndpoint(ep));
-        toast.success('Markdown copied');
-    };
-
-    const handleCopyRequest = () => {
-        if (currentReq?.body?.raw) {
-            navigator.clipboard.writeText(currentReq.body.raw);
-            toast.success('Request Body copied');
-        }
-    };
-
-    const handleGenerateMarkdown = (download = true) => {
+    const handleGenerateMarkdown = useCallback((download = true) => {
         if (!doc) return;
         let md = `# ${doc.title}\n\n`;
         endpoints.forEach(ep => md += getMarkdownForEndpoint(ep));
         if (download) {
-            const blob = new Blob([previewContent], { type: 'text/markdown' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${doc.title.replace(/\s+/g, '_')}_docs.md`;
+            const blob = new Blob([md], { type: 'text/markdown' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${doc.title.replace(/\s+/g, '_')}_docs.md`;
             a.click();
-            toast.success('Markdown generated!');
-        } else {
-            setShowPreview(true);
+            toast.success('Markdown downloaded');
+        } else setActiveView('docs');
+    }, [doc, endpoints, getMarkdownForEndpoint]);
+
+    const handleCopyMarkdown = useCallback((ep: any) => {
+        navigator.clipboard.writeText(getMarkdownForEndpoint(ep));
+        toast.success('Copied');
+    }, [getMarkdownForEndpoint]);
+
+    const handleAiGenerate = useCallback(async () => {
+        if (!currentReq) return;
+        try {
+            const res = await aiMutation.mutateAsync({ method: currentReq.method, url: currentReq.url, body: currentReq.body, response: response?.data, userCommand: aiCommand });
+            handleRequestChange({ name: res.data.name, description: res.data.description });
+            toast.success('Generated with AI');
+        } catch (e) { toast.error('AI failed'); }
+    }, [currentReq, response, aiCommand, aiMutation, handleRequestChange]);
+
+    const handleAiGenerateTests = useCallback(async () => {
+        if (!currentReq || !currentReq.lastResponse || !currentReq.lastResponse.data) {
+            toast.error('No response data found to generate tests from');
+            return;
         }
-    };
+        try {
+            toast.loading('AI is generating tests...', { id: 'ai-tests' });
+            const result = await aiGenerateTestsMutation.mutateAsync({ method: currentReq.method, url: currentReq.url, response: currentReq.lastResponse.data });
+            if (result.status && Array.isArray(result.data)) {
+                handleRequestChange({ assertions: [...(currentReq.assertions || []), ...result.data] });
+                toast.success(`Generated ${result.data.length} tests`, { id: 'ai-tests' });
+            }
+        } catch (error: any) { toast.error('Failed to generate tests', { id: 'ai-tests' }); }
+    }, [currentReq, handleRequestChange, aiGenerateTestsMutation]);
 
-    const handleDownloadIndividualMarkdown = (ep: any) => {
-        const md = getMarkdownForEndpoint(ep);
-        const blob = new Blob([md], { type: 'text/markdown' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${ep.name || 'request'}_${ep.method}.md`;
-        a.click();
-        toast.success('Markdown downloaded!');
-    };
+    const handleAiGenerateRequest = useCallback(async (prompt: string) => {
+        try {
+            toast.loading('AI is building new request...', { id: 'ai-request' });
+            const newReq = await handleAddRequest({ name: 'AI Generated Request' });
+            if (!newReq) { toast.error('Failed to initialize', { id: 'ai-request' }); return; }
+            const result = await aiGenerateRequestMutation.mutateAsync(prompt);
+            if (result.status && result.data) {
+                const updatedReq = { ...newReq, ...result.data };
+                setCurrentReq(updatedReq);
+                setEndpoints(prev => prev.map(e => e.id === updatedReq.id ? updatedReq : e));
+                setOpenTabs(prev => prev.map(t => t.id === updatedReq.id ? updatedReq : t));
+                await api.documentation.updateRequest(updatedReq.id, updatedReq);
+                toast.success('AI Request Built!', { id: 'ai-request' });
+            }
+        } catch (error: any) { toast.error('Failed', { id: 'ai-request' }); }
+    }, [handleAddRequest, aiGenerateRequestMutation]);
 
-    const handleCopyAsCurl = (ep: any = currentReq) => {
+    const handleCopyAsCurl = useCallback((ep: any) => {
         if (!ep) return;
-        let curl = `curl --location '${resolveUrl(ep, true)}' \\\n--request ${ep.method}`;
+        let curl = `curl --location '${resolveUrl(ep)}' \\\n--request ${ep.method}`;
         (ep.headers || []).forEach((h: any) => {
-            if (h.key) curl += ` \\\n--header '${h.key}: ${resolveAll(h.value, ep, true)}'`;
+            if (h.key) curl += ` \\\n--header '${h.key}: ${resolveAll(h.value, ep)}'`;
         });
         if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) {
-            curl += ` \\\n--data '${resolveAll(ep.body.raw, ep, true)}'`;
+            curl += ` \\\n--data '${resolveAll(ep.body.raw, ep)}'`;
         }
         navigator.clipboard.writeText(curl);
-        toast.success('cURL copied (secrets masked)');
-    };
+        toast.success('cURL copied');
+    }, [resolveUrl, resolveAll]);
 
-    const handleCopyAsFetch = (ep: any = currentReq) => {
+    const handleCopyAsFetch = useCallback((ep: any) => {
         if (!ep) return;
         const headers: Record<string, string> = {};
-        (ep.headers || []).forEach((h: any) => { if (h.key) headers[h.key] = resolveAll(h.value, ep, true); });
+        (ep.headers || []).forEach((h: any) => { if (h.key) headers[h.key] = resolveAll(h.value, ep); });
         const options: any = { method: ep.method, headers };
-        if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) options.body = resolveAll(ep.body.raw, ep, true);
-        navigator.clipboard.writeText(`fetch("${resolveUrl(ep, true)}", ${JSON.stringify(options, null, 2)});`);
-        toast.success('Fetch code copied (secrets masked)');
-    };
+        if (ep.body?.raw && !['GET', 'HEAD'].includes(ep.method)) options.body = resolveAll(ep.body.raw, ep);
+        const code = `fetch("${resolveUrl(ep)}", ${JSON.stringify(options, null, 2)});`;
+        navigator.clipboard.writeText(code);
+        toast.success('Fetch code copied');
+    }, [resolveUrl, resolveAll]);
 
-    const deleteRequest = (idx: number, e: React.MouseEvent) => {
-        e.stopPropagation();
-        const requestToDelete = endpoints[idx];
-        setPendingDelete({ type: 'request', idx, name: requestToDelete?.name || 'Untitled Request' });
-        setOpenMenuIdx(null);
-    };
+    const handleAiExplainError = useCallback(async (error: any) => {
+        if (!currentReq) return null;
+        try {
+            const result = await aiExplainErrorMutation.mutateAsync({ method: currentReq.method, url: currentReq.url, error });
+            return result.status ? result.data : null;
+        } catch (e: any) { return null; }
+    }, [currentReq, aiExplainErrorMutation]);
 
-    const confirmDelete = async () => {
-        if (!pendingDelete) return;
-        if (pendingDelete.type === 'request' && pendingDelete.idx !== undefined) {
-            const idx = pendingDelete.idx;
-            const requestToDelete = endpoints[idx];
-            try {
-                if (requestToDelete?.id) {
-                    toast.loading('Deleting...', { id: 'delete-loading' });
-                    await deleteRequestMutation.mutateAsync(requestToDelete.id);
-                    toast.success('Request deleted!', { id: 'delete-loading' });
-                }
-                const newEps = endpoints.filter((_, i) => i !== idx);
-                setEndpoints(newEps);
-                if (selectedIdx === idx) {
-                    if (newEps.length > 0) setSelectedIdx(Math.max(0, idx - 1));
-                    else setCurrentReq(null);
-                } else if (idx < selectedIdx) setSelectedIdx(selectedIdx - 1);
-                queryClient.invalidateQueries({ queryKey: ['doc', id] });
-            } catch (err: any) {
-                toast.error(err.message || 'Failed to delete request', { id: 'delete-loading' });
+    const handleGenerateAiReadme = useCallback(async () => {
+        if (!doc) return;
+        try {
+            toast.loading('AI is generating README...', { id: 'ai-readme' });
+            const result = await aiGenerateReadmeMutation.mutateAsync({ title: doc.title, endpoints });
+            if (result.status && result.data) {
+                const blob = new Blob([result.data], { type: 'text/markdown' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `README_AI_${doc.title}.md`; a.click();
+                toast.success('AI README Generated!', { id: 'ai-readme' });
             }
-        } else if (pendingDelete.type === 'folder' && pendingDelete.folder) {
-            await deleteFolder(pendingDelete.folder.id, true);
-        }
-        setPendingDelete(null);
-    };
+        } catch (error: any) { toast.error('Failed to generate README', { id: 'ai-readme' }); }
+    }, [doc, endpoints, aiGenerateReadmeMutation]);
 
-    const duplicateRequest = async (idx: number, e: React.MouseEvent) => {
+    const handleShare = useCallback(async () => {
+        if (!doc) return;
+        try {
+            const res = await togglePublicMutation.mutateAsync({ id: id as string, isPublic: !doc.isPublic });
+            toast.success(res.message || 'Updated');
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+        } catch (e: any) { toast.error('Error'); }
+    }, [doc, id, togglePublicMutation, queryClient]);
+
+    const handleExportPostman = useCallback(async () => {
+        if (!doc) return;
+        try {
+            toast.loading('Preparing Postman Collection...', { id: 'export-loading' });
+            const blob = await api.documentation.exportPostman(doc.id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${doc.title.replace(/\s+/g, '_')}_collection.json`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            toast.success('Postman Collection Downloaded', { id: 'export-loading' });
+        } catch (e) { toast.error('Export failed', { id: 'export-loading' }); }
+    }, [doc]);
+
+    const handleExportOpenApi = useCallback(async () => {
+        if (!doc) return;
+        try {
+            toast.loading('Preparing OpenAPI Spec...', { id: 'export-loading' });
+            const blob = await api.documentation.exportOpenApi(doc.id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${doc.title.replace(/\s+/g, '_')}_openapi.json`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            toast.success('OpenAPI Specification Downloaded', { id: 'export-loading' });
+        } catch (e) { toast.error('Export failed', { id: 'export-loading' }); }
+    }, [doc]);
+
+    const handleUpdateSlug = useCallback(async (newSlug: string) => {
+        try {
+            await updateSlugMutation.mutateAsync({ id: id as string, slug: newSlug });
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to update URL');
+        }
+    }, [id, updateSlugMutation, queryClient]);
+
+    const lastPresenceUpdateRef = useRef<number>(0);
+    const handlePresenceUpdate = useCallback(async (metadata: any) => {
+        if (!doc?.id || !isOnline || me?.settings?.enableLivePresence === false) return;
+
+        // Performance guard: check if shared
+        const isShared = doc.isPublic || (doc as any).collaborators?.length > 1;
+        if (!isShared) return;
+
+        // Throttle: max once every 1000ms
+        const now = Date.now();
+        if (now - lastPresenceUpdateRef.current < 1000) return;
+
+        lastPresenceUpdateRef.current = now;
+        try {
+            await api.collaboration.updatePresence(doc.id, metadata);
+        } catch (err) {
+            // Ignore presence update errors
+        }
+    }, [doc, isOnline, me?.settings?.enableLivePresence]);
+
+    const handleBulkDelete = useCallback(async (requestIds: string[]) => {
+        try {
+            toast.loading('Deleting multiple requests...', { id: 'bulk-delete' });
+            await bulkDeleteMutation.mutateAsync(requestIds);
+            setEndpoints(prev => prev.filter(e => !requestIds.includes(e.id)));
+            setOpenTabs(prev => prev.filter(t => !requestIds.includes(t.id)));
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+            toast.success('Requests deleted!', { id: 'bulk-delete' });
+        } catch (e: any) {
+            toast.error(e.message || 'Bulk delete failed', { id: 'bulk-delete' });
+        }
+    }, [id, bulkDeleteMutation, queryClient]);
+
+    const handleBulkMove = useCallback(async (requestIds: string[], folderId: string | null) => {
+        try {
+            toast.loading('Moving requests...', { id: 'bulk-move' });
+            await bulkMoveMutation.mutateAsync({ requestIds, folderId });
+            setEndpoints(prev => prev.map(e => requestIds.includes(e.id) ? { ...e, folderId } : e));
+            queryClient.invalidateQueries({ queryKey: ['doc', id] });
+            toast.success('Requests moved!', { id: 'bulk-move' });
+        } catch (e: any) {
+            toast.error(e.message || 'Bulk move failed', { id: 'bulk-move' });
+        }
+    }, [id, bulkMoveMutation, queryClient]);
+
+    const duplicateRequest = useCallback(async (idx: number, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
             toast.loading('Duplicating...', { id: 'dup-loading' });
@@ -1085,658 +501,207 @@ function ApiClientContent() {
             const newReqId = res.data.id;
             const finalReq = { ...JSON.parse(JSON.stringify(reqToDup)), id: newReqId, name: `${reqToDup.name} (Copy)` };
             await updateRequestMutation.mutateAsync({ requestId: newReqId, content: finalReq });
-            const newEps = [...endpoints];
-            newEps.splice(idx + 1, 0, finalReq);
-            setEndpoints(deduplicateEndpoints(newEps));
+            setEndpoints(prev => {
+                const newList = [...prev];
+                newList.splice(idx + 1, 0, finalReq);
+                return newList;
+            });
             setSelectedIdx(idx + 1);
             setOpenMenuIdx(null);
             toast.success('Request duplicated!', { id: 'dup-loading' });
             queryClient.invalidateQueries({ queryKey: ['doc', id] });
         } catch (e: any) {
-            toast.error(e.message || 'Failed to duplicate request', { id: 'dup-loading' });
+            toast.error('Failed to duplicate', { id: 'dup-loading' });
         }
-    };
+    }, [endpoints, id, createRequestMutation, updateRequestMutation, queryClient]);
 
-    const handleDownloadPdf = async () => {
-        if (typeof window === 'undefined') return;
-        toast.loading('Preparing PDF...', { id: 'pdf-loading' });
-
-        const resolveUrlForPdf = (url: string, ep: any) => {
-            let resolved = url;
-            Object.keys(resolvedVariables).forEach(key => {
-                const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                resolved = resolved.replace(regex, resolvedVariables[key] || `[${key}]`);
-            });
-            resolved = resolved.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, param) => `[${param}]`);
-            return resolved;
-        };
-
-        const docTitle = doc?.title || 'API Documentation';
-        const methodColors: Record<string, { bg: string; color: string }> = {
-            'GET': { bg: '#dcfce7', color: '#16a34a' },
-            'POST': { bg: '#dbeafe', color: '#2563eb' },
-            'PUT': { bg: '#fef9c3', color: '#ca8a04' },
-            'DELETE': { bg: '#fee2e2', color: '#dc2626' },
-            'PATCH': { bg: '#f3e8ff', color: '#9333ea' }
-        };
-
-        let content = '';
-        endpoints.filter((ep, i) => selectedForExport.has(ep.id || `idx-${i}`)).forEach((ep, idx) => {
-            const m = methodColors[ep.method] || { bg: '#f3f4f6', color: '#6b7280' };
-            const resolvedUrl = resolveUrlForPdf(ep.url, ep);
-            content += `
-                <div class="endpoint" style="margin-bottom: 24px; page-break-inside: avoid; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                        <span style="background: ${m.bg}; color: ${m.color}; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold;">${ep.method}</span>
-                        <h2 style="margin: 0; font-size: 22px; color: #111827;">${ep.name || 'Untitled'}</h2>
-                    </div>
-                    <code style="display: block; background: #f3f4f6; padding: 12px; border-radius: 6px; font-size: 14px; color: #374151; margin: 8px 0; white-space: pre-wrap; word-break: break-all;">${resolvedUrl}</code>
-                    ${ep.description ? `<p style="margin: 10px 0; color: #4b5563; font-size: 15px; line-height: 1.5;">${ep.description}</p>` : ''}
-            `;
-
-            if (ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key)) {
-                content += `<h3 style="font-size: 16px; color: #111827; margin: 16px 0 8px;">Headers</h3>`;
-                content += `<table style="width: 100%; border-collapse: collapse; font-size: 14px;"><thead><tr style="background: #f9fafb;"><th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Key</th><th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Value</th></tr></thead><tbody>`;
-                ep.headers.filter((h: any) => h.key).forEach((h: any) => {
-                    let headerValue = h.value || '';
-                    Object.keys(resolvedVariables).forEach(key => {
-                        const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                        headerValue = headerValue.replace(regex, resolvedVariables[key] || `[${key}]`);
-                    });
-                    content += `<tr><td style="padding: 10px; border: 1px solid #e5e7eb; font-family: monospace;">${h.key}</td><td style="padding: 10px; border: 1px solid #e5e7eb; font-family: monospace; word-break: break-all;">${headerValue}</td></tr>`;
-                });
-                content += `</tbody></table>`;
-            }
-
-            if (ep.body?.raw) {
-                content += `<h3 style="font-size: 16px; color: #111827; margin: 16px 0 8px;">Request Body</h3>`;
-                let bodyContent = ep.body.raw;
-                Object.keys(resolvedVariables).forEach(key => {
-                    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                    bodyContent = bodyContent.replace(regex, resolvedVariables[key] || `[${key}]`);
-                });
-                content += `<pre style="background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; padding: 14px; border-radius: 6px; font-size: 13px; white-space: pre-wrap; word-wrap: break-word;">${bodyContent}</pre>`;
-            }
-
-            if (ep.lastResponse) {
-                const statusColor = ep.lastResponse.status >= 200 && ep.lastResponse.status < 300 ? '#16a34a' : '#dc2626';
-                content += `<h3 style="font-size: 16px; color: #111827; margin: 16px 0 8px;">Response <span style="color: ${statusColor};">${ep.lastResponse.status}</span></h3>`;
-                content += `<pre style="background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; padding: 14px; border-radius: 6px; font-size: 13px; white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(ep.lastResponse.data, null, 2)}</pre>`;
-            }
-            content += `</div>`;
-            if (idx < endpoints.length - 1) content += `<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">`;
-        });
-
-        const printHtml = `<!DOCTYPE html><html><head><title>${docTitle}</title><style>@page { margin: 20mm; size: A4 portrait; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; line-height: 1.5; font-size: 12pt; }</style></head><body><h1 style="font-size: 24pt; margin-bottom: 24px;">${docTitle}</h1><hr style="border: none; border-top: 2px solid #e5e7eb; margin-bottom: 24px;">${content}</body></html>`;
-        let iframe = document.getElementById('pdf-print-iframe') as HTMLIFrameElement;
-        if (iframe) document.body.removeChild(iframe);
-        iframe = document.createElement('iframe');
-        iframe.id = 'pdf-print-iframe';
-        iframe.style.position = 'fixed';
-        iframe.style.visibility = 'hidden';
-        iframe.style.width = '794px'; // Standard A4 width to prevent text shrinking
-        iframe.style.right = '0';
-        document.body.appendChild(iframe);
-
-        const iframeDoc = iframe.contentWindow?.document;
-        if (iframeDoc) {
-            iframeDoc.open(); iframeDoc.write(printHtml); iframeDoc.close();
-            setTimeout(() => {
-                iframe.contentWindow?.print();
-                toast.success('Print dialog opened!', { id: 'pdf-loading' });
-                setTimeout(() => iframe.remove(), 1000);
-            }, 300);
-        } else {
-            toast.error('Failed to generate PDF', { id: 'pdf-loading' });
+    const lastActiveTabRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (activeTabId === lastActiveTabRef.current) return;
+        const tab = openTabs.find(t => t.id === activeTabId);
+        if (tab) {
+            setCurrentReq({ ...tab }); setResponse(tab.lastResponse || null); setIsDirty(false);
+            lastActiveTabRef.current = activeTabId;
+            const idx = endpoints.findIndex(e => e.id === activeTabId);
+            if (idx !== -1 && idx !== selectedIdx) setSelectedIdx(idx);
+        } else if (openTabs.length === 0) {
+            setCurrentReq(null); setResponse(null); lastActiveTabRef.current = null;
         }
-    };
+    }, [activeTabId, openTabs, endpoints, selectedIdx]);
 
-    const handleSelection = useCallback(() => {
-        const selection = window.getSelection();
-        const text = selection?.toString().trim();
-        if (text && text.length > 0) {
-            setSelectedText(text);
-        } else {
-            setSelectedText('');
-        }
-    }, []);
+    useEffect(() => {
+        const ep = endpoints[selectedIdx];
+        if (ep && !openTabs.find(t => t.id === ep.id)) {
+            setOpenTabs(prev => [...prev, ep]); setActiveTabId(ep.id);
+        } else if (ep) setActiveTabId(ep.id);
+    }, [selectedIdx, endpoints]);
 
+    const handleSelection = useCallback(() => { const s = window.getSelection()?.toString().trim(); if (s) setSelectedText(s); else setSelectedText(''); }, []);
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
-        const selection = window.getSelection();
-        const text = selection?.toString().trim();
-        if (text && text.length > 0) {
-            e.preventDefault();
-            setSelectedText(text);
-            setContextMenu({ x: e.clientX, y: e.clientY, visible: true });
-        } else {
-            setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
-        }
+        const s = window.getSelection()?.toString().trim();
+        if (s) { e.preventDefault(); setSelectedText(s); setContextMenu({ x: e.clientX, y: e.clientY, visible: true }); }
+        else setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
     }, []);
 
-    const handleBulkDelete = async (requestIds: string[]) => {
-        try {
-            toast.loading(`Deleting ${requestIds.length} requests...`, { id: 'bulk-delete' });
-            await api.documentation.bulkDeleteRequests(requestIds);
-            toast.success('Requests deleted successfully', { id: 'bulk-delete' });
-            queryClient.invalidateQueries({ queryKey: ['doc', id] });
-            // If any of the deleted requests are open in tabs, close them
-            requestIds.forEach(rid => handleTabClose(rid));
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to delete requests', { id: 'bulk-delete' });
+    const previewContent = useMemo(() => {
+        if (!doc) return '';
+        let md = `# ${doc.title}\n\n`;
+        endpoints.forEach(ep => md += `## ${ep.name}\n**${ep.method}** ${resolveUrl(ep)}\n\n`);
+        return md;
+    }, [doc, endpoints, resolveUrl]);
+
+    useEffect(() => {
+        if (doc && endpoints.length === 0) {
+            const eps = doc.requests || [];
+            const deduped = deduplicateEndpoints(eps).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+            setEndpoints(deduped);
+            if (deduped.length > 0 && !currentReq) {
+                const first = deduped[0];
+                setCurrentReq(first);
+                setOpenTabs([first]);
+                setActiveTabId(first.id);
+            }
         }
-    };
+    }, [doc]);
 
-    const handleBulkMove = async (requestIds: string[], folderId: string | null) => {
-        try {
-            toast.loading(`Moving ${requestIds.length} requests...`, { id: 'bulk-move' });
-            await api.documentation.bulkMoveRequests(requestIds, folderId);
-            toast.success('Requests moved successfully', { id: 'bulk-move' });
-            queryClient.invalidateQueries({ queryKey: ['doc', id] });
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to move requests', { id: 'bulk-move' });
-        }
-    };
+    if (isLoading) return <div className="h-screen flex items-center justify-center bg-gray-900 text-white font-black tracking-widest animate-pulse">LOADING WORKSPACE...</div>;
+    if (error || !doc) return <div className="h-screen flex items-center justify-center bg-gray-900 text-red-500">Failed to load documentation</div>;
 
-    const handleDragStart = (idx: number) => setDraggedIdx(idx);
-    const handleDragEnd = () => setDraggedIdx(null);
-    const handleDragOver = (e: React.DragEvent, idx: number) => e.preventDefault();
-
-
-    if (isLoading) return <div className={`h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-gray-500' : 'bg-gray-50 text-gray-400'}`}>Loading Client...</div>;
-    if (error || !doc) return <div className={`h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-red-500' : 'bg-gray-50 text-red-600'}`}>Failed to load</div>;
+    const navItems = [
+        { id: 'client', label: 'API Client', icon: Zap, color: 'text-amber-400' },
+        { id: 'docs', label: 'Documentation', icon: FileText, color: 'text-blue-400' },
+        { id: 'monitoring', label: 'Monitoring', icon: Activity, color: 'text-emerald-400' },
+        { id: 'webhooks', label: 'Webhooks', icon: Database, color: 'text-orange-400' },
+        { id: 'changelog', label: 'Changelog', icon: Clock, color: 'text-purple-400' },
+    ];
 
     return (
         <div className={`flex h-[calc(100vh-64px)] overflow-hidden font-sans text-xs relative ${theme === 'dark' ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
             <OfflineBanner isOnline={isOnline} queueLength={queueLength} isSyncing={isSyncing} />
             <Sidebar
-                doc={doc}
-                endpoints={endpoints}
-                folders={folders}
-                selectedIdx={selectedIdx}
-                isCollapsed={isSidebarCollapsed}
-                width={sidebarWidth}
-                isDirty={isCollectionDirty}
-                canEdit={canEdit}
-                canAdmin={canAdmin}
-                openMenuIdx={openMenuIdx}
-                draggedIdx={draggedIdx}
+                doc={doc} endpoints={endpoints} folders={folders} selectedIdx={selectedIdx} isCollapsed={isSidebarCollapsed} width={sidebarWidth} isDirty={isCollectionDirty} canEdit={canEdit} canAdmin={canAdmin} openMenuIdx={openMenuIdx} draggedIdx={draggedIdx}
                 onSelectEndpoint={(idx) => {
-                    setSelectedIdx(idx);
-                    setActiveView('client');
-
+                    setSelectedIdx(idx); setActiveView('client');
                     const ep = endpoints[idx];
                     if (ep) {
-                        setOpenTabs(prev => {
-                            if (!prev.find(t => t.id === ep.id)) {
-                                return [...prev, ep];
-                            }
-                            return prev;
-                        });
+                        setOpenTabs(prev => prev.find(t => t.id === ep.id) ? prev : [...prev, ep]);
                         setActiveTabId(ep.id);
+                        setCurrentReq(ep);
                     }
                 }}
                 onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                onAddRequest={handleAddRequest}
-                onSaveCollection={handleSaveCollection}
-                onShare={() => setShowCollaborators(true)}
-                onDownloadMarkdown={() => handleGenerateMarkdown(false)}
-                onOpenEnvModal={() => setShowEnv(true)}
-                onCopyMarkdown={handleCopyMarkdown}
-                onCopyAsCurl={handleCopyAsCurl}
-                onCopyAsFetch={handleCopyAsFetch}
-                onCopyUrl={(ep) => { navigator.clipboard.writeText(resolveUrl(ep)); toast.success('URL copied'); }}
-                onDuplicate={duplicateRequest}
-                onDelete={deleteRequest}
-                onMenuToggle={setOpenMenuIdx}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-                onReorderRequests={onReorderRequests}
-                aiEnabled={aiEnabled}
-                onAiToggle={setAiEnabled}
-                onAddFolder={() => { setEditingFolder(null); setParentFolderForNew(null); setShowFolderModal(true); }}
-                onEditFolder={(folder) => { setEditingFolder(folder); setParentFolderForNew(null); setShowFolderModal(true); }}
-                onDeleteFolder={(folder) => { setPendingDelete({ type: 'folder', folder, name: folder.name }); }}
-                onAddSubfolder={(parentId) => { setEditingFolder(null); setParentFolderForNew(folders.find(f => f.id === parentId) || null); setShowFolderModal(true); }}
-                onMoveRequestToFolder={async (requestIdx, folderId) => {
-                    const request = endpoints[requestIdx];
-                    if (request?.id) { await moveRequestToFolder(request.id, folderId); queryClient.invalidateQueries({ queryKey: ['doc', id] }); }
-                }}
-                onReorderFolders={async (draggedId, targetId) => {
-                    const draggedFolder = folders.find(f => f.id === draggedId);
-                    const targetFolder = folders.find(f => f.id === targetId);
-                    if (!draggedFolder || !targetFolder) return;
-                    if (draggedFolder.parentId === targetFolder.parentId) {
-                        const updates = [{ id: draggedFolder.id, order: targetFolder.order }, { id: targetFolder.id, order: draggedFolder.order }];
-                        await reorderFolders(updates);
-                    } else {
-                        await updateFolder(draggedFolder.id, { parentId: targetFolder.id });
-                    }
-                    queryClient.invalidateQueries({ queryKey: ['doc', id] });
-                }}
-                onSlugUpdate={async (slug: string) => {
-                    try {
-                        toast.loading('Updating slug...', { id: 'slug-update' });
-                        await api.documentation.updateSlug(id as string, slug);
-                        toast.success('Slug updated successfully!', { id: 'slug-update' });
-                        queryClient.invalidateQueries({ queryKey: ['doc', id] });
-                    } catch (e: any) {
-                        toast.error(e.message || 'Failed to update slug', { id: 'slug-update' });
-                    }
-                }}
-                onRunCollection={() => setShowRunner(true)}
-                onShowSnapshots={canEdit ? () => setShowSnapshots(true) : undefined}
-                onBulkDelete={handleBulkDelete}
-                onBulkMove={handleBulkMove}
-                isOnline={isOnline}
-                isSyncing={isSyncing}
-                queueLength={queueLength}
-                activeView={activeView}
-                onViewChange={setActiveView}
-            />
-
-            <EnvModal
-                isOpen={showEnv}
-                onClose={() => setShowEnv(false)}
-                documentationId={id as string}
-                variables={variables}
-                setVariables={(v) => { setVariables(v); setIsCollectionDirty(true); }}
-            />
-            <CreateFolderModal
-                isOpen={showFolderModal}
-                onClose={() => { setShowFolderModal(false); setEditingFolder(null); setParentFolderForNew(null); }}
-                onSubmit={async (data) => { if (editingFolder) await updateFolder(editingFolder.id, data); else await createFolder(data); }}
-                parentFolder={parentFolderForNew}
-                editingFolder={editingFolder}
+                onAddRequest={handleAddRequest} onShare={() => setShowCollaborators(true)} onDownloadMarkdown={() => handleGenerateMarkdown(false)}
+                onOpenEnvModal={() => setShowEnv(true)} onCopyMarkdown={handleCopyMarkdown} onCopyAsCurl={handleCopyAsCurl} onCopyAsFetch={handleCopyAsFetch}
+                onCopyUrl={(ep) => { navigator.clipboard.writeText(resolveUrl(ep)); toast.success('Copied'); }}
+                onDuplicate={duplicateRequest} onDelete={(idx) => setPendingDelete({ type: 'request', idx, name: endpoints[idx].name })} onMenuToggle={setOpenMenuIdx} onDragStart={() => { }} onDragOver={(e) => e.preventDefault()} onDragEnd={() => { }}
+                onReorderRequests={onReorderRequests} aiEnabled={aiEnabled} onAiToggle={setAiEnabled}
+                onBulkDelete={handleBulkDelete} onBulkMove={handleBulkMove}
+                onAddFolder={() => { setEditingFolder(null); setShowFolderModal(true); }}
+                onEditFolder={(f) => { setEditingFolder(f); setShowFolderModal(true); }}
+                onDeleteFolder={(f) => setPendingDelete({ type: 'folder', folder: f, name: f.name })}
+                onMoveRequestToFolder={async (ri, fi) => { const r = endpoints[ri]; if (r?.id) { await moveRequestToFolder(r.id, fi); queryClient.invalidateQueries({ queryKey: ['doc', id] }); } }}
+                onRunCollection={() => setShowRunner(true)} onShowSnapshots={() => setShowSnapshots(true)} activeView={activeView} onViewChange={setActiveView}
+                onExportPostman={handleExportPostman} onExportOpenApi={handleExportOpenApi}
             />
 
             {!isSidebarCollapsed && (
                 <div
-                    className="w-[1px] cursor-col-resize hover:bg-violet-500/50 z-30 flex-shrink-0 transition-colors bg-white/5"
+                    className={`w-1 h-full cursor-col-resize hover:bg-indigo-500/50 transition-colors z-30 ${isSidebarResizing ? 'bg-indigo-500' : 'bg-transparent'}`}
                     onMouseDown={startSidebarResize}
                 />
             )}
 
             <div className="flex-1 flex flex-col h-full min-w-0 bg-black/20">
-                {/* Modern View Switcher */}
-                {showViewSwitcher && (
-                    <div className="flex items-center justify-between py-2.5 px-6 border-b border-white/5 bg-black/40 backdrop-blur-md">
-                        <div className="flex-1 flex justify-center">
-                            <div className="flex p-1 rounded-xl bg-white/5 border border-white/5 shadow-inner">
-                                {[
-                                    { id: 'client', label: 'API Client', icon: <Layout size={14} /> },
-                                    { id: 'docs', label: 'Documentation', icon: <FileText size={14} /> },
-                                    { id: 'changelog', label: 'Changelog', icon: <Clock size={14} /> },
-                                    { id: 'monitoring', label: 'Monitoring', icon: <Activity size={14} /> }
-                                ].map((view) => (
-                                    <button
-                                        key={view.id}
-                                        onClick={() => setActiveView(view.id as any)}
-                                        className={`flex items-center gap-2 px-6 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300 ${activeView === view.id
-                                            ? 'bg-gradient-premium text-white shadow-lg shadow-indigo-500/20 scale-105'
-                                            : 'text-secondary hover:text-white'
-                                            }`}
-                                    >
-                                        {view.icon}
-                                        {view.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-tighter">
-                                <Shield size={10} /> {userRole}
-                            </span>
+                <div className={`flex items-center justify-between px-4 py-2.5 border-b ${themeClasses.borderCol} ${themeClasses.secondaryBg} z-20 shadow-sm`}>
+                    <div className="flex items-center gap-1.5">
+                        {navItems.map(item => (
                             <button
-                                onClick={() => setShowViewSwitcher(false)}
-                                className="p-1.5 rounded-lg hover:bg-white/5 text-secondary transition-colors"
-                                title="Hide switcher"
+                                key={item.id}
+                                onClick={() => setActiveView(item.id as any)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === item.id
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40'
+                                    : `text-gray-500 hover:text-gray-200 hover:bg-white/5`}`}
                             >
-                                <X size={14} />
+                                <item.icon size={13} className={activeView === item.id ? 'text-white' : item.color} />
+                                {item.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/5">
+                            <button onClick={() => setShowAiBuilder(true)} className="p-1.5 rounded-lg text-indigo-400 hover:bg-indigo-400/10 transition-all" title="AI Request Builder"><Sparkles size={16} /></button>
+                            <div className="w-px h-4 bg-white/10 mx-1" />
+                            <button onClick={() => setShowRunner(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-purple-400 hover:bg-purple-400/10 transition-all" title="Run Collection"><Zap size={16} /></button>
+                            <button onClick={() => setShowSnapshots(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 transition-all" title="Collection Snapshots"><Clock size={16} /></button>
+                            <button onClick={() => handleGenerateMarkdown(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all" title="Download Markdown"><Download size={16} /></button>
+                            {userRole === 'OWNER' && (
+                                <>
+                                    <div className="w-px h-4 bg-white/10 mx-1" />
+                                    <button onClick={() => setShowCollaborators(true)} className={`p-1.5 rounded-lg transition-all ${doc.isPublic ? 'bg-green-500/10 text-green-400' : 'text-gray-500 hover:text-pink-400 hover:bg-pink-400/10'}`} title={doc.isPublic ? "Public Access Enabled" : "Share & Team"}>
+                                        {doc.isPublic ? <Globe size={16} className="animate-pulse" /> : <Users size={16} />}
+                                    </button>
+                                    {doc.isPublic && doc.slug && (
+                                        <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/public/${doc.slug}`); toast.success('Link copied'); }} className="p-1.5 rounded-lg text-green-500 hover:bg-green-500/10 transition-all ml-0.5" title="Copy Public URL"><Copy size={14} /></button>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                        <div className="w-px h-6 bg-white/10" />
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setPaneLayout(paneLayout === 'horizontal' ? 'vertical' : 'horizontal')} className={`p-2 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.subTextColor} hover:text-indigo-400 transition-all`} title={paneLayout === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}>
+                                {paneLayout === 'horizontal' ? <Rows2 size={15} /> : <Columns2 size={15} />}
+                            </button>
+                            <button onClick={() => setShowEnv(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} text-[10px] font-bold text-indigo-400 hover:bg-indigo-600/10 transition-all uppercase tracking-widest`}>
+                                <Settings2 size={13} /> ENV
                             </button>
                         </div>
                     </div>
-                )}
-
-                {!showViewSwitcher && activeView === 'client' && (
-                    <div className="flex items-center justify-between px-6 py-1.5 border-b border-white/5 bg-black/20 backdrop-blur-sm">
-                        <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                            <span className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">{userRole} MODE</span>
-                        </div>
-                        <button
-                            onClick={() => setShowViewSwitcher(true)}
-                            className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-black text-secondary hover:text-white hover:bg-white/5 transition-all tracking-tighter"
-                        >
-                            <Layout size={12} /> OPEN NAVIGATION
-                        </button>
-                    </div>
-                )}
+                </div>
 
                 {activeView === 'client' ? (
                     <>
-                        <RequestTabBar
-                            openTabs={openTabs}
-                            activeTabId={activeTabId}
-                            onTabSelect={setActiveTabId}
-                            onTabClose={handleTabClose}
-                            theme={theme}
-                        />
+                        <RequestTabBar openTabs={openTabs} activeTabId={activeTabId} onTabSelect={(tid) => { setActiveTabId(tid); setCurrentReq(openTabs.find(t => t.id === tid)); }} onTabClose={handleTabClose} theme={theme} />
                         {currentReq ? (
-                            <>
-                                <RequestUrlBar
-                                    currentReq={currentReq}
-                                    canEdit={canEdit}
-                                    isDirty={isDirty}
-                                    reqLoading={reqLoading}
-                                    variables={variables}
-                                    urlHistory={urlHistory}
-                                    onMethodChange={(method) => handleRequestChange({ method })}
-                                    onProtocolChange={(protocol) => handleRequestChange({ protocol })}
-                                    onUrlChange={(url) => handleRequestChange({ url })}
-                                    onSend={handleSendRequest}
-                                    onSave={handleSaveSingleRequest}
-                                    onCopyUrl={() => { navigator.clipboard.writeText(resolveUrl(currentReq)); toast.success('URL copied'); }}
-                                    onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
-                                    onDownloadMarkdown={() => handleDownloadIndividualMarkdown(currentReq)}
-                                    aiEnabled={aiEnabled}
-                                    onAiGenerateRequest={handleAiGenerateRequest}
-                                />
-
-                                <div className={`flex-1 overflow-hidden flex ${paneLayout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
-                                    <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${mainSplitRatio}%` } : { height: `${verticalSplitRatio}%` }}>
-                                        <RequestTabs
-                                            currentReq={currentReq}
-                                            variables={variables}
-                                            activeTab={activeTab}
-                                            canEdit={canEdit}
-                                            aiCommand={aiCommand}
-                                            aiLoading={aiMutation.isPending}
-                                            aiEnabled={aiEnabled}
-                                            onTabChange={setActiveTab}
-                                            onRequestChange={handleRequestChange}
-                                            onAiCommandChange={setAiCommand}
-                                            onAiGenerate={handleAiGenerate}
-                                            onAiGenerateTests={handleAiGenerateTests}
-                                            onFormatJson={handleFormatJson}
-                                            onCopyBody={handleCopyRequest}
-                                            onCopyMarkdown={() => handleCopyMarkdown(currentReq)}
-                                            onSelection={handleSelection}
-                                            onContextMenu={handleContextMenu}
-                                        />
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <RequestUrlBar currentReq={currentReq} canEdit={canEdit} isDirty={isDirty} reqLoading={reqLoading} variables={resolvedVariables} urlHistory={urlHistory} onMethodChange={(m) => handleRequestChange({ method: m })} onProtocolChange={(p) => handleRequestChange({ protocol: p })} onUrlChange={(u) => handleRequestChange({ url: u })} onSend={handleSendRequest} onSave={handleSaveSingleRequest} onCopyUrl={() => { }} onCopyMarkdown={() => { }} onDownloadMarkdown={() => { }} onFocus={(field) => handlePresenceUpdate({ field, requestId: currentReq.id })} />
+                                <div className={`flex-1 overflow-hidden flex ${paneLayout === 'vertical' ? 'flex-col' : 'flex-row'}`}>
+                                    <div className="overflow-hidden" style={paneLayout === 'vertical' ? { height: `${verticalSplitRatio}%` } : { width: `${mainSplitRatio}%` }}>
+                                        <RequestTabs currentReq={currentReq} variables={resolvedVariables} activeTab={activeTab} canEdit={canEdit} aiCommand={aiCommand} aiLoading={aiMutation.isPending} aiEnabled={aiEnabled} onTabChange={setActiveTab} onRequestChange={handleRequestChange} onAiCommandChange={setAiCommand} onAiGenerate={handleAiGenerate} onAiGenerateTests={handleAiGenerateTests} onFormatJson={() => { }} onCopyBody={() => { }} onCopyTitle={() => { }} onCopyMarkdown={() => { }} onSelection={handleSelection} onContextMenu={handleContextMenu} />
                                     </div>
-
-                                    {paneLayout === 'horizontal' ? (
-                                        <div className="w-[1px] cursor-col-resize hover:bg-violet-500/50 z-10 flex-shrink-0 transition-colors bg-white/5" onMouseDown={startMainResize} />
-                                    ) : (
-                                        <div className="h-[1px] cursor-row-resize hover:bg-violet-500/50 z-10 flex-shrink-0 transition-colors bg-white/5" onMouseDown={startVerticalResize} />
-                                    )}
-
-                                    <div className="h-full overflow-hidden" style={paneLayout === 'horizontal' ? { width: `${100 - mainSplitRatio}%` } : { height: `${100 - verticalSplitRatio}%` }}>
-                                        <ResponsePanel
-                                            response={response}
-                                            currentReq={currentReq}
-                                            reqLoading={reqLoading}
-                                            paneLayout={paneLayout}
-                                            endpoints={endpoints}
-                                            selectedIdx={selectedIdx}
-                                            onLayoutChange={setPaneLayout}
-                                            onLoadHistory={(item) => { setCurrentReq({ ...item }); setResponse(item.lastResponse); setIsViewingHistory(true); }}
-                                            onBackToLatest={() => { const latest = endpoints[selectedIdx]; setCurrentReq({ ...latest }); setResponse(latest.lastResponse || null); setIsViewingHistory(false); }}
-                                            isViewingHistory={isViewingHistory}
-                                            onSelection={handleSelection}
-                                            onContextMenu={handleContextMenu}
-                                            aiEnabled={aiEnabled}
-                                            onExplainError={handleAiExplainError}
-                                            wsMessages={currentReq.protocol === 'SSE' ? sseMessages : wsMessages}
-                                            wsStatus={currentReq.protocol === 'SSE' ? sseStatus : wsStatus}
-                                            socketMode={currentReq.protocol === 'SSE' ? 'sse' : 'ws'}
-                                            onWsConnect={() => {
-                                                const finalUrl = resolveAll(currentReq.url, currentReq);
-                                                currentReq.protocol === 'SSE' ? sseConnect(finalUrl) : wsConnect(finalUrl);
-                                            }}
-                                            onWsDisconnect={currentReq.protocol === 'SSE' ? sseDisconnect : wsDisconnect}
-                                            onWsSendMessage={wsSendMessage}
-                                            onWsClearMessages={currentReq.protocol === 'SSE' ? sseClearMessages : wsClearMessages}
-                                        />
+                                    <div className={`bg-indigo-600/10 hover:bg-indigo-600/50 transition-colors z-10 ${paneLayout === 'vertical' ? 'h-1 w-full cursor-row-resize' : 'w-1 h-full cursor-col-resize'} ${isResizingMain || isResizingVertical ? 'bg-indigo-600' : ''}`} onMouseDown={paneLayout === 'vertical' ? startVerticalResize : startMainResize} />
+                                    <div className="flex-1 h-full overflow-hidden">
+                                        <ResponsePanel response={response} currentReq={currentReq} reqLoading={reqLoading} paneLayout={paneLayout} endpoints={endpoints} selectedIdx={selectedIdx} onLayoutChange={setPaneLayout} onLoadHistory={() => { }} onBackToLatest={() => { }} isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={wsMessages} wsStatus={wsStatus} socketMode="ws" onWsConnect={() => { }} onWsDisconnect={() => { }} onWsSendMessage={() => { }} onWsClearMessages={() => { }} />
                                     </div>
                                 </div>
-                            </>
+                            </div>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center">
-                                <GlassCard className="text-center p-12 max-w-sm border-dashed bg-black/10">
-                                    <Layout size={48} className={`mx-auto mb-6 opacity-20 ${theme === 'dark' ? 'text-indigo-100' : 'text-indigo-700'}`} />
-                                    <h3 className="text-xl font-bold mb-2">No Request Selected</h3>
-                                    <p className="text-secondary text-xs leading-relaxed">Choose an endpoint from the sidebar or create a new one to get started.</p>
-                                    <PremiumButton
-                                        onClick={() => handleAddRequest()}
-                                        className="mt-8 w-full"
-                                    >
-                                        Create New Request
-                                    </PremiumButton>
-                                </GlassCard>
-                            </div>
-                        )
-                        }
+                            <div className="flex-1 flex items-center justify-center opacity-30 flex-col gap-4"><FileText size={64} /><p className="text-xl font-bold uppercase tracking-widest">Select a request to begin</p></div>
+                        )}
                     </>
-                ) : activeView === 'docs' ? (
-                    <DocumentationView
-                        doc={doc}
-                        endpoints={endpoints}
-                        theme={theme}
-                        previewContent={previewContent}
-                        onCopyMarkdown={() => { navigator.clipboard.writeText(previewContent); toast.success('Markdown copied!'); }}
-                        onDownloadMarkdown={() => handleGenerateMarkdown(true)}
-                        onDownloadPdf={handleDownloadPdf}
-                        resolveUrl={resolveUrl}
-                        resolveAll={resolveAll}
-                        publicSlug={doc?.isPublic && doc?.slug ? doc.slug : null}
-                    />
-                ) : activeView === 'monitoring' ? (
-                    <MonitorDashboard documentationId={id as string} />
-                ) : (
-                    <ChangelogView
-                        docId={id as string}
-                        theme={theme}
-                        variables={variables}
-                    />
-                )}
+                ) : activeView === 'docs' ? <DocumentationView doc={doc} endpoints={endpoints} theme={theme} previewContent={previewContent} onCopyMarkdown={() => { }} onDownloadMarkdown={() => handleGenerateMarkdown(false)} onDownloadPdf={() => { }} onGenerateAiReadme={handleGenerateAiReadme} resolveUrl={resolveUrl} resolveAll={resolveAll} publicSlug={doc.slug} onExportPostman={handleExportPostman} onExportOpenApi={handleExportOpenApi} />
+                    : activeView === 'monitoring' ? <MonitorDashboard documentationId={id as string} isPublic={doc.isPublic} slug={doc.slug} />
+                        : activeView === 'webhooks' ? <WebhooksTab documentationId={id as string} canAdmin={canAdmin} />
+                            : <ChangelogView docId={id as string} theme={theme} />
+                }
             </div>
-            {showPreview && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={(e) => { if (e.target === e.currentTarget) setShowPreview(false); }}>
-                    <div className={`${themeClasses.secondaryBg} border ${themeClasses.borderCol} rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
-                        <div className={`px-6 py-4 border-b ${themeClasses.borderCol} flex justify-between items-center`}>
-                            <div className="flex items-center gap-3 overflow-hidden">
-                                <FileText size={20} className="text-indigo-500 flex-shrink-0" />
-                                <div className="overflow-hidden">
-                                    <h3 className={`font-bold text-lg truncate max-w-[200px] sm:max-w-[400px] ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`} title={doc?.title || 'Documentation'}>
-                                        {doc?.title || 'Documentation'}
-                                    </h3>
-                                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                                        {endpoints.filter((ep, i) => selectedForExport.has(ep.id || `idx-${i}`)).length} endpoint{endpoints.filter((ep, i) => selectedForExport.has(ep.id || `idx-${i}`)).length !== 1 ? 's' : ''} documented
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => { navigator.clipboard.writeText(previewContent); toast.success('Markdown copied!'); }} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
-                                    <Copy size={14} /> Copy MD
-                                </button>
-                                <button onClick={() => handleGenerateMarkdown(true)} className={`flex items-center gap-2 px-3 py-2 ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'} rounded-lg text-xs`}>
-                                    <Download size={14} /> Download MD
-                                </button>
-                                <button onClick={handleDownloadPdf} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs">
-                                    <Download size={14} /> Export PDF
-                                </button>
-                                <button onClick={() => setShowPreview(false)} className={`p-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} rounded-lg`}>
-                                    <X size={20} />
-                                </button>
-                            </div>
-                        </div>
 
-                        <div className="flex-1 flex overflow-hidden">
-                            <div className={`w-56 flex-shrink-0 border-r ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} overflow-y-auto p-4`}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h4 className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Contents</h4>
-                                    <button
-                                        onClick={() => {
-                                            if (selectedForExport.size === endpoints.length) setSelectedForExport(new Set());
-                                            else setSelectedForExport(new Set(endpoints.map((e: any, i) => e.id || `idx-${i}`)));
-                                        }}
-                                        className="text-[10px] text-indigo-500 hover:underline"
-                                    >
-                                        {selectedForExport.size === endpoints.length ? 'Deselect All' : 'Select All'}
-                                    </button>
-                                </div>
-                                <nav className="space-y-1">
-                                    {endpoints.map((ep, idx) => (
-                                        <div key={idx} className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-xs ${theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100'}`}>
-                                            <div className="flex items-center gap-2 overflow-hidden cursor-pointer flex-1" onClick={() => document.getElementById(`endpoint-${idx}`)?.scrollIntoView({ behavior: 'smooth' })}>
-                                                <span className={`text-[8px] font-bold px-1 py-0.5 rounded flex-shrink-0 ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
-                                                <span className={`truncate ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{ep.name || 'Untitled'}</span>
-                                            </div>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedForExport.has(ep.id || `idx-${idx}`)}
-                                                onChange={(e) => {
-                                                    const newSet = new Set(selectedForExport);
-                                                    const keyId = ep.id || `idx-${idx}`;
-                                                    if (e.target.checked) newSet.add(keyId);
-                                                    else newSet.delete(keyId);
-                                                    setSelectedForExport(newSet);
-                                                }}
-                                                className="w-3 h-3 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer flex-shrink-0"
-                                            />
-                                        </div>
-                                    ))}
-                                </nav>
-                            </div>
-
-                            <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-                                <div className="max-w-4xl mx-auto px-8 py-10">
-                                    <div className="mb-6 pb-4 border-b border-gray-700/20"><h1 className={`text-4xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{doc?.title || 'API Documentation'}</h1></div>
-                                    {endpoints.filter((ep: any, i) => selectedForExport.has(ep.id || `idx-${i}`)).map((ep, idx) => (
-                                        <div key={idx} id={`endpoint-${idx}`} className="mb-6 scroll-mt-6">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <span className={`text-xs font-bold px-2 py-1 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' : ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' : 'bg-gray-600/20 text-gray-500'}`}>{ep.method}</span>
-                                                <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
-                                            </div>
-                                            <div className={`px-4 py-3 rounded-lg font-mono text-sm mb-6 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{resolveUrl(ep)}</div>
-                                            {ep.description && <p className={`mb-6 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{resolveAll(ep.description, ep)}</p>}
-                                            {ep.headers && ep.headers.length > 0 && ep.headers.some((h: any) => h.key) && (
-                                                <div className="mb-6">
-                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Headers</h3>
-                                                    <div className={`rounded-lg border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} overflow-hidden`}>
-                                                        <table className="w-full text-sm">
-                                                            <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}><tr><th className="px-4 py-2 text-left">Key</th><th className="px-4 py-2 text-left">Value</th></tr></thead>
-                                                            <tbody>{ep.headers.filter((h: any) => h.key).map((h: any, hi: number) => (<tr key={hi} className="border-t border-gray-700"><td className="px-4 py-2">{h.key}</td><td className="px-4 py-2">{resolveAll(h.value, ep)}</td></tr>))}</tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {ep.body?.raw && (
-                                                <div className="mb-6">
-                                                    <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Request Body</h3>
-                                                    <div className="h-60 rounded-lg overflow-hidden border border-gray-700/20 shadow-lg">
-                                                        <Editor
-                                                            height="100%"
-                                                            language="json"
-                                                            value={resolveAll(ep.body.raw, ep)}
-                                                            theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                                            options={{
-                                                                readOnly: true,
-                                                                fontSize: 13,
-                                                                minimap: { enabled: false },
-                                                                scrollBeyondLastLine: false,
-                                                                wordWrap: 'on',
-                                                                automaticLayout: true,
-                                                                padding: { top: 12, bottom: 12 },
-                                                                lineNumbers: 'on',
-                                                                folding: true,
-                                                                renderLineHighlight: 'none',
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {idx < endpoints.length - 1 && <hr className="my-6 border-gray-700" />}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+            <EnvModal isOpen={showEnv} onClose={() => setShowEnv(false)} documentationId={id as string} variables={variables} setVariables={(v) => { setVariables(v); setIsCollectionDirty(true); }} />
+            {showAiBuilder && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className={`w-full max-w-lg rounded-3xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#1a1b26]' : 'bg-white'} shadow-2xl p-6 flex flex-col gap-6 animate-in zoom-in-95 duration-200`}>
+                        <div><h2 className={`text-xl font-black tracking-tight ${themeClasses.textColor} flex items-center gap-2`}><Sparkles className="text-indigo-400 animate-pulse" /> AI Request Builder</h2><p className="text-xs text-gray-500">Describe the API request you want to create (e.g., "Create a POST request for user registration with name and email fields")</p></div>
+                        <div className="space-y-4"><textarea value={aiBuilderPrompt} onChange={(e) => setAiBuilderPrompt(e.target.value)} className={`w-full h-32 p-4 rounded-2xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none`} placeholder="What kind of request should I build?" autoFocus /></div>
+                        <div className="flex gap-3"><button onClick={() => setShowAiBuilder(false)} className={`flex-1 px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all`}>CANCEL</button><button onClick={() => { if (aiBuilderPrompt.trim()) { handleAiGenerateRequest(aiBuilderPrompt); setShowAiBuilder(false); setAiBuilderPrompt(''); } }} disabled={!aiBuilderPrompt.trim()} className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"><Zap size={16} /> BUILD REQUEST</button></div>
                     </div>
                 </div>
             )}
-
-            <SearchBar isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} endpoints={endpoints} onSelect={(idx: number) => { setSelectedIdx(idx); setShowSearchModal(false); }} />
-            <KeyboardShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
-
-            <SaveVariableModal
-                isOpen={showSaveVarModal}
-                onClose={() => setShowSaveVarModal(false)}
-                selectedValue={selectedText}
-                documentationId={id as string}
-            />
-
-            {/* Custom Context Menu */}
-            {
-                contextMenu.visible && (
-                    <div
-                        className={`fixed z-[100] ${themeClasses.secondaryBg} border ${themeClasses.borderCol} rounded shadow-lg py-1 min-w-[150px] animate-in fade-in zoom-in duration-100`}
-                        style={{ top: contextMenu.y, left: contextMenu.x }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            onClick={() => {
-                                setShowSaveVarModal(true);
-                                setContextMenu({ ...contextMenu, visible: false });
-                            }}
-                            className={`w-full text-left px-3 py-2 text-[11px] ${themeClasses.textColor} hover:bg-indigo-600 hover:text-white flex items-center gap-2`}
-                        >
-                            <Copy size={12} /> Set as variable
-                        </button>
-                    </div>
-                )
-            }
-
-            <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
-                <button onClick={() => setShowShortcutsModal(true)} className={`p-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'} border rounded-lg shadow-lg hover:text-indigo-400 transition-all`} title="Keyboard Shortcuts (Ctrl+/)"><Keyboard size={16} /></button>
-                {/* <button onClick={() => setShowSearchModal(true)} className={`px-3 py-2 ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-600'} border rounded-lg shadow-lg flex items-center gap-2 text-[11px] font-medium`} title="Search Endpoints (Ctrl+K)"><Search size={14} /><span>Search</span><kbd className="ml-1 px-1.5 py-0.5 bg-gray-700 rounded text-[9px]">Ctrl+K</kbd></button> */}
-            </div>
-
-            {
-                showRunner && (
-                    <CollectionRunner
-                        endpoints={endpoints}
-                        variables={resolvedVariables}
-                        onClose={() => setShowRunner(false)}
-                    />
-                )
-            }
-
-            <DeleteConfirmModal
-                isOpen={!!pendingDelete}
-                itemName={pendingDelete?.name || ''}
-                itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'}
-                onConfirm={confirmDelete}
-                onCancel={() => setPendingDelete(null)}
-            />
-
-            <SnapshotModal
-                isOpen={showSnapshots}
-                onClose={() => setShowSnapshots(false)}
-                documentationId={id as string}
-            />
-
-            <CollaboratorModal
-                isOpen={showCollaborators}
-                onClose={() => setShowCollaborators(false)}
-                documentationId={id as string}
-                isPublic={doc?.isPublic}
-                slug={doc?.slug}
-                onTogglePublic={handleShare}
-                onSlugUpdate={(slug) => api.documentation.updateSlug(id as string, slug).then(() => queryClient.invalidateQueries({ queryKey: ['doc', id] }))}
-            />
+            <CreateFolderModal isOpen={showFolderModal} onClose={() => setShowFolderModal(false)} onSubmit={async (data) => { if (editingFolder) await updateFolder(editingFolder.id, data); else await createFolder(data); }} parentFolder={parentFolderForNew} editingFolder={editingFolder} />
+            <CollaboratorModal isOpen={showCollaborators} onClose={() => setShowCollaborators(false)} documentationId={id as string} isPublic={doc.isPublic} slug={doc.slug} onTogglePublic={handleShare} onSlugUpdate={handleUpdateSlug} userRole={userRole as any} />
+            <SnapshotModal isOpen={showSnapshots} onClose={() => setShowSnapshots(false)} documentationId={id as string} />
+            {showRunner && <CollectionRunner endpoints={endpoints} variables={resolvedVariables} onClose={() => setShowRunner(false)} />}
+            <DeleteConfirmModal isOpen={!!pendingDelete} itemName={pendingDelete?.name || ''} itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'} onConfirm={async () => { if (pendingDelete?.type === 'request' && pendingDelete.idx !== undefined) { const rid = endpoints[pendingDelete.idx].id; if (rid) await deleteRequestMutation.mutateAsync(rid); queryClient.invalidateQueries({ queryKey: ['doc', id] }); setEndpoints(prev => prev.filter((_, i) => !pendingDelete || i !== pendingDelete.idx)); } else if (pendingDelete?.type === 'folder') await deleteFolder(pendingDelete.folder.id, true); setPendingDelete(null); }} onCancel={() => setPendingDelete(null)} />
+            <SaveVariableModal isOpen={showSaveVarModal} onClose={() => setShowSaveVarModal(false)} selectedValue={selectedText} documentationId={id as string} />
         </div>
     );
 }

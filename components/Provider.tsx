@@ -7,12 +7,14 @@ export default function Provider({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
         mutationCache: new MutationCache({
             onError: (error) => {
-                toast.error(`Error: ${error.message}`);
+                // Toasts are handled individually in components
+                console.error('Mutation Error:', error);
             },
         }),
         queryCache: new QueryCache({
             onError: (error) => {
-                toast.error(`Error: ${error.message}`);
+                // Toasts are handled individually in components
+                console.error('Query Error:', error);
             },
         }),
     }));

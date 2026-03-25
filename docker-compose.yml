@@ -1,5 +1,5 @@
 # ============================================
-# Postman Documentation Generator - Client
+# DevManus Documentation Generator - Client
 # Docker Compose Configuration
 # ============================================
 
@@ -11,7 +11,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: postman-docs-client
+    container_name: devmanus-docs-client
     restart: unless-stopped
     environment:
       NODE_ENV: production

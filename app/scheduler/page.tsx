@@ -1,18 +1,29 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar as CalendarIcon, Plus, Settings, RefreshCw, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import { api } from '@/utils/api';
 import { useTheme } from '@/context/ThemeContext';
 import { getThemeClasses } from '@/app/docs/[id]/utils/theme';
 import { SchedulerSidebar } from '@/app/components/SchedulerSidebar';
-import { SchedulerCalendar } from '@/app/components/SchedulerCalendar';
+import dynamic from 'next/dynamic';
 import { AddTaskModal } from '@/app/components/AddTaskModal';
 import { AddHabitModal } from '@/app/components/AddHabitModal';
 import { TaskDetailModal } from '@/app/components/TaskDetailModal';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
 import { DemoOverlay } from '@/app/components/DemoOverlay';
+import { Loader2 } from 'lucide-react';
+
+const SchedulerCalendar = dynamic(() => import('@/app/components/SchedulerCalendar').then(mod => mod.SchedulerCalendar), {
+    ssr: false,
+    loading: () => (
+        <div className="flex-1 flex flex-col items-center justify-center bg-black/5 rounded-2xl border-2 border-dashed border-gray-500/10">
+            <Loader2 size={40} className="animate-spin text-indigo-500 mb-4" />
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest animate-pulse">Loading Calendar Engine...</p>
+        </div>
+    )
+});
 
 export default function SchedulerPage() {
     const { isLoggedIn } = useAuth();
@@ -37,7 +48,7 @@ export default function SchedulerPage() {
         activeDateRangeRef.current = activeDateRange;
     }, [activeDateRange]);
 
-    const fetchData = async (rangeOverride?: { start: Date, end: Date }) => {
+    const fetchData = useCallback(async (rangeOverride?: { start: Date, end: Date }) => {
         if (!isLoggedIn) {
             setLoading(false);
             return;
@@ -77,7 +88,7 @@ export default function SchedulerPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [isLoggedIn]);
 
     useEffect(() => {
         // Initial fetch handled either by this or the activeDateRange effect below
@@ -88,16 +99,16 @@ export default function SchedulerPage() {
         // Set up an interval to refresh data every minute to keep the calendar up to date
         const interval = setInterval(() => fetchData(activeDateRangeRef.current || undefined), 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchData]);
 
     // Refetch when the calendar view changes
     useEffect(() => {
         if (activeDateRange) {
             fetchData(activeDateRange);
         }
-    }, [activeDateRange]);
+    }, [activeDateRange, fetchData]);
 
-    const handleOptimize = async () => {
+    const handleOptimize = useCallback(async () => {
         try {
             await toast.promise(
                 api.scheduler.optimize(),
@@ -111,9 +122,9 @@ export default function SchedulerPage() {
         } catch (error) {
             console.error('Optimization error:', error);
         }
-    };
+    }, [fetchData]);
 
-    const handleSelectRange = (data: { start: Date; end: Date; duration: number }) => {
+    const handleSelectRange = useCallback((data: { start: Date; end: Date; duration: number }) => {
         // Convert dates to string format for datetime-local input (YYYY-MM-DDThh:mm)
         const formatForInput = (date: Date) => {
             const year = date.getFullYear();
@@ -132,7 +143,7 @@ export default function SchedulerPage() {
             title: ''
         });
         setIsAddTaskModalOpen(true);
-    };
+    }, []);
 
     // Resizing logic
     useEffect(() => {

@@ -1,5 +1,5 @@
 # ============================================
-# Postman Documentation Generator - Client
+# DevManus Documentation Generator - Client
 # Next.js 16 Frontend Application
 # ============================================
 

@@ -1,5 +1,7 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { api } from '../utils/api';
 
 type Theme = 'light' | 'dark';
 
@@ -11,15 +13,24 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+    const { user, isLoggedIn } = useAuth();
     const [theme, setTheme] = useState<Theme>('dark');
     const [mounted, setMounted] = useState(false);
 
+    // Initial setup from localStorage or system preference
     useEffect(() => {
         const saved = localStorage.getItem('theme') as Theme;
         if (saved) setTheme(saved);
         else if (window.matchMedia('(prefers-color-scheme: light)').matches) setTheme('light');
         setMounted(true);
     }, []);
+
+    // Sync theme with user settings if logged in
+    useEffect(() => {
+        if (isLoggedIn && user?.settings?.theme && mounted) {
+            setTheme(user.settings.theme as Theme);
+        }
+    }, [isLoggedIn, user?.settings?.theme, mounted]);
 
     useEffect(() => {
         if (mounted) {
@@ -32,8 +43,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
     }, [theme, mounted]);
 
-    const toggleTheme = () => {
-        setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    const toggleTheme = async () => {
+        const newTheme = theme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+        
+        if (isLoggedIn && user) {
+            try {
+                const currentSettings = user.settings || {};
+                await api.auth.updateProfile({
+                    settings: { ...currentSettings, theme: newTheme }
+                });
+            } catch (error) {
+                console.error('Failed to save theme preference:', error);
+            }
+        }
     };
 
     return (

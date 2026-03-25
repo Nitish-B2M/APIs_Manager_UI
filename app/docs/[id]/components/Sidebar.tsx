@@ -1,58 +1,64 @@
 'use client';
 
-import React, { memo, useState, useRef, useEffect, useCallback } from 'react';
-import {
-    ChevronLeft,
-    ChevronRight,
-    ChevronDown,
-    Plus,
-    Save,
-    Share2,
-    Download,
-    Settings,
-    Copy,
-    MoreVertical,
-    GripVertical,
-    Trash2,
-    Terminal,
-    Code,
-    Folder,
-    FolderOpen,
-    FolderPlus,
-    Edit3,
-    Globe,
-    ExternalLink,
-    Upload,
-    Play,
-    Sparkles,
-    Clock,
-    Users,
-    ListChecks,
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
+import { 
+    ChevronLeft, 
+    ChevronRight, 
+    Plus, 
+    FolderPlus, 
+    Upload, 
+    Play, 
+    Clock, 
+    Webhook, 
+    Settings, 
+    Search,
     Database,
-    RotateCcw
+    Trash2,
+    Users,
+    Save,
+    Download,
+    Copy,
+    ExternalLink,
+    ListChecks,
+    Globe,
+    Edit3,
+    Activity,
+    Zap,
+    LayoutDashboard,
+    AlertCircle,
+    CheckCircle2,
+    Sparkles,
+    MoreVertical,
+    FileText,
+    GripVertical,
+    Move,
+    X,
+    Folder,
+    Terminal,
+    Eye
 } from 'lucide-react';
-import ImportCurlModal from './ImportCurlModal';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '../../../../context/ThemeContext';
+import { useAuth } from '../../../../context/AuthContext';
+import { usePresence } from '../hooks/usePresence';
 import { Endpoint, HttpMethod, Documentation, Folder as FolderType } from '@/types';
-// DndRequestList removed in favor of unified native DnD
-
+import { toast } from 'react-hot-toast';
+import ImportCurlModal from './ImportCurlModal';
 
 interface SidebarProps {
     doc: Documentation;
     endpoints: Endpoint[];
-    folders?: FolderType[];
+    folders: FolderType[];
     selectedIdx: number;
     isCollapsed: boolean;
     width: number;
     isDirty: boolean;
     canEdit: boolean;
-    canAdmin?: boolean;
+    canAdmin: boolean;
     openMenuIdx: number | null;
     draggedIdx: number | null;
     onSelectEndpoint: (idx: number) => void;
     onToggleCollapse: () => void;
     onAddRequest: (data?: any) => void;
-    onSaveCollection: () => void;
     onShare: () => void;
     onDownloadMarkdown: () => void;
     onOpenEnvModal: () => void;
@@ -64,551 +70,29 @@ interface SidebarProps {
     onDelete: (idx: number, e: React.MouseEvent) => void;
     onMenuToggle: (idx: number | null) => void;
     onDragStart: (idx: number) => void;
-    onDragOver: (e: React.DragEvent, idx: number) => void;
+    onDragOver: (e: React.DragEvent) => void;
     onDragEnd: () => void;
-    onReorderRequests?: (oldIndex: number, newIndex: number) => void;
-    // Folder callbacks (optional for backwards compatibility)
-    onAddFolder?: () => void;
-    onEditFolder?: (folder: FolderType) => void;
-    onDeleteFolder?: (folder: FolderType) => void;
-    onAddSubfolder?: (parentId: string) => void;
-    onMoveRequestToFolder?: (requestIdx: number, folderId: string | null) => void;
-    onReorderFolders?: (draggedId: string, targetId: string) => void;
-    onSlugUpdate?: (slug: string) => void;
-    onRunCollection?: () => void;
-    onShowSnapshots?: () => void;
-    aiEnabled?: boolean;
-    onAiToggle?: (enabled: boolean) => void;
-    onBulkDelete?: (ids: string[]) => void;
-    onBulkMove?: (ids: string[], folderId: string | null) => void;
-    isOnline?: boolean;
-    isSyncing?: boolean;
-    queueLength?: number;
-    activeView?: string;
-    onViewChange?: (view: any) => void;
+    onReorderRequests: (draggedIdx: number, targetIdx: number) => void;
+    aiEnabled: boolean;
+    onAiToggle: (enabled: boolean) => void;
+    onAddFolder: () => void;
+    onEditFolder: (folder: FolderType) => void;
+    onDeleteFolder: (folder: FolderType) => void;
+    onMoveRequestToFolder: (requestIdx: number, folderId: string | null) => void;
+    onRunCollection: () => void;
+    onShowSnapshots: () => void;
+    activeView: string;
+    onViewChange: (view: any) => void;
+    onBulkDelete?: (ids: string[]) => Promise<void>;
+    onBulkMove?: (ids: string[], folderId: string | null) => Promise<void>;
+    onExportPostman?: () => void;
+    onExportOpenApi?: () => void;
 }
 
-const getMethodColor = (method: HttpMethod): string => {
-    switch (method) {
-        case 'GET': return 'bg-green-600/20 text-green-500';
-        case 'POST': return 'bg-blue-600/20 text-blue-500';
-        case 'PUT': return 'bg-yellow-600/20 text-yellow-600';
-        case 'DELETE': return 'bg-red-600/20 text-red-500';
-        case 'PATCH': return 'bg-purple-600/20 text-purple-500';
-        default: return 'bg-gray-700 text-gray-400';
-    }
-};
-
-// Dropdown menu component that auto-positions above/below based on viewport space
-interface DropdownMenuProps {
-    buttonRef: React.RefObject<HTMLButtonElement | null>;
-    isOpen: boolean;
-    onClose: () => void;
-    children: React.ReactNode;
-    className?: string;
-}
-
-function DropdownMenu({ buttonRef, isOpen, children, className = '' }: DropdownMenuProps) {
-    const [position, setPosition] = useState<'below' | 'above'>('below');
-    const menuRef = useRef<HTMLDivElement>(null);
-    const { theme } = useTheme();
-
-    useEffect(() => {
-        if (isOpen && buttonRef.current) {
-            const buttonRect = buttonRef.current.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const menuHeight = 180; // Approximate menu height
-            const spaceBelow = viewportHeight - buttonRect.bottom;
-            const spaceAbove = buttonRect.top;
-
-            // If not enough space below but more space above, position above
-            if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
-                setPosition('above');
-            } else {
-                setPosition('below');
-            }
-        }
-    }, [isOpen, buttonRef]);
-
-    if (!isOpen) return null;
-
-    const positionClasses = position === 'above'
-        ? 'bottom-full mb-2'
-        : 'top-full mt-2';
-
-    return (
-        <div
-            ref={menuRef}
-            className={`absolute right-0 ${positionClasses} z-50 animate-in fade-in zoom-in duration-200 ${className}`}
-            onClick={(e) => e.stopPropagation()}
-        >
-            <div className={`rounded-xl border ${theme === 'dark' ? 'bg-gray-900/90 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'} shadow-2xl overflow-hidden min-w-[160px]`}>
-                {children}
-            </div>
-        </div>
-    );
-}
-
-// Request menu dropdown with auto-positioning
-interface RequestMenuProps {
-    theme: 'light' | 'dark';
-    isOpen: boolean;
-    request: Endpoint;
-    globalIdx: number;
-    secondaryBg: string;
-    borderCol: string;
-    textColor: string;
-    hoverBg: string;
-    onCopyAsCurl: (ep: Endpoint) => void;
-    onCopyAsFetch: (ep: Endpoint) => void;
-    onCopyUrl: (ep: Endpoint) => void;
-    onDuplicate: (idx: number, e: React.MouseEvent) => void;
-    onDelete: (idx: number, e: React.MouseEvent) => void;
-    onMenuToggle: (idx: number | null) => void;
-}
-
-function RequestMenuDropdown({
-    theme,
-    isOpen,
-    request,
-    globalIdx,
-    secondaryBg,
-    borderCol,
-    textColor,
-    hoverBg,
-    onCopyAsCurl,
-    onCopyAsFetch,
-    onCopyUrl,
-    onDuplicate,
-    onDelete,
-    onMenuToggle,
-}: RequestMenuProps) {
-    const buttonRef = useRef<HTMLButtonElement>(null);
-    const [position, setPosition] = useState<'below' | 'above'>('below');
-
-    useEffect(() => {
-        if (isOpen && buttonRef.current) {
-            const buttonRect = buttonRef.current.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const menuHeight = 180;
-            const spaceBelow = viewportHeight - buttonRect.bottom;
-            const spaceAbove = buttonRect.top;
-
-            if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
-                setPosition('above');
-            } else {
-                setPosition('below');
-            }
-        }
-    }, [isOpen]);
-
-    const positionClasses = position === 'above'
-        ? 'bottom-full mb-1'
-        : 'top-full mt-1';
-
-    const secondaryBg2 = theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100';
-
-    return (
-        <div className="relative">
-            <button
-                ref={buttonRef}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onMenuToggle(isOpen ? null : globalIdx);
-                }}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-600 p-1 rounded transition-all"
-            >
-                <MoreVertical size={12} />
-            </button>
-
-            {isOpen && (
-                <div
-                    className={`absolute right-0 ${positionClasses} w-44 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 py-1.5 text-[11px] animate-in fade-in zoom-in duration-200`}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onCopyAsCurl(request); onMenuToggle(null); }}
-                        className={`w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200`}
-                    >
-                        <Terminal size={12} className="text-indigo-400" /> Copy as cURL
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onCopyAsFetch(request); onMenuToggle(null); }}
-                        className={`w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200`}
-                    >
-                        <Code size={12} className="text-blue-400" /> Copy as Fetch
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onCopyUrl(request); onMenuToggle(null); }}
-                        className={`w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200`}
-                    >
-                        <Copy size={12} className="text-green-400" /> Copy URL
-                    </button>
-                    <div className={`h-px bg-white/5 my-1`} />
-                    <button
-                        onClick={(e) => onDuplicate(globalIdx, e)}
-                        className={`w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 text-gray-200`}
-                    >
-                        <Plus size={12} className="text-gray-400" /> Duplicate
-                    </button>
-                    <button
-                        onClick={(e) => onDelete(globalIdx, e)}
-                        className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-500 flex items-center gap-2"
-                    >
-                        <Trash2 size={12} /> Delete
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// Folder Item Sub-component
-interface FolderItemProps {
-    folder: FolderType;
-    allFolders: FolderType[];
-    allEndpoints: Endpoint[];
-    selectedIdx: number;
-    canEdit: boolean;
-    openMenuIdx: number | null;
-    draggedIdx: number | null;
-    expandedFolders: Set<string>;
-    theme: 'light' | 'dark';
-    secondaryBg: string;
-    borderCol: string;
-    textColor: string;
-    subTextColor: string;
-    onToggleExpand: (folderId: string) => void;
-    onSelectEndpoint: (idx: number) => void;
-    onEditFolder?: (folder: FolderType) => void;
-    onDeleteFolder?: (folder: FolderType) => void;
-    onAddSubfolder?: (parentId: string) => void;
-    onCopyMarkdown: (ep: Endpoint) => void;
-    onCopyAsCurl: (ep: Endpoint) => void;
-    onCopyAsFetch: (ep: Endpoint) => void;
-    onCopyUrl: (ep: Endpoint) => void;
-    onDuplicate: (idx: number, e: React.MouseEvent) => void;
-    onDelete: (idx: number, e: React.MouseEvent) => void;
-    onMenuToggle: (idx: number | null) => void;
-    onDragStart: (idx: number) => void;
-    onDragOver: (e: React.DragEvent, idx: number) => void;
-    onDragEnd: () => void;
-    onDropOnFolder?: (folderId: string | null) => void;
-    onFolderDragStart?: (id: string) => void;
-    draggedFolderId?: string | null;
-    onReorderFolders?: (draggedId: string, targetId: string) => void;
-    onReorderRequests?: (oldIndex: number, newIndex: number) => void;
-    selectedRequestIds: Set<string>;
-    onToggleSelect: (id: string, isShift: boolean) => void;
-    isSelectionMode: boolean;
-}
-
-function FolderItemComponent({
-    folder,
-    allFolders,
-    allEndpoints,
-    selectedIdx,
-    canEdit,
-    openMenuIdx,
-    draggedIdx,
-    expandedFolders,
-    theme,
-    secondaryBg,
-    borderCol,
-    textColor,
-    subTextColor,
-    onToggleExpand,
-    onSelectEndpoint,
-    onEditFolder,
-    onDeleteFolder,
-    onAddSubfolder,
-    onCopyMarkdown,
-    onCopyAsCurl,
-    onCopyAsFetch,
-    onCopyUrl,
-    onDuplicate,
-    onDelete,
-    onMenuToggle,
-    onDragStart,
-    onDragOver,
-    onDragEnd,
-    onDropOnFolder,
-    onFolderDragStart,
-    draggedFolderId,
-    onReorderFolders,
-    onReorderRequests,
-    selectedRequestIds,
-    onToggleSelect,
-    isSelectionMode,
-}: FolderItemProps) {
-    const [showFolderMenu, setShowFolderMenu] = useState(false);
-    const [isDragOver, setIsDragOver] = useState(false);
-
-    const isExpanded = expandedFolders.has(folder.id);
-    const hoverBg = theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100';
-    const dragOverBg = theme === 'dark' ? 'bg-indigo-600/20' : 'bg-indigo-50';
-
-    // Get child folders and requests
-    const childFolders = allFolders.filter(f => f.parentId === folder.id).sort((a, b) => a.order - b.order);
-    const folderRequests = allEndpoints.filter(r => r.folderId === folder.id);
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(true);
-    };
-
-    const handleDragLeave = () => {
-        setIsDragOver(false);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-        // Handle folder drop (reorder) or request drop (move to folder)
-        if (draggedIdx !== null) {
-            onDropOnFolder?.(folder.id);
-        } else if (draggedFolderId && onReorderFolders) {
-            onReorderFolders(draggedFolderId, folder.id);
-        }
-    };
-
-    const handleFolderDragStart = (e: React.DragEvent) => {
-        e.stopPropagation();
-        if (canEdit && onFolderDragStart) {
-            onFolderDragStart(folder.id);
-        }
-    };
-
-    return (
-        <div className="select-none">
-            {/* Folder Header */}
-            <div
-                className={`group flex items-center justify-between px-2 py-1.5 cursor-pointer transition-all ${hoverBg} ${isDragOver ? dragOverBg : ''}`}
-                onClick={() => onToggleExpand(folder.id)}
-                draggable={canEdit}
-                onDragStart={handleFolderDragStart}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-            >
-                <div className="flex items-end gap-1.5 overflow-hidden flex-1">
-                    <span className={`self-center ${subTextColor}`}>
-                        {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    </span>
-                    <span className={`self-center ${theme === 'dark' ? 'text-yellow-500' : 'text-yellow-600'}`}>
-                        {isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />}
-                    </span>
-                    <span className={`truncate text-[12px] font-medium ${textColor}`}>
-                        {folder.name}
-                    </span>
-                    <span className={`text-[10px] ${subTextColor}`}>
-                        F:{childFolders.length} R:{folderRequests.length}
-                    </span>
-                </div>
-
-                {canEdit && (
-                    <div className="relative">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowFolderMenu(!showFolderMenu);
-                            }}
-                            className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-all ${subTextColor} ${hoverBg}`}
-                        >
-                            <MoreVertical size={12} />
-                        </button>
-
-                        {showFolderMenu && (
-                            <div
-                                className={`absolute right-0 top-full mt-1 w-36 ${secondaryBg} border ${borderCol} rounded-lg shadow-xl z-50 py-1 text-[10px]`}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <button
-                                    onClick={() => {
-                                        onAddSubfolder?.(folder.id);
-                                        setShowFolderMenu(false);
-                                    }}
-                                    className={`w-full text-left px-3 py-1.5 ${hoverBg} flex items-center gap-2 ${textColor}`}
-                                >
-                                    <FolderPlus size={12} className={theme === 'dark' ? 'text-yellow-500' : 'text-yellow-600'} /> Add Subfolder
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        onEditFolder?.(folder);
-                                        setShowFolderMenu(false);
-                                    }}
-                                    className={`w-full text-left px-3 py-1.5 ${hoverBg} flex items-center gap-2 ${textColor}`}
-                                >
-                                    <Edit3 size={12} className="text-blue-500" /> Rename
-                                </button>
-                                <div className={`h-px ${borderCol} my-1 opacity-50`} />
-                                <button
-                                    onClick={() => {
-                                        onDeleteFolder?.(folder);
-                                        setShowFolderMenu(false);
-                                    }}
-                                    className="w-full text-left px-3 py-1.5 hover:bg-red-500/10 text-red-500 flex items-center gap-2"
-                                >
-                                    <Trash2 size={12} /> Delete
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* Folder Contents */}
-            {isExpanded && (
-                <div className={`ml-3 border-l ${borderCol}`}>
-                    {/* Child Folders (recursive) */}
-                    {childFolders.map((childFolder) => (
-                        <FolderItemComponent
-                            key={childFolder.id}
-                            folder={childFolder}
-                            allFolders={allFolders}
-                            allEndpoints={allEndpoints}
-                            selectedIdx={selectedIdx}
-                            canEdit={canEdit}
-                            openMenuIdx={openMenuIdx}
-                            draggedIdx={draggedIdx}
-                            expandedFolders={expandedFolders}
-                            theme={theme}
-                            secondaryBg={secondaryBg}
-                            borderCol={borderCol}
-                            textColor={textColor}
-                            subTextColor={subTextColor}
-                            onToggleExpand={onToggleExpand}
-                            onSelectEndpoint={onSelectEndpoint}
-                            onEditFolder={onEditFolder}
-                            onDeleteFolder={onDeleteFolder}
-                            onAddSubfolder={onAddSubfolder}
-                            onCopyMarkdown={onCopyMarkdown}
-                            onCopyAsCurl={onCopyAsCurl}
-                            onCopyAsFetch={onCopyAsFetch}
-                            onCopyUrl={onCopyUrl}
-                            onDuplicate={onDuplicate}
-                            onDelete={onDelete}
-                            onMenuToggle={onMenuToggle}
-                            onDragStart={onDragStart}
-                            onDragOver={onDragOver}
-                            onDragEnd={onDragEnd}
-                            onDropOnFolder={onDropOnFolder}
-                            onFolderDragStart={onFolderDragStart}
-                            draggedFolderId={draggedFolderId}
-                            onReorderRequests={onReorderRequests}
-                            selectedRequestIds={selectedRequestIds}
-                            onToggleSelect={onToggleSelect}
-                            isSelectionMode={isSelectionMode}
-                        />
-                    ))}
-
-                    {/* Requests in this folder */}
-                    {folderRequests.map((request) => {
-                        const globalIdx = allEndpoints.indexOf(request);
-                        const isSelected = globalIdx === selectedIdx;
-
-                        return (
-                            <div
-                                key={`${request.id || 'req'}-${globalIdx}`}
-                                onClick={() => onSelectEndpoint(globalIdx)}
-                                draggable={canEdit}
-                                onDragStart={() => canEdit && onDragStart(globalIdx)}
-                                onDragOver={(e) => canEdit && onDragOver(e, globalIdx)}
-                                onDragEnd={() => canEdit && onDragEnd()}
-                                onDrop={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (draggedIdx !== null && draggedIdx !== globalIdx && onReorderRequests) {
-                                        onReorderRequests(draggedIdx, globalIdx);
-                                    }
-                                }}
-                                className={`group flex items-center justify-between p-2.5 cursor-pointer border-l-2 transition-all relative ${isSelected
-                                    ? theme === 'dark'
-                                        ? 'bg-indigo-600/20 border-indigo-500'
-                                        : 'bg-indigo-50 border-indigo-500'
-                                    : `border-transparent ${hoverBg}`
-                                    } ${draggedIdx === globalIdx ? 'opacity-50' : ''} ${selectedRequestIds.has(request.id as string) ? 'bg-indigo-600/10' : ''}`}
-                            >
-                                <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                    {canEdit && (
-                                        <GripVertical
-                                            size={10}
-                                            className={`${theme === 'dark'
-                                                ? 'text-gray-600 group-hover:text-gray-400'
-                                                : 'text-gray-300 group-hover:text-gray-500'
-                                                } cursor-grab active:cursor-grabbing flex-shrink-0`}
-                                        />
-                                    )}
-                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                        {isSelectionMode && (
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedRequestIds.has(request.id as string)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                onChange={(e) => onToggleSelect(request.id as string, (e.nativeEvent as any).shiftKey)}
-                                                className="w-3 h-3 rounded border-gray-400 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                            />
-                                        )}
-                                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded w-10 text-center flex-shrink-0 ${getMethodColor(request.method)}`}>
-                                            {request.method}
-                                        </span>
-                                    </div>
-                                    <span className={`truncate text-[11px] ${isSelected
-                                        ? `font-bold ${textColor}`
-                                        : subTextColor
-                                        }`}>
-                                        {request.name || 'Untitled'}
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center gap-1">
-                                    {/* <button
-                                        onClick={(e) => { e.stopPropagation(); onCopyMarkdown(request); }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-indigo-400 transition-all"
-                                        title="Copy Markdown"
-                                    >
-                                        <Copy size={10} />
-                                    </button> */}
-                                    <RequestMenuDropdown
-                                        theme={theme}
-                                        isOpen={openMenuIdx === globalIdx}
-                                        request={request}
-                                        globalIdx={globalIdx}
-                                        secondaryBg={secondaryBg}
-                                        borderCol={borderCol}
-                                        textColor={textColor}
-                                        hoverBg={hoverBg}
-                                        onCopyAsCurl={onCopyAsCurl}
-                                        onCopyAsFetch={onCopyAsFetch}
-                                        onCopyUrl={onCopyUrl}
-                                        onDuplicate={onDuplicate}
-                                        onDelete={onDelete}
-                                        onMenuToggle={onMenuToggle}
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })}
-
-                    {/* Empty folder */}
-                    {folderRequests.length === 0 && childFolders.length === 0 && (
-                        <div className={`px-3 py-2 text-[10px] ${subTextColor} italic`}>
-                            Drag requests here
-                        </div>
-                    )}
-                </div>
-            )
-            }
-        </div >
-    );
-}
-
-function SidebarComponent({
+const SidebarComponent = ({
     doc,
     endpoints,
-    folders = [],
+    folders,
     selectedIdx,
     isCollapsed,
     width,
@@ -620,7 +104,6 @@ function SidebarComponent({
     onSelectEndpoint,
     onToggleCollapse,
     onAddRequest,
-    onSaveCollection,
     onShare,
     onDownloadMarkdown,
     onOpenEnvModal,
@@ -635,141 +118,192 @@ function SidebarComponent({
     onDragOver,
     onDragEnd,
     onReorderRequests,
-    onShowSnapshots,
+    aiEnabled,
+    onAiToggle,
     onAddFolder,
     onEditFolder,
     onDeleteFolder,
-    onAddSubfolder,
     onMoveRequestToFolder,
-    onReorderFolders,
-    onSlugUpdate,
     onRunCollection,
-    aiEnabled = true,
-    onAiToggle,
+    onShowSnapshots,
+    activeView,
+    onViewChange,
     onBulkDelete,
     onBulkMove,
-    isOnline = true,
-    isSyncing = false,
-    queueLength = 0,
-    activeView = 'client',
-    onViewChange
-}: SidebarProps) {
+    onExportPostman,
+    onExportOpenApi
+}: SidebarProps) => {
     const { theme } = useTheme();
+    const { user } = useAuth();
+
+    const isShared = useMemo(() => {
+        return doc.isPublic || (doc as any).collaborators?.length > 1;
+    }, [doc]);
+
+    const { activeUsers, status: presenceStatus } = usePresence(
+        doc.id, 
+        isShared, 
+        user?.settings?.enableLivePresence !== false
+    );
+
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    const [searchTerm, setSearchTerm] = useState('');
+    const menuRef = useRef<HTMLDivElement>(null);
+
     const [selectedRequestIds, setSelectedRequestIds] = useState<Set<string>>(new Set());
     const [showBulkMoveMenu, setShowBulkMoveMenu] = useState(false);
-    const [lastCheckedId, setLastCheckedId] = useState<string | null>(null);
-    const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
-    const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null); // Local state for folder dragging
-    const [slugInput, setSlugInput] = useState(doc.slug || '');
-    const [showSlugEditor, setShowSlugEditor] = useState(false);
-    const [slugCopied, setSlugCopied] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
 
-    // Close menus on click
+    // Theme Constants
+    const isDark = theme === 'dark';
+    const textColor = isDark ? 'text-white' : 'text-gray-900';
+    const subTextColor = isDark ? 'text-gray-400' : 'text-gray-500';
+    const borderCol = isDark ? 'border-white/5' : 'border-gray-200';
+    const inputBg = isDark ? 'bg-white/5' : 'bg-gray-100';
+    const secondaryBg = isDark ? 'bg-[#0a0a0b]' : 'bg-white';
+
     useEffect(() => {
-        const handleClick = () => {
-            setShowBulkMoveMenu(false);
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                onMenuToggle(null);
+            }
         };
-        window.addEventListener('click', handleClick);
-        return () => window.removeEventListener('click', handleClick);
-    }, []);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onMenuToggle]);
 
-    const secondaryBg = theme === 'dark' ? 'bg-[#0F0E13]' : 'bg-white/80 backdrop-blur-md';
-    const borderCol = theme === 'dark' ? 'border-white/5' : 'border-gray-200';
-    const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
-    const subTextColor = theme === 'dark' ? 'text-slate-400' : 'text-gray-500';
-    const hoverBg = theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-100';
+    const getMethodColor = (method: string) => {
+        const colors: Record<string, string> = {
+            'GET': 'text-green-500',
+            'POST': 'text-blue-500',
+            'PUT': 'text-amber-500',
+            'DELETE': 'text-red-500',
+            'PATCH': 'text-purple-500',
+        };
+        return colors[method] || 'text-gray-500';
+    };
 
-    const handleToggleExpand = (folderId: string) => {
+    const toggleFolder = (folderId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
         setExpandedFolders(prev => {
             const next = new Set(prev);
-            if (next.has(folderId)) {
-                next.delete(folderId);
-            } else {
-                next.add(folderId);
-            }
+            if (next.has(folderId)) next.delete(folderId);
+            else next.add(folderId);
             return next;
         });
     };
 
-    const handleToggleSelect = (id: string, isShift: boolean) => {
+    const toggleRequestSelection = (id: string, event: React.MouseEvent) => {
+        event.stopPropagation();
         setSelectedRequestIds(prev => {
             const next = new Set(prev);
-            if (isShift && lastCheckedId) {
-                // Flatten visuals: process all visible requests in UI order
-                const visualOrder: string[] = [];
-                const addFolderContent = (fid: string | null) => {
-                    endpoints.filter(e => e.folderId === fid).forEach(e => visualOrder.push(e.id as string));
-                    folders.filter(f => f.parentId === fid).sort((a, b) => a.order - b.order).forEach(f => {
-                        if (expandedFolders.has(f.id)) { // Only add content of expanded folders
-                            addFolderContent(f.id);
-                        }
-                    });
-                };
-
-                // Root requests first, then folders and their contents
-                endpoints.filter(e => !e.folderId).forEach(e => visualOrder.push(e.id as string));
-                folders.filter(f => !f.parentId).sort((a, b) => a.order - b.order).forEach(f => {
-                    if (expandedFolders.has(f.id)) { // Only add content of expanded folders
-                        addFolderContent(f.id);
-                    }
-                });
-
-                const start = visualOrder.indexOf(lastCheckedId);
-                const end = visualOrder.indexOf(id);
-                if (start !== -1 && end !== -1) {
-                    const range = visualOrder.slice(Math.min(start, end), Math.max(start, end) + 1);
-                    range.forEach(rid => {
-                        if (rid) next.add(rid);
-                    });
-                }
-            } else {
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-            }
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
             return next;
         });
-        setLastCheckedId(id);
     };
 
-    const handleDropOnFolder = (folderId: string | null) => {
-        if (draggedIdx !== null && onMoveRequestToFolder) {
-            onMoveRequestToFolder(draggedIdx, folderId);
-        }
-        setDropTargetFolderId(null);
-    };
+    const rootFolders = useMemo(() => {
+        const foldersList = folders.filter(f => !f.parentId).sort((a, b) => a.order - b.order);
+        if (!searchTerm) return foldersList;
+        const s = searchTerm.toLowerCase();
+        return foldersList.filter(f => {
+            const nameMatch = f.name.toLowerCase().includes(s);
+            const childMatch = endpoints.some(e => e.folderId === f.id && (e.name?.toLowerCase().includes(s) || e.url?.toLowerCase().includes(s)));
+            return nameMatch || childMatch;
+        });
+    }, [folders, endpoints, searchTerm]);
 
-    const handleRootDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        if (draggedIdx !== null && onMoveRequestToFolder) {
-            onMoveRequestToFolder(draggedIdx, null); // Move to root
-        }
-        // Handle root folder reordering logic if needed
-    };
+    const renderEndpoint = (ep: Endpoint, index: number) => {
+        const isActive = endpoints[selectedIdx]?.id === ep.id;
+        const isSelected = selectedRequestIds.has(ep.id || '');
+        const isMenuOpen = index === openMenuIdx;
+        const otherUsersViewing = activeUsers.filter(u => u.id !== user?.id && u.metadata?.requestId === ep.id);
 
-    const handleFolderReorder = (draggedId: string, targetId: string) => {
-        if (onReorderFolders) {
-            onReorderFolders(draggedId, targetId);
-        }
-    };
+        return (
+            <div
+                key={ep.id}
+                draggable={canEdit && !isSelectionMode}
+                onDragStart={() => onDragStart(index)}
+                onDragOver={onDragOver}
+                onDragEnd={onDragEnd}
+                onClick={(e) => isSelectionMode ? toggleRequestSelection(ep.id || '', e) : onSelectEndpoint(endpoints.indexOf(ep))}
+                className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isActive && !isSelectionMode ? 'bg-indigo-600 text-white shadow-lg' : isSelected ? 'bg-indigo-500/20 ring-1 ring-indigo-500/30' : 'hover:bg-white/5'}`}
+            >
+                {otherUsersViewing.length > 0 && !isCollapsed && (
+                    <div className="absolute -left-1 top-1/2 -translate-y-1/2 flex -space-x-1">
+                        {otherUsersViewing.slice(0, 2).map(u => (
+                            <div key={u.id} className="w-1.5 h-3 rounded-full bg-indigo-400 animate-pulse border border-indigo-900" title={`${u.name} is viewing`} />
+                        ))}
+                    </div>
+                )}
 
-    // Get root-level folders and unfiled requests
-    const rootFolders = folders.filter(f => !f.parentId).sort((a, b) => a.order - b.order);
-    const unfiledRequests = endpoints.filter(r => !r.folderId);
+                {isSelectionMode && (
+                    <div className={`w-3.5 h-3.5 rounded border transition-all flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-500 bg-white/5'}`}>
+                        {isSelected && <CheckCircle2 size={10} className="text-white" />}
+                    </div>
+                )}
+                {canEdit && !isSelectionMode && (
+                    <GripVertical size={10} className={`opacity-0 group-hover:opacity-30 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+                )}
+                <span className={`text-[8px] font-black w-8 flex-shrink-0 ${isActive && !isSelectionMode ? 'text-white' : getMethodColor(ep.method)}`}>{ep.method}</span>
+                <span className="text-[11px] truncate flex-1 font-medium">{ep.name}</span>
+                
+                {otherUsersViewing.length > 0 && (
+                    <div className="flex items-center gap-0.5 opacity-60">
+                        <Eye size={10} className="text-indigo-400" />
+                        <span className="text-[8px] font-black uppercase text-indigo-400">{otherUsersViewing[0].metadata?.field || 'view'}</span>
+                    </div>
+                )}
+
+                {canEdit && !isSelectionMode && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onMenuToggle(isMenuOpen ? null : index); }}
+                        className={`p-1 rounded hover:bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity ${isMenuOpen ? 'opacity-100' : ''}`}
+                    >
+                        <MoreVertical size={12} />
+                    </button>
+                )}
+
+                {isMenuOpen && (
+                    <div
+                        ref={menuRef}
+                        className={`absolute right-0 top-full mt-1 z-50 w-44 rounded-xl border ${borderCol} ${isDark ? 'bg-[#1a1b26]' : 'bg-white'} shadow-2xl overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-100`}
+                    >
+                        <button onClick={(e) => onDuplicate(index, e)} className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <Copy size={12} /> Duplicate
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onCopyUrl(ep); onMenuToggle(null); }} className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <ExternalLink size={12} /> Copy URL
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onCopyAsCurl(ep); onMenuToggle(null); }} className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <Terminal size={12} /> Copy as cURL
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onCopyAsFetch(ep); onMenuToggle(null); }} className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <Zap size={12} /> Copy as Fetch
+                        </button>
+                        <div className="h-px bg-white/5 my-1" />
+                        <button onClick={(e) => onDelete(index, e)} className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 text-red-400 ${isDark ? 'hover:bg-red-500/10' : 'hover:bg-red-50'}`}>
+                            <Trash2 size={12} /> Delete
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div
             className={`${secondaryBg} border-r ${borderCol} flex flex-col transition-all duration-300 z-20 ${isCollapsed ? 'w-12' : ''}`}
             style={{ width: isCollapsed ? '48px' : `${width}px` }}
         >
-            {/* Premium Header */}
-            <div className={`p-4 border-b ${borderCol} flex flex-col gap-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50/50'}`}>
+            {/* Header */}
+            <div className={`p-4 border-b ${borderCol} flex flex-col gap-4 ${isDark ? 'bg-white/5' : 'bg-gray-50/50'}`}>
                 <div className="flex items-center justify-between">
                     {!isCollapsed && (
                         <div className="flex items-center gap-2 overflow-hidden">
-                            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
+                            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg">
                                 <Database size={14} className="text-white" />
                             </div>
                             <h2 className={`font-bold ${textColor} truncate text-sm tracking-tight`} title={doc.title}>
@@ -777,493 +311,211 @@ function SidebarComponent({
                             </h2>
                         </div>
                     )}
-                    <button
-                        onClick={onToggleCollapse}
-                        className={`p-1.5 rounded-lg ${subTextColor} hover:bg-white/10 hover:text-violet-400 transition-all duration-200 border border-transparent hover:border-white/5`}
-                        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    >
-                        {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button onClick={onDownloadMarkdown} className={`p-1.5 rounded-lg border ${borderCol} ${inputBg} ${subTextColor} hover:text-emerald-400 transition-all`} title="Download Markdown"><Download size={14} /></button>
+                        {(onExportPostman || onExportOpenApi) && (
+                            <div className="flex items-center gap-1">
+                                {onExportPostman && <button onClick={onExportPostman} className={`p-1.5 rounded-lg border ${borderCol} ${inputBg} ${subTextColor} hover:text-amber-400 transition-all`} title="Export Postman"><Download size={14} /></button>}
+                                {onExportOpenApi && <button onClick={onExportOpenApi} className={`p-1.5 rounded-lg border ${borderCol} ${inputBg} ${subTextColor} hover:text-indigo-400 transition-all`} title="Export OpenAPI 3.1"><Zap size={14} /></button>}
+                            </div>
+                        )}
+                        <button
+                            onClick={onToggleCollapse}
+                            className={`p-1.5 rounded-lg ${subTextColor} hover:bg-white/10 hover:text-indigo-400 transition-all`}
+                        >
+                            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                        </button>
+                    </div>
                 </div>
             </div>
+
             {!isCollapsed && (
-                <>
-                    <div className="flex flex-wrap gap-1 mt-1">
+                <div className="p-3 space-y-3">
+                    <div className="flex gap-1">
+                        {canEdit && (
+                            <button
+                                onClick={onAddRequest}
+                                className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${isDark ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}
+                                title="New Request"
+                            >
+                                <Plus size={14} /> <span className="font-bold uppercase tracking-widest text-[9px]">Request</span>
+                            </button>
+                        )}
                         {canEdit && (
                             <button
                                 onClick={() => setIsImportOpen(true)}
-                                className={`p-1.5 rounded flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
-                                    ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-600/30'
-                                    : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100'
-                                    }`}
+                                className={`p-1.5 rounded border ${isDark ? 'bg-white/5 text-gray-400 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200'} transition-all hover:bg-white/10`}
                                 title="Import cURL"
                             >
                                 <Upload size={14} />
                             </button>
                         )}
-                        {onRunCollection && (
-                            <button
-                                onClick={onRunCollection}
-                                className={`p-1.5 rounded flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
-                                    ? 'bg-purple-600/20 text-purple-400 border-purple-500/30 hover:bg-purple-600/30'
-                                    : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100'
-                                    }`}
-                                title="Run Collection"
-                            >
-                                <Play size={14} />
-                            </button>
-                        )}
-                        {onShowSnapshots && (
-                            <button
-                                onClick={onShowSnapshots}
-                                className={`p-1.5 rounded flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
-                                    ? 'bg-blue-600/20 text-blue-400 border-blue-500/30 hover:bg-blue-600/30'
-                                    : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
-                                    }`}
-                                title="Collection Snapshots"
-                            >
-                                <Clock size={14} />
-                            </button>
-                        )}
                         {canEdit && (
-                            <button
-                                onClick={() => {
-                                    setIsSelectionMode(!isSelectionMode);
-                                    if (isSelectionMode) {
-                                        setSelectedRequestIds(new Set());
-                                    }
-                                }}
-                                className={`p-1.5 rounded flex items-center justify-center gap-1 transition-all border ${isSelectionMode
-                                    ? 'bg-violet-600 text-white border-violet-500 shadow-inner'
-                                    : theme === 'dark'
-                                        ? 'bg-violet-600/20 text-violet-400 border-violet-500/30 hover:bg-violet-600/30'
-                                        : 'bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100'
-                                    }`}
-                                title={isSelectionMode ? "Exit Selection Mode" : "Enter Selection Mode"}
-                            >
-                                <ListChecks size={14} />
-                            </button>
-                        )}
-                        {canEdit && (
-                            <button
-                                onClick={onAddRequest}
-                                className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
-                                    ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-600/30'
-                                    : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100'
-                                    }`}
-                                title="Add New Request (Alt+N)"
-                            >
-                                <Plus size={14} /> <span className="font-bold">NEW</span>
-                            </button>
-                        )}
-                        {canEdit && onAddFolder && (
                             <button
                                 onClick={onAddFolder}
-                                className={`p-1.5 rounded flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
-                                    ? 'bg-yellow-600/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-600/30'
-                                    : 'bg-yellow-50 text-yellow-600 border-yellow-100 hover:bg-yellow-100'
-                                    }`}
-                                title="Add New Folder"
+                                className={`p-1.5 rounded border ${isDark ? 'bg-white/5 text-gray-400 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200'} transition-all hover:bg-white/10`}
+                                title="New Folder"
                             >
                                 <FolderPlus size={14} />
                             </button>
                         )}
-                        {canEdit && (
-                            <>
-                                {canAdmin && (
-                                    <button
-                                        onClick={onShare}
-                                        className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${theme === 'dark'
-                                            ? 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
-                                            : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                                            }`}
-                                        title="Manage Team & Sharing"
-                                    >
-                                        <Users size={14} />
-                                    </button>
-                                )}
-                                <button
-                                    onClick={onSaveCollection}
-                                    disabled={!isDirty}
-                                    className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all relative border ${isDirty
-                                        ? 'bg-green-600/20 text-green-400 border-green-600/30 hover:bg-green-600/30 shadow-md'
-                                        : theme === 'dark'
-                                            ? 'bg-gray-800 text-gray-500 border-gray-700 opacity-50 cursor-not-allowed'
-                                            : 'bg-gray-100 text-gray-400 border-gray-200 opacity-50 cursor-not-allowed'
-                                        }`}
-                                    title={isDirty ? "Save Collection (Ctrl+S)" : "No collection changes to save"}
-                                >
-                                    <Save size={14} />
-                                    {isDirty && (
-                                        <span className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-gray-800 animate-pulse" />
-                                    )}
-                                </button>
-                            </>
-                        )}
                         <button
-                            onClick={onDownloadMarkdown}
-                            className={`p-1.5 ${theme === 'dark'
-                                ? 'bg-gray-700 text-gray-300 border-gray-600'
-                                : 'bg-gray-100 text-gray-700 border-gray-300'
-                                } hover:bg-opacity-80 rounded border flex-1 flex items-center justify-center gap-1 transition-all`}
-                            title="Download Markdown"
+                            onClick={() => {
+                                setIsSelectionMode(!isSelectionMode);
+                                if (!isSelectionMode) setSelectedRequestIds(new Set());
+                            }}
+                            className={`p-1.5 rounded border transition-all ${isSelectionMode ? 'bg-violet-600 text-white border-violet-500 shadow-lg' : `${isDark ? 'bg-white/5 text-gray-400 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200'} hover:bg-white/10`}`}
+                            title="Selection Mode"
                         >
-                            <Download size={14} /> MD
+                            <ListChecks size={14} />
                         </button>
-                        {canEdit && (
-                            <button
-                                onClick={onOpenEnvModal}
-                                className={`p-1.5 ${theme === 'dark'
-                                    ? 'bg-gray-700 text-gray-300 border-gray-600'
-                                    : 'bg-gray-100 text-gray-700 border-gray-300'
-                                    } hover:bg-opacity-80 rounded border flex-1 flex items-center justify-center gap-1 transition-all`}
-                                title="Environment Variables"
-                            >
-                                <Settings size={14} />
-                            </button>
-                        )}
                     </div>
 
-                    {/* Public Slug Editor - shows when doc is public */}
-                    {doc.isPublic && canEdit && (
-                        <div className={`mt-2 p-2 rounded-lg border ${theme === 'dark' ? 'bg-gray-900/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                                <Globe size={12} className="text-green-500" />
-                                <span className={`text-[10px] font-semibold uppercase tracking-wider ${subTextColor}`}>Public URL</span>
-                            </div>
-                            {showSlugEditor ? (
-                                <div className="flex gap-1">
-                                    <input
-                                        type="text"
-                                        value={slugInput}
-                                        onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-                                        placeholder="my-api-docs"
-                                        className={`flex-1 text-[11px] px-2 py-1 rounded border ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:outline-none focus:ring-1 focus:ring-indigo-500`}
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            if (slugInput.length >= 3 && onSlugUpdate) {
-                                                onSlugUpdate(slugInput);
-                                                setShowSlugEditor(false);
-                                            }
-                                        }}
-                                        className="text-[10px] px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all"
-                                    >
-                                        Save
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-1">
-                                    {doc.slug ? (
-                                        <a
-                                            href={`/public/${doc.slug}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 transition-colors truncate"
-                                        >
-                                            <ExternalLink size={10} />
-                                            /public/{doc.slug}
-                                        </a>
-                                    ) : (
-                                        <span className={`text-[10px] ${subTextColor}`}>No slug set</span>
-                                    )}
-                                    {doc.slug && (
-                                        <button
-                                            onClick={() => {
-                                                const url = `${window.location.origin}/public/${doc.slug}`;
-                                                navigator.clipboard.writeText(url);
-                                                setSlugCopied(true);
-                                                setTimeout(() => setSlugCopied(false), 1500);
-                                            }}
-                                            className={`text-[10px] px-1.5 py-0.5 rounded ${slugCopied ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-200')} transition-all`}
-                                            title={slugCopied ? 'Copied!' : 'Copy public URL'}
-                                        >
-                                            {slugCopied ? <span className="text-[10px]">✓</span> : <Copy size={10} />}
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => setShowSlugEditor(true)}
-                                        className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-200'} transition-all`}
-                                    >
-                                        <Edit3 size={10} />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" size={12} />
+                        <input
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className={`w-full pl-8 pr-3 py-1.5 rounded-lg border ${borderCol} ${inputBg} text-[11px] outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all`}
+                            placeholder="Filter requests..."
+                        />
+                    </div>
+                </div>
             )}
 
-            {/* Endpoint List with Folders */}
-            {
-                !isCollapsed && (
-                    <div className="flex-1 overflow-y-auto">
-                        {/* Root Folders */}
-                        {rootFolders.map((folder) => (
-                            <FolderItemComponent
-                                key={folder.id}
-                                folder={folder}
-                                allFolders={folders}
-                                allEndpoints={endpoints}
-                                selectedIdx={selectedIdx}
-                                canEdit={canEdit}
-                                openMenuIdx={openMenuIdx}
-                                draggedIdx={draggedIdx}
-                                expandedFolders={expandedFolders}
-                                theme={theme}
-                                secondaryBg={secondaryBg}
-                                borderCol={borderCol}
-                                textColor={textColor}
-                                subTextColor={subTextColor}
-                                onToggleExpand={handleToggleExpand}
-                                onSelectEndpoint={onSelectEndpoint}
-                                onEditFolder={onEditFolder}
-                                onDeleteFolder={onDeleteFolder}
-                                onAddSubfolder={onAddSubfolder}
-                                onCopyMarkdown={onCopyMarkdown}
-                                onCopyAsCurl={onCopyAsCurl}
-                                onCopyAsFetch={onCopyAsFetch}
-                                onCopyUrl={onCopyUrl}
-                                onDuplicate={onDuplicate}
-                                onDelete={onDelete}
-                                onMenuToggle={onMenuToggle}
-                                onDragStart={onDragStart}
-                                onDragOver={onDragOver}
-                                onDragEnd={onDragEnd}
-                                onDropOnFolder={handleDropOnFolder}
-                                onFolderDragStart={setDraggedFolderId}
-                                draggedFolderId={draggedFolderId}
-                                onReorderFolders={handleFolderReorder}
-                                onReorderRequests={onReorderRequests}
-                                selectedRequestIds={selectedRequestIds}
-                                onToggleSelect={handleToggleSelect}
-                                isSelectionMode={isSelectionMode}
-                            />
-                        ))}
-
-                        {/* Unfiled Requests (requests without a folder) */}
-                        {/* Unfiled Requests (requests without a folder) */}
-                        <div
-                            onDragOver={(e) => { e.preventDefault(); }}
-                            onDrop={handleRootDrop}
-                            className="min-h-[50px]"
-                        >
-                            {unfiledRequests.map((request) => {
-                                const globalIdx = endpoints.indexOf(request);
-                                const isSelected = globalIdx === selectedIdx;
-
-                                return (
-                                    <div
-                                        key={`${request.id || 'req'}-${globalIdx}`}
-                                        onClick={() => onSelectEndpoint(globalIdx)}
-                                        draggable={canEdit}
-                                        onDragStart={() => canEdit && onDragStart(globalIdx)}
-                                        onDragOver={(e) => canEdit && onDragOver(e, globalIdx)}
-                                        onDragEnd={() => canEdit && onDragEnd()}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            if (draggedIdx !== null && draggedIdx !== globalIdx && onReorderRequests) {
-                                                onReorderRequests(draggedIdx, globalIdx);
-                                            }
-                                        }}
-                                        className={`group flex items-center justify-between p-2 cursor-pointer border-l-2 transition-all relative ${isSelected
-                                            ? theme === 'dark'
-                                                ? 'bg-indigo-600/20 border-indigo-500'
-                                                : 'bg-indigo-50 border-indigo-500'
-                                            : `border-transparent ${hoverBg}`
-                                            } ${draggedIdx === globalIdx ? 'opacity-50' : ''} ${selectedRequestIds.has(request.id as string) ? 'bg-indigo-600/10' : ''}`}
-                                    >
-                                        <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                            {canEdit && (
-                                                <GripVertical
-                                                    size={10}
-                                                    className={`${theme === 'dark'
-                                                        ? 'text-gray-600 group-hover:text-gray-400'
-                                                        : 'text-gray-300 group-hover:text-gray-500'
-                                                        } cursor-grab active:cursor-grabbing flex-shrink-0`}
-                                                />
-                                            )}
-                                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                {isSelectionMode && (
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedRequestIds.has(request.id as string)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => handleToggleSelect(request.id as string, (e.nativeEvent as any).shiftKey)}
-                                                        className="w-3 h-3 rounded border-gray-400 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                                    />
-                                                )}
-                                                <span className={`text-[9px] font-bold px-1 py-0.5 rounded w-10 text-center flex-shrink-0 ${getMethodColor(request.method)}`}>
-                                                    {request.method}
-                                                </span>
-                                            </div>
-                                            <span className={`truncate text-[11px] ${isSelected
-                                                ? `font-bold ${textColor}`
-                                                : subTextColor
-                                                }`}>
-                                                {request.name || 'Untitled'}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                            <RequestMenuDropdown
-                                                theme={theme}
-                                                isOpen={openMenuIdx === globalIdx}
-                                                request={request}
-                                                globalIdx={globalIdx}
-                                                secondaryBg={secondaryBg}
-                                                borderCol={borderCol}
-                                                textColor={textColor}
-                                                hoverBg={hoverBg}
-                                                onCopyAsCurl={onCopyAsCurl}
-                                                onCopyAsFetch={onCopyAsFetch}
-                                                onCopyUrl={onCopyUrl}
-                                                onDuplicate={onDuplicate}
-                                                onDelete={onDelete}
-                                                onMenuToggle={onMenuToggle}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Empty state */}
-                        {endpoints.length === 0 && folders.length === 0 && (
-                            <div className={`p-4 text-center ${subTextColor} text-sm`}>
-                                No requests yet. Click "NEW" to add one.
-                            </div>
-                        )}
-                    </div>
-                )
-            }
-
-            {/* Bulk Action Bar - conditons on both selection mode and item selection */}
-            {
-                isSelectionMode && selectedRequestIds.size > 0 && (
-                    <div className={`p-2 border-t ${borderCol} ${theme === 'dark' ? 'bg-indigo-900/40' : 'bg-indigo-50'} animate-in slide-in-from-bottom flex flex-col gap-2`}>
-                        <div className="flex items-center justify-between px-1">
-                            <span className="text-[10px] font-bold text-indigo-500">{selectedRequestIds.size} selected</span>
-                            <button onClick={() => setSelectedRequestIds(new Set())} className={`text-[10px] ${subTextColor} hover:text-indigo-500`}>Clear</button>
-                        </div>
-                        <div className="flex gap-1">
-                            <button
-                                onClick={() => {
-                                    if (confirm(`Delete ${selectedRequestIds.size} requests?`) && onBulkDelete) {
-                                        onBulkDelete(Array.from(selectedRequestIds));
-                                        setSelectedRequestIds(new Set());
-                                    }
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-red-600/20 text-red-500 rounded text-[10px] font-bold hover:bg-red-600/30 transition-all border border-red-500/30"
-                            >
-                                <Trash2 size={12} /> Delete
-                            </button>
-
-                            <div className="relative flex-1">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowBulkMoveMenu(!showBulkMoveMenu);
-                                    }}
-                                    className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-md"
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {!isCollapsed && (
+                    <div className="p-2 space-y-1">
+                        {/* Folders */}
+                        {rootFolders.map(folder => (
+                            <div key={folder.id} className="space-y-1">
+                                <div
+                                    onClick={(e) => toggleFolder(folder.id, e)}
+                                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all ${expandedFolders.has(folder.id) ? 'bg-white/5' : 'hover:bg-white/5'}`}
                                 >
-                                    <Folder size={12} /> Move
-                                </button>
-                                {showBulkMoveMenu && (
-                                    <div
-                                        className="absolute bottom-full left-0 w-48 z-[60] mb-2"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <div className={`shadow-2xl border ${borderCol} ${secondaryBg} rounded-lg py-1 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150`}>
-                                            <button
-                                                onClick={() => {
-                                                    onBulkMove?.(Array.from(selectedRequestIds), null);
-                                                    setSelectedRequestIds(new Set());
-                                                    setShowBulkMoveMenu(false);
-                                                }}
-                                                className={`w-full text-left px-3 py-1.5 ${hoverBg} text-[10px] ${textColor} border-b ${borderCol} border-opacity-30 flex items-center gap-2`}
-                                            >
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Root Level
-                                            </button>
-                                            <div className="max-h-60 overflow-y-auto">
-                                                {folders.length === 0 && (
-                                                    <div className={`px-3 py-2 text-[10px] ${subTextColor} italic`}>No folders available</div>
-                                                )}
-                                                {folders.map(f => (
-                                                    <button
-                                                        key={f.id}
-                                                        onClick={() => {
-                                                            onBulkMove?.(Array.from(selectedRequestIds), f.id);
-                                                            setSelectedRequestIds(new Set());
-                                                            setShowBulkMoveMenu(false);
-                                                        }}
-                                                        className={`w-full text-left px-3 py-1.5 ${hoverBg} text-[10px] ${textColor} truncate flex items-center gap-2`}
-                                                    >
-                                                        <Folder size={10} className="text-yellow-500 flex-shrink-0" /> {f.name}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                        <ChevronRight size={12} className={`transition-transform flex-shrink-0 ${expandedFolders.has(folder.id) ? 'rotate-90' : ''}`} />
+                                        <span className={`text-[11px] font-bold truncate ${textColor}`}>{folder.name}</span>
+                                    </div>
+                                    {canEdit && !isSelectionMode && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onEditFolder(folder); }}
+                                            className="p-1 rounded hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Edit3 size={10} className="text-gray-500" />
+                                        </button>
+                                    )}
+                                </div>
+                                {expandedFolders.has(folder.id) && (
+                                    <div className="ml-3 border-l border-white/5 pl-2 py-1 space-y-0.5">
+                                        {endpoints.filter(e => e.folderId === folder.id).map((ep, i) => renderEndpoint(ep, endpoints.indexOf(ep)))}
+                                        {endpoints.filter(e => e.folderId === folder.id).length === 0 && (
+                                            <p className="text-[9px] text-gray-600 italic py-1 px-2">Empty folder</p>
+                                        )}
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    </div>
-                )
-            }
-            {/* Footer with Status & AI Controls */}
-            <div className={`mt-auto border-t ${borderCol} p-3 space-y-3`}>
-                {/* Status Indicators */}
-                {!isCollapsed && (
-                    <div className="flex items-center justify-between px-1">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`} />
-                            <span className={`text-[9px] uppercase font-bold tracking-tighter ${subTextColor}`}>
-                                {isOnline ? 'Online' : 'Offline'}
-                            </span>
-                        </div>
+                        ))}
 
-                        {isSyncing && (
-                            <div className="flex items-center gap-1.5">
-                                <RotateCcw size={10} className="animate-spin text-indigo-400" />
-                                <span className="text-[9px] font-medium text-indigo-400">Syncing...</span>
-                            </div>
-                        )}
-
-                        {!isSyncing && queueLength > 0 && (
-                            <div className="flex items-center gap-1">
-                                <Clock size={10} className="text-amber-400" />
-                                <span className="text-[9px] font-medium text-amber-400">{queueLength} cached</span>
-                            </div>
-                        )}
+                        {/* Unfiled Requests */}
+                        {endpoints.filter(r => !r.folderId).map((ep, i) => renderEndpoint(ep, endpoints.indexOf(ep)))}
                     </div>
                 )}
-
-                {/* AI Assistant Toggle */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Sparkles size={12} className={aiEnabled ? 'text-indigo-400' : subTextColor} />
-                        <span className={`text-[10px] uppercase font-bold tracking-wider ${aiEnabled ? textColor : subTextColor}`}>
-                            AI Assistant
-                        </span>
-                    </div>
-                    <button
-                        onClick={() => onAiToggle?.(!aiEnabled)}
-                        className={`w-8 h-4 rounded-full transition-all relative ${aiEnabled ? 'bg-indigo-600' : theme === 'dark' ? 'bg-gray-800' : 'bg-gray-300'}`}
-                    >
-                        <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${aiEnabled ? 'left-4.5' : 'left-0.5'}`} />
-                    </button>
-                </div>
             </div>
 
-            <ImportCurlModal
-                isOpen={isImportOpen}
-                onClose={() => setIsImportOpen(false)}
-                onImport={onAddRequest}
+            {/* Selection Mode Actions */}
+            {isSelectionMode && !isCollapsed && selectedRequestIds.size > 0 && (
+                <div className={`p-3 border-t ${borderCol} bg-indigo-600/10 animate-in slide-in-from-bottom-2`}>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-black uppercase text-indigo-400">{selectedRequestIds.size} Selected</span>
+                        <button onClick={() => setSelectedRequestIds(new Set())} className="text-[9px] font-bold text-gray-500 hover:text-white uppercase">Clear</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 relative">
+                        <button 
+                            onClick={() => setShowBulkMoveMenu(!showBulkMoveMenu)}
+                            className="flex items-center justify-center gap-1.5 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-bold text-gray-300 transition-all border border-white/5"
+                        >
+                            <Move size={12} /> MOVE
+                        </button>
+                        <button 
+                            onClick={() => { if (onBulkDelete) onBulkDelete(Array.from(selectedRequestIds)); setIsSelectionMode(false); }}
+                            className="flex items-center justify-center gap-1.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-[10px] font-bold text-red-400 transition-all border border-red-500/20"
+                        >
+                            <Trash2 size={12} /> DELETE
+                        </button>
+
+                        {/* Bulk Move Menu */}
+                        {showBulkMoveMenu && (
+                            <div className={`absolute bottom-full left-0 mb-2 w-full max-h-48 overflow-y-auto rounded-xl border ${borderCol} ${isDark ? 'bg-[#1a1b26]' : 'bg-white'} shadow-2xl z-50 py-1`}>
+                                <button 
+                                    onClick={() => { if (onBulkMove) onBulkMove(Array.from(selectedRequestIds), null); setIsSelectionMode(false); setShowBulkMoveMenu(false); }}
+                                    className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'}`}
+                                >
+                                    <Folder size={12} className="text-gray-500" /> [Root]
+                                </button>
+                                {folders.map(f => (
+                                    <button 
+                                        key={f.id}
+                                        onClick={() => { if (onBulkMove) onBulkMove(Array.from(selectedRequestIds), f.id); setIsSelectionMode(false); setShowBulkMoveMenu(false); }}
+                                        className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'}`}
+                                    >
+                                        <Folder size={12} className="text-indigo-400" /> {f.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Footer */}
+            {!isCollapsed && (
+                <div className={`p-3 border-t ${borderCol} flex flex-col gap-3 ${isDark ? 'bg-white/5' : 'bg-gray-50/50'}`}>
+                    <button
+                        onClick={() => onAiToggle(!aiEnabled)}
+                        className={`flex items-center justify-between w-full p-2.5 rounded-xl border transition-all ${aiEnabled
+                            ? 'bg-indigo-600/10 border-indigo-500/30 text-indigo-400 shadow-lg shadow-indigo-900/20'
+                            : 'bg-black/20 border-white/5 text-gray-500 hover:bg-white/5'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Sparkles size={14} className={aiEnabled ? 'animate-pulse text-indigo-400' : 'text-gray-600'} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">AI Copilot</span>
+                        </div>
+                        <div className={`w-7 h-4 rounded-full relative transition-colors ${aiEnabled ? 'bg-indigo-600' : 'bg-gray-800'}`}>
+                            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all shadow-sm ${aiEnabled ? 'left-3.5' : 'left-0.5'}`} />
+                        </div>
+                    </button>
+
+                    {activeUsers.length > 0 && (
+                        <div className="flex -space-x-2 overflow-hidden px-1">
+                            {activeUsers.slice(0, 5).map((u) => (
+                                <div key={u.id} className={`w-6 h-6 rounded-full border-2 ${isDark ? 'border-[#0a0a0b]' : 'border-white'} bg-indigo-600 flex items-center justify-center text-[8px] font-bold text-white shadow-sm`} title={u.name || u.email}>
+                                    {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full rounded-full object-cover" /> : (u.name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] px-1 mt-1">
+                        <div className="flex items-center gap-1.5">
+                            <Activity size={10} />
+                            <span>Workspace</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                            <span className="text-green-500 font-black">Live</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <ImportCurlModal 
+                isOpen={isImportOpen} 
+                onClose={() => setIsImportOpen(false)} 
+                onImport={(data) => { onAddRequest(data); setIsImportOpen(false); }} 
             />
-        </div >
+        </div>
     );
-}
+};
 
 export const Sidebar = memo(SidebarComponent);

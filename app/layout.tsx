@@ -26,8 +26,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <ThemeProvider>
             <BetaModeProvider>
               <Provider>
                 <Toaster position="bottom-right" />
@@ -37,8 +37,8 @@ export default function RootLayout({
                 <SystemResourceWidget />
               </Provider>
             </BetaModeProvider>
-          </AuthProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

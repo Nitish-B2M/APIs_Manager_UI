@@ -1,12 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Power, Save, Trash2, Plus, Copy, Clock, Settings2, Globe, CheckCircle2, Loader2, Sparkles, ExternalLink } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import { Power, Save, Trash2, Plus, Copy, Clock, Settings2, Globe, CheckCircle2, Loader2, Sparkles, ExternalLink, Filter } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { api, API_URL } from '../../../../utils/api';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 import { toast } from 'react-hot-toast';
+
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex items-center justify-center bg-black/10">
+            <Loader2 size={20} className="animate-spin text-indigo-500" />
+        </div>
+    )
+});
 
 interface MockTabProps {
     requestId: string;
@@ -23,14 +32,27 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
         headers: {},
         body: '',
         delay: 0,
-        isActive: true
+        isActive: true,
+        rules: []
     });
+
+    const [headerList, setHeaderList] = useState<{ key: string, value: string }[]>([]);
+    const [rules, setRules] = useState<any[]>([]);
 
     const mockUrl = `${API_URL}/m/${requestId}`;
 
     useEffect(() => {
         fetchConfig();
     }, [requestId]);
+
+    useEffect(() => {
+        if (config.headers) {
+            setHeaderList(Object.entries(config.headers).map(([key, value]) => ({ key, value: String(value) })));
+        }
+        if (config.rules) {
+            setRules(config.rules);
+        }
+    }, [config.headers, config.rules]);
 
     const fetchConfig = async () => {
         setIsLoading(true);
@@ -49,9 +71,17 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            // Filter out empty header keys
+            const cleanHeaders: Record<string, string> = {};
+            headerList.forEach(h => {
+                if (h.key.trim()) cleanHeaders[h.key.trim()] = h.value;
+            });
+
             await api.mock.updateConfig({
                 requestId,
-                ...config
+                ...config,
+                headers: cleanHeaders,
+                rules: rules
             });
             toast.success('Mock configuration saved');
         } catch (error: any) {
@@ -61,19 +91,41 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
         }
     };
 
-    const handleHeaderChange = (key: string, value: string, oldKey?: string) => {
-        const newHeaders = { ...config.headers };
-        if (oldKey && oldKey !== key) {
-            delete newHeaders[oldKey];
-        }
-        newHeaders[key] = value;
-        setConfig({ ...config, headers: newHeaders });
+    const updateHeader = (index: number, key: string, value: string) => {
+        const newList = [...headerList];
+        newList[index] = { key, value };
+        setHeaderList(newList);
     };
 
-    const removeHeader = (key: string) => {
-        const newHeaders = { ...config.headers };
-        delete newHeaders[key];
-        setConfig({ ...config, headers: newHeaders });
+    const addHeader = () => {
+        setHeaderList([...headerList, { key: '', value: '' }]);
+    };
+
+    const removeHeader = (index: number) => {
+        setHeaderList(headerList.filter((_, i) => i !== index));
+    };
+
+    const addRule = () => {
+        setRules([...rules, {
+            id: Math.random().toString(36).substring(7),
+            condition: { type: 'header', key: '', operator: 'equals', value: '' },
+            response: { statusCode: 200, body: '', headers: {} }
+        }]);
+    };
+
+    const updateRule = (index: number, field: string, value: any) => {
+        const newRules = [...rules];
+        if (field.includes('.')) {
+            const [parent, child] = field.split('.');
+            newRules[index][parent][child] = value;
+        } else {
+            newRules[index][field] = value;
+        }
+        setRules(newRules);
+    };
+
+    const removeRule = (index: number) => {
+        setRules(rules.filter((_, i) => i !== index));
     };
 
     if (isLoading) {
@@ -85,7 +137,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
     }
 
     return (
-        <div className="h-full flex flex-col gap-4 overflow-y-auto">
+        <div className="h-full flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
             {/* Header / Status Section */}
             <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-indigo-500/30 bg-indigo-500/5">
                 <div className="flex flex-col gap-1">
@@ -149,13 +201,21 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                         >
                             <option value="200">200 OK</option>
                             <option value="201">201 Created</option>
+                            <option value="202">202 Accepted</option>
                             <option value="204">204 No Content</option>
+                            <option value="301">301 Moved Permanently</option>
+                            <option value="302">302 Found</option>
                             <option value="400">400 Bad Request</option>
                             <option value="401">401 Unauthorized</option>
                             <option value="403">403 Forbidden</option>
                             <option value="404">404 Not Found</option>
+                            <option value="405">405 Method Not Allowed</option>
+                            <option value="409">409 Conflict</option>
+                            <option value="422">422 Unprocessable Entity</option>
+                            <option value="429">429 Too Many Requests</option>
                             <option value="500">500 Internal Server Error</option>
                             <option value="502">502 Bad Gateway</option>
+                            <option value="503">503 Service Unavailable</option>
                         </select>
                     </div>
 
@@ -182,44 +242,136 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                             <label className="text-[10px] font-bold uppercase tracking-wider">Response Headers</label>
                         </div>
                         <button
-                            onClick={() => handleHeaderChange('', '')}
+                            onClick={addHeader}
                             className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300"
                         >
                             + ADD
                         </button>
                     </div>
-                    <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2">
-                        {Object.entries(config.headers || {}).map(([key, value], idx) => (
+                    <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                        {headerList.map((h, idx) => (
                             <div key={idx} className="flex gap-2">
                                 <input
-                                    value={key}
-                                    onChange={(e) => handleHeaderChange(e.target.value, String(value), key)}
+                                    value={h.key}
+                                    onChange={(e) => updateHeader(idx, e.target.value, h.value)}
                                     className={`flex-1 px-2 py-1.5 ${themeClasses.inputBg} border ${themeClasses.borderCol} ${themeClasses.textColor} rounded text-[11px] outline-none`}
                                     placeholder="Header Key"
                                 />
                                 <input
-                                    value={String(value)}
-                                    onChange={(e) => handleHeaderChange(key, e.target.value)}
+                                    value={h.value}
+                                    onChange={(e) => updateHeader(idx, h.key, e.target.value)}
                                     className={`flex-1 px-2 py-1.5 ${themeClasses.inputBg} border ${themeClasses.borderCol} ${themeClasses.textColor} rounded text-[11px] outline-none`}
                                     placeholder="Value"
                                 />
                                 <button
-                                    onClick={() => removeHeader(key)}
+                                    onClick={() => removeHeader(idx)}
                                     className="p-1.5 text-gray-500 hover:text-red-400"
                                 >
                                     <Trash2 size={12} />
                                 </button>
                             </div>
                         ))}
-                        {Object.keys(config.headers).length === 0 && (
+                        {headerList.length === 0 && (
                             <div className="text-center py-4 text-gray-600 text-[10px] italic">No custom headers defined</div>
                         )}
                     </div>
                 </div>
             </div>
 
+            {/* Conditional Rules Section */}
+            <div className={`p-4 rounded-xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50/50'}`}>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <Filter size={14} className="text-indigo-400" />
+                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Conditional Rules (Override Default)</span>
+                    </div>
+                    <button
+                        onClick={addRule}
+                        className="text-[10px] font-bold bg-indigo-600/10 text-indigo-400 px-3 py-1 rounded hover:bg-indigo-600/20 transition-all"
+                    >
+                        + ADD RULE
+                    </button>
+                </div>
+
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {rules.map((rule, idx) => (
+                        <div key={rule.id} className={`p-3 rounded-lg border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-black/20' : 'bg-white'} flex flex-col gap-3`}>
+                            <div className="flex items-center gap-3">
+                                <span className="text-[9px] font-bold text-gray-500">IF</span>
+                                <select
+                                    value={rule.condition.type}
+                                    onChange={(e) => updateRule(idx, 'condition.type', e.target.value)}
+                                    className={`px-2 py-1 rounded bg-transparent border ${themeClasses.borderCol} text-[10px] ${themeClasses.textColor} outline-none`}
+                                >
+                                    <option value="header">Header</option>
+                                    <option value="query">Query Param</option>
+                                    <option value="body">Body Key</option>
+                                </select>
+                                <input
+                                    placeholder="key"
+                                    value={rule.condition.key}
+                                    onChange={(e) => updateRule(idx, 'condition.key', e.target.value)}
+                                    className={`flex-1 px-2 py-1 rounded bg-transparent border ${themeClasses.borderCol} text-[10px] ${themeClasses.textColor} outline-none`}
+                                />
+                                <select
+                                    value={rule.condition.operator}
+                                    onChange={(e) => updateRule(idx, 'condition.operator', e.target.value)}
+                                    className={`px-2 py-1 rounded bg-transparent border ${themeClasses.borderCol} text-[10px] ${themeClasses.textColor} outline-none`}
+                                >
+                                    <option value="equals">==</option>
+                                    <option value="contains">contains</option>
+                                    <option value="regex">regex</option>
+                                    <option value="exists">exists</option>
+                                </select>
+                                {rule.condition.operator !== 'exists' && (
+                                    <input
+                                        placeholder="value"
+                                        value={rule.condition.value}
+                                        onChange={(e) => updateRule(idx, 'condition.value', e.target.value)}
+                                        className={`flex-1 px-2 py-1 rounded bg-transparent border ${themeClasses.borderCol} text-[10px] ${themeClasses.textColor} outline-none`}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-3 border-t pt-3 border-dashed border-gray-500/20">
+                                <span className="text-[9px] font-bold text-gray-500">THEN RETURN</span>
+                                <select
+                                    value={rule.response.statusCode}
+                                    onChange={(e) => updateRule(idx, 'response.statusCode', parseInt(e.target.value))}
+                                    className={`px-2 py-1 rounded bg-transparent border ${themeClasses.borderCol} text-[10px] ${themeClasses.textColor} outline-none`}
+                                >
+                                    <option value="200">200 OK</option>
+                                    <option value="201">201 Created</option>
+                                    <option value="400">400 Error</option>
+                                    <option value="401">401 Auth</option>
+                                    <option value="404">404 Not Found</option>
+                                    <option value="500">500 Server Err</option>
+                                </select>
+                                <input
+                                    placeholder="Response Body (JSON or string)"
+                                    value={rule.response.body}
+                                    onChange={(e) => updateRule(idx, 'response.body', e.target.value)}
+                                    className={`flex-[2] px-2 py-1 rounded bg-transparent border ${themeClasses.borderCol} text-[10px] ${themeClasses.textColor} outline-none`}
+                                />
+                                <button
+                                    onClick={() => removeRule(idx)}
+                                    className="p-1.5 text-gray-500 hover:text-red-400"
+                                >
+                                    <Trash2 size={12} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    {rules.length === 0 && (
+                        <div className="text-center py-6 border-2 border-dashed border-gray-500/10 rounded-xl">
+                            <p className="text-[10px] text-gray-500 italic">No conditional rules defined. All requests will return the default response below.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* Body Section */}
-            <div className="flex-1 flex flex-col min-h-[250px] gap-2">
+            <div className="flex-1 flex flex-col min-h-[300px] gap-2">
                 <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Response Body (JSON)</label>
                     <button

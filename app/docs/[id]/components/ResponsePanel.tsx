@@ -94,6 +94,7 @@ interface ResponsePanelProps {
     onWsClearMessages?: () => void;
     aiEnabled?: boolean;
     onExplainError?: (error: any) => Promise<string | null>;
+    shouldCopySingleLine?: boolean;
 }
 
 export function ResponsePanel({
@@ -117,7 +118,8 @@ export function ResponsePanel({
     onWsSendMessage,
     onWsClearMessages,
     aiEnabled,
-    onExplainError
+    onExplainError,
+    shouldCopySingleLine
 }: ResponsePanelProps) {
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
@@ -138,7 +140,8 @@ export function ResponsePanel({
 
     const handleCopyResponse = () => {
         if (!response?.data) return;
-        navigator.clipboard.writeText(JSON.stringify(response.data, null, 2));
+        const textToCopy = JSON.stringify(response.data, null, 2);
+        navigator.clipboard.writeText(shouldCopySingleLine ? textToCopy.replace(/\s+/g, '') : textToCopy);
         toast.success('Response copied');
     };
 

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../utils/api';
 import {
     Activity, Plus, Trash2, Play, CheckCircle2, Clock, Wifi,
-    WifiOff, RefreshCw, Bell, ChevronDown, ChevronUp, Loader2, X
+    WifiOff, RefreshCw, Bell, ChevronDown, ChevronUp, Loader2, X, Globe
 } from 'lucide-react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
@@ -14,6 +14,8 @@ import { useEffect } from 'react';
 
 interface MonitorDashboardProps {
     documentationId: string;
+    isPublic: boolean;
+    slug: string;
 }
 
 const FREQUENCIES = [
@@ -297,6 +299,112 @@ function ResponseChart({ history, theme }: { history: any[]; theme: string }) {
     );
 }
 
+// ─── 24h Latency Heatmap (Service Status Style) ───────────────────────────────
+function LatencyHeatmap({ heatmapData, theme }: { heatmapData: any[]; theme: string }) {
+    const [hover, setHover] = useState<{ bin: any; idx: number; x: number; y: number } | null>(null);
+
+    const bins = useMemo(() => {
+        const _bins: { time: Date; total: number; success: number; avgResponseTime: number | null }[] = [];
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        
+        for (let i = 23; i >= 0; i--) {
+            const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+            _bins.push({
+                time: d,
+                total: 0,
+                success: 0,
+                avgResponseTime: null as number | null
+            });
+        }
+        
+        if (heatmapData && Array.isArray(heatmapData)) {
+            heatmapData.forEach(row => {
+                const hTime = new Date(row.hour).getTime();
+                // Find closest bin
+                const bin = _bins.find(b => Math.abs(b.time.getTime() - hTime) < 1000 * 60 * 30);
+                if (bin) {
+                    bin.total = parseInt(row.total) || 0;
+                    bin.success = parseInt(row.success) || 0;
+                    bin.avgResponseTime = row.avgResponseTime ? parseInt(row.avgResponseTime) : null;
+                }
+            });
+        }
+        return _bins;
+    }, [heatmapData]);
+
+    const getColor = (bin: any) => {
+        if (bin.total === 0) return theme === 'dark' ? '#374151' : '#e5e7eb'; // gray-700 / gray-200
+        const successRate = bin.success / bin.total;
+        if (successRate < 0.8) return '#ef4444'; // red-500
+        if (successRate < 1.0) return '#f59e0b'; // amber-500
+        return '#10b981'; // emerald-500
+    };
+
+    return (
+        <div className="relative">
+            <div className="flex gap-1 h-12">
+                {bins.map((bin, i) => (
+                    <div
+                        key={i}
+                        className="flex-1 rounded-sm cursor-pointer transition-all hover:opacity-75"
+                        style={{ backgroundColor: getColor(bin) }}
+                        onMouseEnter={(e) => {
+                            const rect = (e.target as HTMLElement).getBoundingClientRect();
+                            setHover({ bin, idx: i, x: rect.left + rect.width / 2, y: rect.top });
+                        }}
+                        onMouseLeave={() => setHover(null)}
+                    />
+                ))}
+            </div>
+            
+            <div className={`mt-2 flex justify-between text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                <span>24 hours ago</span>
+                <span>Today</span>
+            </div>
+
+            {hover !== null && (
+                <div
+                    className={`fixed pointer-events-none px-3 py-2 rounded-xl text-xs shadow-lg border z-[9999] ${theme === 'dark'
+                        ? 'bg-[#1a1a2e] border-indigo-500/30 text-gray-200'
+                        : 'bg-white border-gray-200 text-gray-800'
+                        }`}
+                    style={{
+                        left: hover.x,
+                        top: hover.y - 8,
+                        transform: 'translate(-50%, -100%)',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    <div className="font-bold mb-1 text-[10px] uppercase text-gray-400 border-b border-gray-500/20 pb-1">
+                        {hover.bin.time.toLocaleDateString()} {hover.bin.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    {hover.bin.total === 0 ? (
+                        <span className="text-gray-500">No data for this hour</span>
+                    ) : (
+                        <div className="space-y-1">
+                            <div className="flex justify-between gap-4">
+                                <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Checks</span>
+                                <span className="font-mono font-bold">{hover.bin.success} / {hover.bin.total}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                                <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Success Rate</span>
+                                <span className={`font-mono font-bold ${hover.bin.success === hover.bin.total ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {Math.round((hover.bin.success / hover.bin.total) * 100)}%
+                                </span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                                <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Avg Latency</span>
+                                <span className="font-mono font-bold text-indigo-400">{hover.bin.avgResponseTime}ms</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Uptime bar with hover titles and click modals ───────────────────────────
 function UptimeBar({ history, theme }: { history: any[]; theme: string }) {
     const [clicked, setClicked] = useState<{ check: any; x: number; y: number } | null>(null);
@@ -347,6 +455,13 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
         queryFn: () => api.monitor.history(monitor.id, 100),
         enabled: expanded,
         refetchInterval: expanded ? 30000 : false,
+    });
+
+    const { data: heatmapRes, isLoading: heatLoading } = useQuery({
+        queryKey: ['monitor-heatmap', monitor.id],
+        queryFn: () => api.monitor.heatmap(monitor.id),
+        enabled: expanded,
+        refetchInterval: expanded ? 60000 : false,
     });
 
     const checkMutation = useMutation({
@@ -478,13 +593,20 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
             {/* Expanded detail */}
             {expanded && (
                 <div className={`border-t px-4 pb-4 pt-3 space-y-3 ${theme === 'dark' ? 'border-white/5' : 'border-gray-100'}`}>
-                    {histLoading ? (
+                    {histLoading || heatLoading ? (
                         <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-indigo-400" /></div>
                     ) : (
                         <>
                             <div>
                                 <p className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${themeClasses.subTextColor}`}>
-                                    Response Time Trend
+                                    24-Hour Latency Heatmap
+                                    <span className={`ml-2 font-normal normal-case ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>— hourly intervals</span>
+                                </p>
+                                <LatencyHeatmap heatmapData={heatmapRes?.data} theme={theme} />
+                            </div>
+                            <div>
+                                <p className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${themeClasses.subTextColor}`}>
+                                    Recent Latency Trend
                                     <span className={`ml-2 font-normal normal-case ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>— hover to inspect, click to pin details</span>
                                 </p>
                                 <ResponseChart history={history} theme={theme} />
@@ -519,7 +641,7 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-export function MonitorDashboard({ documentationId }: MonitorDashboardProps) {
+export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDashboardProps) {
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
     const queryClient = useQueryClient();
@@ -586,7 +708,15 @@ export function MonitorDashboard({ documentationId }: MonitorDashboardProps) {
                         <Activity size={22} />
                     </div>
                     <div>
-                        <h2 className={`text-lg font-bold ${themeClasses.textColor}`}>API Monitoring</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className={`text-lg font-bold ${themeClasses.textColor}`}>API Monitoring</h2>
+                            {isPublic && (
+                                <a href={`/status/${slug}`} target="_blank" rel="noreferrer" 
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}>
+                                    <Globe size={10} /> Public Status Page
+                                </a>
+                            )}
+                        </div>
                         <p className={`text-xs ${themeClasses.subTextColor}`}>Scheduled uptime &amp; performance tracking</p>
                     </div>
                 </div>
