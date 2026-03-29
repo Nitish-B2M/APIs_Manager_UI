@@ -78,7 +78,7 @@ export const RequestTabs = memo(({
 
     const [wrapLines, setWrapLines] = React.useState(false);
 
-    const allTabs: TabType[] = ['params', 'headers', 'auth', 'body', 'tests', 'schema', 'mocking', 'notes', 'docs', 'code'];
+    const allTabs: TabType[] = ['body', 'headers', 'params', 'auth', 'tests', 'code', 'docs', 'schema', 'notes', 'mocking'];
     const tabs = React.useMemo(() => {
         const protocol = currentReq?.protocol || 'REST';
         switch (protocol) {
