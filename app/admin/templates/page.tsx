@@ -68,7 +68,7 @@ export default function AdminTemplatesPage() {
             <div className="max-w-7xl mx-auto">
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight underline decoration-violet-500/50 underline-offset-8">Email Administration</h1>
+                        <h1 className="text-3xl font-extrabold tracking-tight underline decoration-[#249d9f]/50 underline-offset-8">Email Administration</h1>
                         <p className={`mt-4 ${theme === 'dark' ? 'text-slate-400' : 'text-gray-500'} font-medium`}>
                             Manage dynamic email templates and track engagement analytics.
                         </p>
@@ -79,12 +79,12 @@ export default function AdminTemplatesPage() {
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${theme === 'dark' ? 'bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10' : 'bg-white border border-gray-200 hover:shadow-md'
                                 }`}
                         >
-                            {view === 'templates' ? <BarChart3 size={18} className="text-violet-400" /> : <Mail size={18} className="text-violet-400" />}
+                            {view === 'templates' ? <BarChart3 size={18} className="text-[#2ec4c7]" /> : <Mail size={18} className="text-[#2ec4c7]" />}
                             {view === 'templates' ? 'View Analytics' : 'Manage Templates'}
                         </button>
                         <button
                             onClick={() => { setSelectedTemplate(null); setIsEditorOpen(true); }}
-                            className="flex items-center gap-2 px-5 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-violet-500/25 active:scale-95 transition-all"
+                            className="flex items-center gap-2 px-5 py-2 bg-[#1a7a7c] hover:bg-[#249d9f] text-white rounded-xl text-sm font-bold shadow-lg shadow-[#249d9f]/25 active:scale-95 transition-all"
                         >
                             <Plus size={18} />
                             Create Template
@@ -119,7 +119,7 @@ export default function AdminTemplatesPage() {
                         </div>
                         <div className="flex items-center justify-between mb-4">
                             <span className={`text-[11px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-gray-500'}`}>Acceptance Rate</span>
-                            <div className="p-2 bg-violet-500/10 rounded-xl text-violet-400"><BarChart3 size={20} /></div>
+                            <div className="p-2 bg-[#249d9f]/10 rounded-xl text-[#2ec4c7]"><BarChart3 size={20} /></div>
                         </div>
                         <div className="text-4xl font-black leading-none flex items-baseline gap-1">
                             {stats.successRate}
@@ -147,7 +147,7 @@ export default function AdminTemplatesPage() {
                                             <td className="px-8 py-6">
                                                 <div className="font-bold text-lg">{tpl.name}</div>
                                                 {tpl.isDefault && (
-                                                    <span className="text-[10px] bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 px-2 py-0.5 rounded-full font-black uppercase mt-1.5 inline-block">
+                                                    <span className="text-[10px] bg-violet-100 text-[#1a7a7c] dark:bg-[#249d9f]/20 dark:text-[#2ec4c7] px-2 py-0.5 rounded-full font-black uppercase mt-1.5 inline-block">
                                                         Primary Default
                                                     </span>
                                                 )}
@@ -162,7 +162,7 @@ export default function AdminTemplatesPage() {
                                                 <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-slate-300' : 'text-gray-700'} truncate max-w-xs mb-2 transition-colors`}>{tpl.subject}</div>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {tpl.variables?.map((v: string) => (
-                                                        <span key={v} className="text-[10px] font-mono font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-1 rounded-md">
+                                                        <span key={v} className="text-[10px] font-mono font-bold bg-[#249d9f]/10 text-[#2ec4c7] border border-[#249d9f]/20 px-2 py-1 rounded-md">
                                                             {v}
                                                         </span>
                                                     ))}
@@ -184,7 +184,7 @@ export default function AdminTemplatesPage() {
                                                 <div className="flex items-center justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                                                     <button
                                                         onClick={() => { setSelectedTemplate(tpl); setIsEditorOpen(true); }}
-                                                        className={`p-2.5 rounded-xl transition-all ${theme === 'dark' ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-white border-transparent hover:border-gray-100 border text-gray-400 hover:text-violet-600 hover:shadow-sm'}`}
+                                                        className={`p-2.5 rounded-xl transition-all ${theme === 'dark' ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-white border-transparent hover:border-gray-100 border text-gray-400 hover:text-[#1a7a7c] hover:shadow-sm'}`}
                                                         title="Edit Template"
                                                     >
                                                         <Edit2 size={18} />
@@ -204,11 +204,11 @@ export default function AdminTemplatesPage() {
                                         <tr>
                                             <td colSpan={5} className="px-6 py-20 text-center">
                                                 <div className="flex flex-col items-center gap-3 opacity-50">
-                                                    <Mail size={48} className="text-violet-500" />
+                                                    <Mail size={48} className="text-[#249d9f]" />
                                                     <p className="font-bold text-lg text-slate-500">No email templates created yet</p>
                                                     <button
                                                         onClick={() => { setSelectedTemplate(null); setIsEditorOpen(true); }}
-                                                        className="text-violet-400 hover:text-violet-300 transition-colors font-bold uppercase tracking-wide text-sm mt-2"
+                                                        className="text-[#2ec4c7] hover:text-violet-300 transition-colors font-bold uppercase tracking-wide text-sm mt-2"
                                                     >
                                                         Initialize with first template
                                                     </button>
@@ -221,15 +221,15 @@ export default function AdminTemplatesPage() {
                         </div>
                     </div>
                 ) : (
-                    <div className={`rounded-3xl border ${theme === 'dark' ? 'bg-white/[0.02] border-white/5 shadow-2xl backdrop-blur-md' : 'bg-white border-gray-100 shadow-xl shadow-violet-500/5'} overflow-hidden transition-all duration-300`}>
+                    <div className={`rounded-3xl border ${theme === 'dark' ? 'bg-white/[0.02] border-white/5 shadow-2xl backdrop-blur-md' : 'bg-white border-gray-100 shadow-xl shadow-[#249d9f]/5'} overflow-hidden transition-all duration-300`}>
                         <div className={`px-8 py-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-white/5 bg-white/[0.01]' : 'border-gray-50 bg-gray-50/30'}`}>
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-violet-500/10 rounded-xl text-violet-400"><Clock size={20} /></div>
+                                <div className="p-2 bg-[#249d9f]/10 rounded-xl text-[#2ec4c7]"><Clock size={20} /></div>
                                 <h3 className="font-extrabold text-lg">Delivery Analytics</h3>
                             </div>
                             <button
                                 onClick={fetchData}
-                                className="text-[11px] text-violet-400 hover:text-violet-300 font-black uppercase tracking-widest border border-violet-500/20 px-4 py-2 rounded-xl hover:bg-violet-500/10 transition-all"
+                                className="text-[11px] text-[#2ec4c7] hover:text-violet-300 font-black uppercase tracking-widest border border-[#249d9f]/20 px-4 py-2 rounded-xl hover:bg-[#249d9f]/10 transition-all"
                             >
                                 Refresh Feed
                             </button>
@@ -257,7 +257,7 @@ export default function AdminTemplatesPage() {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">
-                                                <div className="text-xs font-bold text-violet-400">{log.documentationTitle || 'Global Context'}</div>
+                                                <div className="text-xs font-bold text-[#2ec4c7]">{log.documentationTitle || 'Global Context'}</div>
                                             </td>
                                             <td className="px-8 py-5 text-xs font-mono text-slate-500">
                                                 {new Date(log.sentAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}

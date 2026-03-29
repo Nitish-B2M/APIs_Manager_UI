@@ -10,7 +10,7 @@ export const DemoOverlay = ({ title, description }: { title: string, description
         <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-background/40 backdrop-blur-xl">
             <div className="max-w-md w-full bg-black/60 dark:bg-white/10 border border-glass-border p-8 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] text-center relative overflow-hidden group">
                 {/* Ambience */}
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#249d9f]/10 via-[#249d9f]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
                 <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 shadow-inner relative z-10">
                     <Lock size={28} className="text-slate-300" />

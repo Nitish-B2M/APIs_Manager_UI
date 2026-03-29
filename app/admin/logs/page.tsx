@@ -86,7 +86,7 @@ export default function AdminLogsPage() {
         <div className="flex flex-col h-[calc(100vh-140px)] gap-4 p-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
+                    <div className="p-2 rounded-lg bg-[#249d9f]/10 text-[#249d9f]">
                         <Terminal size={20} />
                     </div>
                     <div>
@@ -101,7 +101,7 @@ export default function AdminLogsPage() {
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filter === f ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filter === f ? 'bg-[#1a7a7c] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                             >
                                 {f}
                             </button>
@@ -110,7 +110,7 @@ export default function AdminLogsPage() {
 
                     <button
                         onClick={() => setIsPaused(!isPaused)}
-                        className={`p-2 rounded-lg border transition-all ${isPaused ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' : 'bg-white/5 border-white/10 text-gray-500 hover:text-indigo-500'}`}
+                        className={`p-2 rounded-lg border transition-all ${isPaused ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' : 'bg-white/5 border-white/10 text-gray-500 hover:text-[#249d9f]'}`}
                         title={isPaused ? "Resume Stream" : "Pause Stream"}
                     >
                         {isPaused ? <Play size={18} /> : <Pause size={18} />}
@@ -156,7 +156,7 @@ export default function AdminLogsPage() {
                             <span className={log.level === 'error' ? 'text-red-200' : ''}>{log.message}</span>
                             {log.data && (
                                 <details className="mt-1 opacity-60 hover:opacity-100 transition-opacity">
-                                    <summary className="cursor-pointer text-[10px] hover:text-indigo-400">View Data</summary>
+                                    <summary className="cursor-pointer text-[10px] hover:text-[#2ec4c7]">View Data</summary>
                                     <pre className="mt-1 p-2 rounded bg-black/40 border border-white/5 overflow-x-auto text-[10px]">
                                         {JSON.stringify(log.data, null, 2)}
                                     </pre>

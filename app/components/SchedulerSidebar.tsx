@@ -102,12 +102,12 @@ export function SchedulerSidebar({ tasks, habits, onRefresh, theme, onAddHabit, 
                 className="flex items-center justify-between mb-2 px-1 cursor-pointer group hover:opacity-80 transition-opacity"
                 onClick={() => toggleSection(sectionKey)}
             >
-                <h2 className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${customColorClass || 'text-indigo-400'}`}>
+                <h2 className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${customColorClass || 'text-[#2ec4c7]'}`}>
                     {Icon && <Icon size={14} />} {title}
                 </h2>
                 <div className="flex items-center gap-2">
                     {count !== undefined && (
-                        <span className={`text-[10px] ${customColorClass ? 'bg-gray-500/10 text-gray-400' : 'bg-indigo-500/10 text-indigo-400'} px-1.5 py-0.5 rounded-full font-bold`}>
+                        <span className={`text-[10px] ${customColorClass ? 'bg-gray-500/10 text-gray-400' : 'bg-[#249d9f]/10 text-[#2ec4c7]'} px-1.5 py-0.5 rounded-full font-bold`}>
                             {count}
                         </span>
                     )}
@@ -144,7 +144,7 @@ export function SchedulerSidebar({ tasks, habits, onRefresh, theme, onAddHabit, 
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="text-sm font-semibold truncate group-hover:text-indigo-400 transition-colors">
+                                                <h4 className="text-sm font-semibold truncate group-hover:text-[#2ec4c7] transition-colors">
                                                     {task.title}
                                                 </h4>
                                                 <p className={`text-[10px] ${themeClasses.subTextColor} mt-1 line-clamp-1`}>
@@ -188,14 +188,14 @@ export function SchedulerSidebar({ tasks, habits, onRefresh, theme, onAddHabit, 
                                     {dayTasks.map((task: any) => (
                                         <div
                                             key={task.id}
-                                            className={`p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 ${themeClasses.hoverBg} group cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]`}
+                                            className={`p-3 rounded-xl border border-[#249d9f]/20 bg-[#249d9f]/5 ${themeClasses.hoverBg} group cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]`}
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="text-sm font-semibold truncate text-indigo-200">
                                                         {task.title}
                                                     </h4>
-                                                    <p className={`text-[9px] text-indigo-400/70 mt-1`}>
+                                                    <p className={`text-[9px] text-[#2ec4c7]/70 mt-1`}>
                                                         {new Date(task.scheduled_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(task.scheduled_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </p>
                                                 </div>
@@ -212,7 +212,7 @@ export function SchedulerSidebar({ tasks, habits, onRefresh, theme, onAddHabit, 
                 {/* Pagination Controls */}
                 <div className="flex items-center justify-between pt-2 pb-4 px-1">
                     <span className="text-[10px] font-bold text-gray-400 tracking-widest uppercase text-center w-full">
-                        Showing: <span className="text-indigo-400">{getWindowLabel()}</span>
+                        Showing: <span className="text-[#2ec4c7]">{getWindowLabel()}</span>
                     </span>
                 </div>
 
@@ -275,11 +275,11 @@ export function SchedulerSidebar({ tasks, habits, onRefresh, theme, onAddHabit, 
             </div>
 
             {/* Bottom Info / Tip */}
-            <div className={`p-4 mt-auto border-t ${themeClasses.borderCol} bg-indigo-500/5`}>
+            <div className={`p-4 mt-auto border-t ${themeClasses.borderCol} bg-[#249d9f]/5`}>
                 <div className="flex gap-2">
-                    <Info size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+                    <Info size={14} className="text-[#2ec4c7] shrink-0 mt-0.5" />
                     <p className="text-[10px] text-gray-500 leading-relaxed italic">
-                        AntiGravity uses AI to find the best gaps in your calendar for these items. Items marked as <span className="text-indigo-400 font-bold">Planned</span> are tentative until focused.
+                        AntiGravity uses AI to find the best gaps in your calendar for these items. Items marked as <span className="text-[#2ec4c7] font-bold">Planned</span> are tentative until focused.
                     </p>
                 </div>
             </div>

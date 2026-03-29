@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: 'DevManus',
   description: 'The Ultimate Workspace for Developers. Write API docs, manage tasks, take rich notes, and schedule your time securely from one unified platform.',
   manifest: '/manifest.json',
-  themeColor: '#6366f1',
+  themeColor: '#249d9f',
   viewport: { width: 'device-width', initialScale: 1, maximumScale: 1 },
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'DevManus' },
 };

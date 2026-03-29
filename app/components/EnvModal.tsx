@@ -309,17 +309,17 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
     const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-800';
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
     const inputBg = theme === 'dark'
-        ? 'bg-gray-900 border-gray-600 text-gray-100 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600'
-        : 'bg-white border-gray-300 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-400';
+        ? 'bg-gray-900 border-gray-600 text-gray-100 focus:ring-[#249d9f] focus:border-[#249d9f] placeholder:text-gray-600'
+        : 'bg-white border-gray-300 text-gray-900 focus:ring-[#249d9f] focus:border-[#249d9f] placeholder:text-gray-400';
     const codeStyle = theme === 'dark'
-        ? 'bg-gray-900 text-indigo-400 px-1 rounded'
-        : 'bg-gray-100 text-indigo-600 px-1 rounded';
+        ? 'bg-gray-900 text-[#2ec4c7] px-1 rounded'
+        : 'bg-gray-100 text-[#1a7a7c] px-1 rounded';
     const deleteBtn = theme === 'dark'
         ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/10'
         : 'text-gray-400 hover:text-red-500 hover:bg-red-50';
     const actionBtn = theme === 'dark'
-        ? 'text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/10'
-        : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50';
+        ? 'text-gray-400 hover:text-[#2ec4c7] hover:bg-[#249d9f]/10'
+        : 'text-gray-400 hover:text-[#1a7a7c] hover:bg-indigo-50';
     const closeBtn = theme === 'dark'
         ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
         : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200';
@@ -335,8 +335,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                 <div className={`flex items-center justify-between p-4 border-b ${headerBg}`}>
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}`}>
-                                <Globe size={18} className="text-indigo-500" />
+                            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-[#249d9f]/20' : 'bg-indigo-50'}`}>
+                                <Globe size={18} className="text-[#249d9f]" />
                             </div>
                             <h2 className={`text-lg font-bold ${textColor}`}>Environments</h2>
                         </div>
@@ -346,7 +346,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                             <button
                                 onClick={() => setScope('COLLECTION')}
                                 className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${scope === 'COLLECTION'
-                                    ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm'
+                                    ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-[#1a7a7c] shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
@@ -355,7 +355,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                             <button
                                 onClick={() => setScope('GLOBAL')}
                                 className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${scope === 'GLOBAL'
-                                    ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm'
+                                    ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-[#1a7a7c] shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
@@ -378,7 +378,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                         key={env.id}
                                         onClick={() => setSelectedEnvId(env.id)}
                                         className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${selectedEnvId === env.id
-                                            ? theme === 'dark' ? 'bg-indigo-600/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
+                                            ? theme === 'dark' ? 'bg-[#1a7a7c]/20 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'
                                             : `${textColor} ${hoverBg}`
                                             }`}
                                     >
@@ -416,7 +416,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                     <div className="flex gap-2">
                                         <button
                                             onClick={handleCreateEnvironment}
-                                            className="flex-1 px-2 py-1.5 text-xs bg-indigo-600 text-white rounded-lg font-bold"
+                                            className="flex-1 px-2 py-1.5 text-xs bg-[#1a7a7c] text-white rounded-lg font-bold"
                                         >
                                             Create
                                         </button>
@@ -432,8 +432,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                 <button
                                     onClick={() => setIsCreatingNew(true)}
                                     className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${theme === 'dark'
-                                        ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
-                                        : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
+                                        ? 'text-[#2ec4c7] hover:bg-[#249d9f]/10 border border-[#249d9f]/30'
+                                        : 'text-[#1a7a7c] hover:bg-indigo-50 border border-indigo-200'
                                         }`}
                                 >
                                     <Plus size={14} /> New {scope === 'GLOBAL' ? 'Global' : 'Env'}
@@ -452,7 +452,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                         <input
                                             value={editingName}
                                             onChange={(e) => setEditingName(e.target.value)}
-                                            className={`text-lg font-bold bg-transparent border-b-2 border-transparent focus:border-indigo-500 outline-none px-1 ${textColor}`}
+                                            className={`text-lg font-bold bg-transparent border-b-2 border-transparent focus:border-[#249d9f] outline-none px-1 ${textColor}`}
                                         />
                                         {selectedEnv.isActive && (
                                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
@@ -518,17 +518,17 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
 
                                 {/* Variables */}
                                 <div
-                                    className={`flex-1 p-6 overflow-y-auto relative transition-colors ${isDragging && isBeta ? (theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50') : ''}`}
+                                    className={`flex-1 p-6 overflow-y-auto relative transition-colors ${isDragging && isBeta ? (theme === 'dark' ? 'bg-[#249d9f]/10' : 'bg-indigo-50') : ''}`}
                                     onDragOver={handleDragOver}
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                 >
                                     {isDragging && isBeta && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-indigo-500/10 backdrop-blur-sm z-50 pointer-events-none border-2 border-dashed border-indigo-500 rounded-xl m-2 animate-in fade-in duration-200">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-[#249d9f]/10 backdrop-blur-sm z-50 pointer-events-none border-2 border-dashed border-[#249d9f] rounded-xl m-2 animate-in fade-in duration-200">
                                             <div className="text-center">
-                                                <Upload size={48} className="mx-auto mb-4 text-indigo-500 animate-bounce" />
-                                                <p className="text-lg font-black text-indigo-500">Drop to Import Environments</p>
-                                                <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mt-2">.env or .json supported</p>
+                                                <Upload size={48} className="mx-auto mb-4 text-[#249d9f] animate-bounce" />
+                                                <p className="text-lg font-black text-[#249d9f]">Drop to Import Environments</p>
+                                                <p className="text-xs text-[#2ec4c7] font-bold uppercase tracking-widest mt-2">.env or .json supported</p>
                                             </div>
                                         </div>
                                     )}
@@ -653,8 +653,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                                 <button
                                                     onClick={addVariable}
                                                     className={`mt-6 flex items-center gap-2 font-bold text-sm px-4 py-2.5 rounded-xl transition-all ${theme === 'dark'
-                                                        ? 'text-indigo-400 hover:bg-indigo-500/10 border border-indigo-500/30'
-                                                        : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
+                                                        ? 'text-[#2ec4c7] hover:bg-[#249d9f]/10 border border-[#249d9f]/30'
+                                                        : 'text-[#1a7a7c] hover:bg-indigo-50 border border-indigo-200'
                                                         }`}
                                                 >
                                                     <Plus size={18} /> Add Variable
@@ -662,8 +662,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                                                 <button
                                                     onClick={toggleBulkEdit}
                                                     className={`mt-6 ${subTextColor} flex items-center gap-2 font-bold text-sm px-4 py-2.5 rounded-xl transition-all ${theme === 'dark'
-                                                        ? 'text-purple-400 hover:bg-purple-500/10 border border-purple-500/30'
-                                                        : 'text-purple-600 hover:bg-purple-50 border border-purple-200'
+                                                        ? 'text-[#2ec4c7] hover:bg-[#249d9f]/10 border border-[#249d9f]/30'
+                                                        : 'text-[#1a7a7c] hover:bg-purple-50 border border-purple-200'
                                                         }`}
                                                 >
                                                     {isBulkEdit ? <Settings size={14} /> : <FileText size={14} />}
@@ -710,7 +710,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                         )}
                         <button
                             onClick={onClose}
-                            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all text-sm"
+                            className="px-8 py-2.5 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all text-sm"
                         >
                             Done
                         </button>

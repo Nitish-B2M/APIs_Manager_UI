@@ -42,7 +42,7 @@ function VerifyEmailContent() {
             <div className={`w-full max-w-md p-10 ${cardBg} rounded-3xl border text-center`}>
                 {status === 'verifying' && (
                     <>
-                        <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-indigo-500/30">
+                        <div className="w-16 h-16 bg-[#1a7a7c] rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-[#249d9f]/30">
                             <Loader2 size={32} className="animate-spin" />
                         </div>
                         <h1 className="text-2xl font-black tracking-tight mb-2">Verifying Your Email</h1>
@@ -61,7 +61,7 @@ function VerifyEmailContent() {
                         </p>
                         <button
                             onClick={() => router.push('/dashboard')}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-xl shadow-indigo-500/20"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-2xl font-bold transition-all shadow-xl shadow-[#249d9f]/20"
                         >
                             Go to Dashboard <ArrowRight size={16} />
                         </button>
@@ -78,7 +78,7 @@ function VerifyEmailContent() {
                         <div className="flex flex-col gap-3">
                             <button
                                 onClick={() => router.push('/dashboard')}
-                                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all"
+                                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-2xl font-bold transition-all"
                             >
                                 Go to Dashboard
                             </button>
@@ -97,7 +97,7 @@ export default function VerifyEmailPage() {
     return (
         <Suspense fallback={
             <div className="flex min-h-[calc(100vh-64px)] items-center justify-center">
-                <Loader2 size={32} className="animate-spin text-indigo-500" />
+                <Loader2 size={32} className="animate-spin text-[#249d9f]" />
             </div>
         }>
             <VerifyEmailContent />

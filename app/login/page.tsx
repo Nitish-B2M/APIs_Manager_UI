@@ -88,7 +88,7 @@ export default function LoginPage() {
 
     const mainBg = theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900';
     const cardBg = theme === 'dark' ? 'bg-gray-900 border-gray-800 shadow-2xl' : 'bg-white border-gray-100 shadow-xl';
-    const inputBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white focus:border-indigo-500' : 'bg-white border-gray-200 text-gray-900 focus:border-indigo-500';
+    const inputBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white focus:border-[#249d9f]' : 'bg-white border-gray-200 text-gray-900 focus:border-[#249d9f]';
     const inputErrorBg = theme === 'dark' ? 'bg-gray-800 border-red-500 text-white focus:border-red-400' : 'bg-white border-red-500 text-gray-900 focus:border-red-400';
     const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
@@ -98,7 +98,7 @@ export default function LoginPage() {
             <div className={`flex min-h-[calc(100vh-64px)] items-center justify-center ${mainBg} transition-colors duration-300 p-6`}>
                 <div className={`w-full max-w-md p-10 ${cardBg} rounded-3xl border`}>
                     <div className="flex flex-col items-center mb-8">
-                        <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-indigo-500/30">
+                        <div className="w-12 h-12 bg-[#1a7a7c] rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-[#249d9f]/30">
                             <Lock size={24} />
                         </div>
                         <h1 className={`text-3xl font-black ${textColor} tracking-tight`}>Welcome Back</h1>
@@ -106,11 +106,11 @@ export default function LoginPage() {
                     </div>
 
                     {message && (
-                        <div className="mb-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-start gap-3">
-                            <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-500">
+                        <div className="mb-6 p-4 bg-[#249d9f]/10 border border-[#249d9f]/20 rounded-2xl flex items-start gap-3">
+                            <div className="p-2 bg-[#249d9f]/20 rounded-xl text-[#249d9f]">
                                 <Lock size={16} />
                             </div>
-                            <p className="text-sm text-indigo-500 leading-relaxed font-bold">
+                            <p className="text-sm text-[#249d9f] leading-relaxed font-bold">
                                 {message}
                             </p>
                         </div>
@@ -143,7 +143,7 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => router.push('/forgot-password')}
-                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                                    className="text-xs font-bold text-[#1a7a7c] hover:text-[#249d9f] transition-colors"
                                 >
                                     Forgot password?
                                 </button>
@@ -165,7 +165,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loginMutation.isPending}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-[0.98]"
+                            className="w-full py-4 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-[#249d9f]/20 disabled:opacity-50 active:scale-[0.98]"
                         >
                             {loginMutation.isPending ? 'Logging in...' : 'Sign In'}
                         </button>
@@ -176,7 +176,7 @@ export default function LoginPage() {
                             New to DevManusClone?{' '}
                             <button
                                 onClick={() => router.push('/register')}
-                                className="text-indigo-600 hover:text-indigo-500 font-bold transition-colors cursor-pointer"
+                                className="text-[#1a7a7c] hover:text-[#249d9f] font-bold transition-colors cursor-pointer"
                             >
                                 Create an account
                             </button>

@@ -80,7 +80,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                 }`}>
                 <header className={`px-8 py-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-50 bg-gray-50/50'}`}>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+                        <div className="w-10 h-10 bg-[#1a7a7c] rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(36,157,159,0.5)]">
                             <Mail size={20} />
                         </div>
                         <div>
@@ -93,14 +93,14 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                             <button
                                 type="button"
                                 onClick={() => setTab('edit')}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${tab === 'edit' ? 'bg-violet-600 text-white shadow-[0_0_10px_rgba(139,92,246,0.3)]' : `text-slate-500 hover:text-white`}`}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${tab === 'edit' ? 'bg-[#1a7a7c] text-white shadow-[0_0_10px_rgba(36,157,159,0.3)]' : `text-slate-500 hover:text-white`}`}
                             >
                                 <Code size={14} /> Editor
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setTab('preview')}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${tab === 'preview' ? 'bg-violet-600 text-white shadow-[0_0_10px_rgba(139,92,246,0.3)]' : `text-slate-500 hover:text-white`}`}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${tab === 'preview' ? 'bg-[#1a7a7c] text-white shadow-[0_0_10px_rgba(36,157,159,0.3)]' : `text-slate-500 hover:text-white`}`}
                             >
                                 <Eye size={14} /> Preview
                             </button>
@@ -122,7 +122,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
                                             placeholder="e.g., Modern Invite Template"
-                                            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${theme === 'dark' ? 'bg-white/[0.02] border-white/5 focus:border-violet-500 focus:bg-white/[0.04] text-white' : 'bg-gray-50 border-gray-100 focus:border-violet-500'
+                                            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${theme === 'dark' ? 'bg-white/[0.02] border-white/5 focus:border-[#249d9f] focus:bg-white/[0.04] text-white' : 'bg-gray-50 border-gray-100 focus:border-[#249d9f]'
                                                 }`}
                                         />
                                     </div>
@@ -133,7 +133,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                                         <select
                                             value={purpose}
                                             onChange={(e) => setPurpose(e.target.value)}
-                                            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all appearance-none cursor-pointer ${theme === 'dark' ? 'bg-[#0B0A0F] border-white/5 focus:border-violet-500 text-white' : 'bg-gray-50 border-gray-100 focus:border-violet-500'
+                                            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all appearance-none cursor-pointer ${theme === 'dark' ? 'bg-[#0B0A0F] border-white/5 focus:border-[#249d9f] text-white' : 'bg-gray-50 border-gray-100 focus:border-[#249d9f]'
                                                 }`}
                                         >
                                             <option value="COLLABORATION_INVITE">Collaboration Invite</option>
@@ -151,7 +151,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                                         value={subject}
                                         onChange={(e) => setSubject(e.target.value)}
                                         placeholder="Use {{variables}} here"
-                                        className={`w-full px-4 py-3 rounded-xl border outline-none transition-all font-medium ${theme === 'dark' ? 'bg-white/[0.02] border-white/5 focus:border-violet-500 focus:bg-white/[0.04] text-white' : 'bg-gray-50 border-gray-100 focus:border-violet-500'
+                                        className={`w-full px-4 py-3 rounded-xl border outline-none transition-all font-medium ${theme === 'dark' ? 'bg-white/[0.02] border-white/5 focus:border-[#249d9f] focus:bg-white/[0.04] text-white' : 'bg-gray-50 border-gray-100 focus:border-[#249d9f]'
                                             }`}
                                     />
                                 </div>
@@ -166,7 +166,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                                         onChange={(e) => setBody(e.target.value)}
                                         placeholder="HTML content with {{variables}}..."
                                         rows={12}
-                                        className={`w-full px-4 py-4 rounded-2xl border outline-none transition-all font-mono text-sm leading-relaxed custom-scrollbar ${theme === 'dark' ? 'bg-[#0B0A0F] border-white/5 focus:border-violet-500 text-slate-300' : 'bg-gray-50 border-gray-100 focus:border-violet-500 shadow-inner'
+                                        className={`w-full px-4 py-4 rounded-2xl border outline-none transition-all font-mono text-sm leading-relaxed custom-scrollbar ${theme === 'dark' ? 'bg-[#0B0A0F] border-white/5 focus:border-[#249d9f] text-slate-300' : 'bg-gray-50 border-gray-100 focus:border-[#249d9f] shadow-inner'
                                             }`}
                                     />
                                 </div>
@@ -174,7 +174,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
 
                             <div className="space-y-6">
                                 <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-white/[0.02] border-white/5 shadow-xl backdrop-blur-md' : 'bg-indigo-50/30 border-indigo-100/50'}`}>
-                                    <h4 className={`text-sm font-black mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}><Info size={16} className="text-violet-500" /> Variable Helper</h4>
+                                    <h4 className={`text-sm font-black mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}><Info size={16} className="text-[#249d9f]" /> Variable Helper</h4>
                                     <p className={`text-xs mb-4 font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>Dynamic tags that will be replaced during delivery.</p>
                                     <div className="flex flex-wrap gap-2">
                                         {['docTitle', 'inviterName', 'role', 'inviteLink', 'username'].map(v => (
@@ -182,7 +182,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                                                 key={v}
                                                 type="button"
                                                 onClick={() => addVariable(v)}
-                                                className={`text-[10px] font-black uppercase px-2 py-1.5 rounded-lg border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10 text-violet-400' : 'bg-white border-gray-200 hover:border-violet-300 text-violet-600 shadow-sm'
+                                                className={`text-[10px] font-black uppercase px-2 py-1.5 rounded-lg border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10 text-[#2ec4c7]' : 'bg-white border-gray-200 hover:border-violet-300 text-[#1a7a7c] shadow-sm'
                                                     }`}
                                             >
                                                 +{v}
@@ -198,7 +198,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                                                     onChange={(e) => setIsDefault(e.target.checked)}
                                                     className="sr-only"
                                                 />
-                                                <div className={`w-10 h-5 rounded-full transition-colors ${isDefault ? 'bg-violet-600 shadow-[0_0_10px_rgba(139,92,246,0.3)]' : theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`}></div>
+                                                <div className={`w-10 h-5 rounded-full transition-colors ${isDefault ? 'bg-[#1a7a7c] shadow-[0_0_10px_rgba(36,157,159,0.3)]' : theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`}></div>
                                                 <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${isDefault ? 'translate-x-[20px]' : ''}`}></div>
                                             </div>
                                             <span className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Set as Primary Default</span>
@@ -241,7 +241,7 @@ export default function TemplateEditor({ template, onClose, onSave }: TemplateEd
                         type="button"
                         onClick={handleSave}
                         disabled={loading}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-black shadow-[0_0_15px_rgba(139,92,246,0.25)] active:scale-95 disabled:opacity-50 transition-all"
+                        className="flex items-center gap-2 px-8 py-2.5 bg-[#1a7a7c] hover:bg-[#249d9f] text-white rounded-xl text-sm font-black shadow-[0_0_15px_rgba(36,157,159,0.25)] active:scale-95 disabled:opacity-50 transition-all"
                     >
                         {loading ? 'Processing...' : (
                             <>

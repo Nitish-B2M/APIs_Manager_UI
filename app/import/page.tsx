@@ -111,8 +111,8 @@ export default function ImportPage() {
     const mainBg = theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900';
     const cardBg = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200 shadow-sm';
     const inputClasses = theme === 'dark'
-        ? 'bg-gray-700 border-gray-600 text-white focus:border-indigo-500'
-        : 'bg-white border-gray-300 text-gray-900 focus:border-indigo-500';
+        ? 'bg-gray-700 border-gray-600 text-white focus:border-[#249d9f]'
+        : 'bg-white border-gray-300 text-gray-900 focus:border-[#249d9f]';
 
     return (
         <ProtectedRoute>
@@ -120,8 +120,8 @@ export default function ImportPage() {
                 <div className={`w-full max-w-md p-8 ${cardBg} rounded-2xl border shadow-xl`}>
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-indigo-500/10 rounded-lg">
-                                <UploadCloud className="text-indigo-500" size={24} />
+                            <div className="p-2 bg-[#249d9f]/10 rounded-lg">
+                                <UploadCloud className="text-[#249d9f]" size={24} />
                             </div>
                             <h1 className="text-2xl font-bold">Import API</h1>
                         </div>
@@ -161,7 +161,7 @@ export default function ImportPage() {
                             <label className={`block mb-1.5 text-sm font-bold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Select File (DevManus or OpenAPI)
                             </label>
-                            <div className={`relative group border-2 border-dashed rounded-xl p-8 text-center transition-all ${theme === 'dark' ? 'border-gray-700 bg-gray-900/50 hover:border-indigo-500/50' : 'border-gray-200 bg-gray-50 hover:border-indigo-500'}`}>
+                            <div className={`relative group border-2 border-dashed rounded-xl p-8 text-center transition-all ${theme === 'dark' ? 'border-gray-700 bg-gray-900/50 hover:border-[#249d9f]/50' : 'border-gray-200 bg-gray-50 hover:border-[#249d9f]'}`}>
                                 <input
                                     type="file"
                                     accept=".json"
@@ -171,10 +171,10 @@ export default function ImportPage() {
                                 />
                                 <div className="space-y-3">
                                     <div className="flex justify-center">
-                                        <FileJson className={`transition-colors ${fileContent ? 'text-indigo-500' : 'text-gray-400'}`} size={32} />
+                                        <FileJson className={`transition-colors ${fileContent ? 'text-[#249d9f]' : 'text-gray-400'}`} size={32} />
                                     </div>
                                     <div>
-                                        <p className={`text-sm font-bold ${fileContent ? 'text-indigo-500' : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        <p className={`text-sm font-bold ${fileContent ? 'text-[#249d9f]' : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                                             {fileContent ? '✓ File Uploaded' : 'Drag & Drop your JSON'}
                                         </p>
                                         <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-tighter">
@@ -188,7 +188,7 @@ export default function ImportPage() {
                         <button
                             type="submit"
                             disabled={createDocMutation.isPending || !fileContent}
-                            className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
+                            className="w-full py-3.5 px-4 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-xl font-bold transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
                         >
                             {createDocMutation.isPending ? 'Processing Import...' : 'Generate Documentation'}
                         </button>
