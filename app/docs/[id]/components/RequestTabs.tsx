@@ -12,6 +12,7 @@ import { SchemaEditor } from './SchemaEditor';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 import toast from 'react-hot-toast';
+import { WorkspaceTab } from './WorkspaceTab';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
@@ -22,7 +23,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
     )
 });
 
-type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'code' | 'mocking';
+type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'code' | 'mocking' | 'notes';
 
 interface RequestTabsProps {
     currentReq: any;
@@ -77,7 +78,7 @@ export const RequestTabs = memo(({
 
     const [wrapLines, setWrapLines] = React.useState(false);
 
-    const allTabs: TabType[] = ['params', 'headers', 'auth', 'body', 'tests', 'schema', 'mocking', 'docs', 'code'];
+    const allTabs: TabType[] = ['params', 'headers', 'auth', 'body', 'tests', 'schema', 'mocking', 'notes', 'docs', 'code'];
     const tabs = React.useMemo(() => {
         const protocol = currentReq?.protocol || 'REST';
         switch (protocol) {
@@ -557,6 +558,14 @@ export const RequestTabs = memo(({
                 {/* Code Tab */}
                 {activeTab === 'code' && (
                     <CodeSnippets request={currentReq} variables={variables} />
+                )}
+
+                {/* Workspace (Notes & Tasks) Tab */}
+                {activeTab === 'notes' && (
+                    <WorkspaceTab 
+                        endpointId={currentReq.id}
+                        canEdit={canEdit}
+                    />
                 )}
             </div>
         </div>
