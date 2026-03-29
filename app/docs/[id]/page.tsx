@@ -572,7 +572,7 @@ function ApiClientContent() {
         { id: 'docs', label: 'Documentation', icon: FileText, color: 'text-blue-400' },
         { id: 'monitoring', label: 'Monitoring', icon: Activity, color: 'text-emerald-400' },
         { id: 'webhooks', label: 'Webhooks', icon: Database, color: 'text-orange-400' },
-        { id: 'changelog', label: 'Changelog', icon: Clock, color: 'text-purple-400' },
+        { id: 'changelog', label: 'Changelog', icon: Clock, color: 'text-[#2ec4c7]' },
     ];
 
     return (
@@ -606,7 +606,7 @@ function ApiClientContent() {
 
             {!isSidebarCollapsed && (
                 <div
-                    className={`w-1 h-full cursor-col-resize hover:bg-indigo-500/50 transition-colors z-30 ${isSidebarResizing ? 'bg-indigo-500' : 'bg-transparent'}`}
+                    className={`w-1 h-full cursor-col-resize hover:bg-[#249d9f]/50 transition-colors z-30 ${isSidebarResizing ? 'bg-[#249d9f]' : 'bg-transparent'}`}
                     onMouseDown={startSidebarResize}
                 />
             )}
@@ -619,7 +619,7 @@ function ApiClientContent() {
                                 key={item.id}
                                 onClick={() => setActiveView(item.id as any)}
                                 className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === item.id
-                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40'
+                                    ? 'bg-[#1a7a7c] text-white shadow-lg shadow-indigo-900/40'
                                     : `text-gray-500 hover:text-gray-200 hover:bg-white/5`}`}
                             >
                                 <item.icon size={13} className={activeView === item.id ? 'text-white' : item.color} />
@@ -630,9 +630,9 @@ function ApiClientContent() {
 
                     <div className="flex items-center gap-3">
                         <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/5">
-                            <button onClick={() => setShowAiBuilder(true)} className="p-1.5 rounded-lg text-indigo-400 hover:bg-indigo-400/10 transition-all" title="AI Request Builder"><Sparkles size={16} /></button>
+                            <button onClick={() => setShowAiBuilder(true)} className="p-1.5 rounded-lg text-[#2ec4c7] hover:bg-[#2ec4c7]/10 transition-all" title="AI Request Builder"><Sparkles size={16} /></button>
                             <div className="w-px h-4 bg-white/10 mx-1" />
-                            <button onClick={() => setShowRunner(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-purple-400 hover:bg-purple-400/10 transition-all" title="Run Collection"><Zap size={16} /></button>
+                            <button onClick={() => setShowRunner(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-[#2ec4c7] hover:bg-[#2ec4c7]/10 transition-all" title="Run Collection"><Zap size={16} /></button>
                             <button onClick={() => setShowSnapshots(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 transition-all" title="Collection Snapshots"><Clock size={16} /></button>
                             <button onClick={() => handleGenerateMarkdown(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all" title="Download Markdown"><Download size={16} /></button>
                             {userRole === 'OWNER' && (
@@ -649,10 +649,10 @@ function ApiClientContent() {
                         </div>
                         <div className="w-px h-6 bg-white/10" />
                         <div className="flex items-center gap-1.5">
-                            <button onClick={() => setPaneLayout(paneLayout === 'horizontal' ? 'vertical' : 'horizontal')} className={`p-2 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.subTextColor} hover:text-indigo-400 transition-all`} title={paneLayout === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}>
+                            <button onClick={() => setPaneLayout(paneLayout === 'horizontal' ? 'vertical' : 'horizontal')} className={`p-2 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.subTextColor} hover:text-[#2ec4c7] transition-all`} title={paneLayout === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}>
                                 {paneLayout === 'horizontal' ? <Rows2 size={15} /> : <Columns2 size={15} />}
                             </button>
-                            <button onClick={() => setShowEnv(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} text-[10px] font-bold text-indigo-400 hover:bg-indigo-600/10 transition-all uppercase tracking-widest`}>
+                            <button onClick={() => setShowEnv(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} text-[10px] font-bold text-[#2ec4c7] hover:bg-[#1a7a7c]/10 transition-all uppercase tracking-widest`}>
                                 <Settings2 size={13} /> ENV
                             </button>
                         </div>
@@ -669,7 +669,7 @@ function ApiClientContent() {
                                     <div className="overflow-hidden" style={paneLayout === 'vertical' ? { height: `${verticalSplitRatio}%` } : { width: `${mainSplitRatio}%` }}>
                                         <RequestTabs currentReq={currentReq} variables={resolvedVariables} activeTab={activeTab} canEdit={canEdit} aiCommand={aiCommand} aiLoading={aiMutation.isPending} aiEnabled={aiEnabled} onTabChange={setActiveTab} onRequestChange={handleRequestChange} onAiCommandChange={setAiCommand} onAiGenerate={handleAiGenerate} onAiGenerateTests={handleAiGenerateTests} onFormatJson={() => { }} onCopyBody={() => { }} onCopyTitle={() => { }} onCopyMarkdown={() => { }} onSelection={handleSelection} onContextMenu={handleContextMenu} />
                                     </div>
-                                    <div className={`bg-indigo-600/10 hover:bg-indigo-600/50 transition-colors z-10 ${paneLayout === 'vertical' ? 'h-1 w-full cursor-row-resize' : 'w-1 h-full cursor-col-resize'} ${isResizingMain || isResizingVertical ? 'bg-indigo-600' : ''}`} onMouseDown={paneLayout === 'vertical' ? startVerticalResize : startMainResize} />
+                                    <div className={`bg-[#1a7a7c]/10 hover:bg-[#1a7a7c]/50 transition-colors z-10 ${paneLayout === 'vertical' ? 'h-1 w-full cursor-row-resize' : 'w-1 h-full cursor-col-resize'} ${isResizingMain || isResizingVertical ? 'bg-[#1a7a7c]' : ''}`} onMouseDown={paneLayout === 'vertical' ? startVerticalResize : startMainResize} />
                                     <div className="flex-1 h-full overflow-hidden">
                                         <ResponsePanel response={response} currentReq={currentReq} reqLoading={reqLoading} paneLayout={paneLayout} endpoints={endpoints} selectedIdx={selectedIdx} onLayoutChange={setPaneLayout} onLoadHistory={() => { }} onBackToLatest={() => { }} isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={wsMessages} wsStatus={wsStatus} socketMode="ws" onWsConnect={() => { }} onWsDisconnect={() => { }} onWsSendMessage={() => { }} onWsClearMessages={() => { }} />
                                     </div>
@@ -690,9 +690,9 @@ function ApiClientContent() {
             {showAiBuilder && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className={`w-full max-w-lg rounded-3xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#1a1b26]' : 'bg-white'} shadow-2xl p-6 flex flex-col gap-6 animate-in zoom-in-95 duration-200`}>
-                        <div><h2 className={`text-xl font-black tracking-tight ${themeClasses.textColor} flex items-center gap-2`}><Sparkles className="text-indigo-400 animate-pulse" /> AI Request Builder</h2><p className="text-xs text-gray-500">Describe the API request you want to create (e.g., "Create a POST request for user registration with name and email fields")</p></div>
-                        <div className="space-y-4"><textarea value={aiBuilderPrompt} onChange={(e) => setAiBuilderPrompt(e.target.value)} className={`w-full h-32 p-4 rounded-2xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none`} placeholder="What kind of request should I build?" autoFocus /></div>
-                        <div className="flex gap-3"><button onClick={() => setShowAiBuilder(false)} className={`flex-1 px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all`}>CANCEL</button><button onClick={() => { if (aiBuilderPrompt.trim()) { handleAiGenerateRequest(aiBuilderPrompt); setShowAiBuilder(false); setAiBuilderPrompt(''); } }} disabled={!aiBuilderPrompt.trim()} className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"><Zap size={16} /> BUILD REQUEST</button></div>
+                        <div><h2 className={`text-xl font-black tracking-tight ${themeClasses.textColor} flex items-center gap-2`}><Sparkles className="text-[#2ec4c7] animate-pulse" /> AI Request Builder</h2><p className="text-xs text-gray-500">Describe the API request you want to create (e.g., "Create a POST request for user registration with name and email fields")</p></div>
+                        <div className="space-y-4"><textarea value={aiBuilderPrompt} onChange={(e) => setAiBuilderPrompt(e.target.value)} className={`w-full h-32 p-4 rounded-2xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-[#249d9f]/20 focus:border-[#249d9f] transition-all resize-none`} placeholder="What kind of request should I build?" autoFocus /></div>
+                        <div className="flex gap-3"><button onClick={() => setShowAiBuilder(false)} className={`flex-1 px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all`}>CANCEL</button><button onClick={() => { if (aiBuilderPrompt.trim()) { handleAiGenerateRequest(aiBuilderPrompt); setShowAiBuilder(false); setAiBuilderPrompt(''); } }} disabled={!aiBuilderPrompt.trim()} className="flex-1 px-4 py-2.5 rounded-xl bg-[#1a7a7c] text-white text-sm font-bold hover:bg-[#249d9f] transition-all disabled:opacity-50 flex items-center justify-center gap-2"><Zap size={16} /> BUILD REQUEST</button></div>
                     </div>
                 </div>
             )}

@@ -12,7 +12,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
     loading: () => (
         <div className="h-full w-full flex items-center justify-center bg-black/10">
-            <Loader2 size={20} className="animate-spin text-indigo-500" />
+            <Loader2 size={20} className="animate-spin text-[#249d9f]" />
         </div>
     )
 });
@@ -131,7 +131,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
     if (isLoading) {
         return (
             <div className="h-full flex items-center justify-center">
-                <Loader2 size={24} className="animate-spin text-indigo-500" />
+                <Loader2 size={24} className="animate-spin text-[#249d9f]" />
             </div>
         );
     }
@@ -139,17 +139,17 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
     return (
         <div className="h-full flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
             {/* Header / Status Section */}
-            <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-indigo-500/30 bg-indigo-500/5">
+            <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-[#249d9f]/30 bg-[#249d9f]/5">
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                        <Globe size={14} className="text-indigo-400" />
-                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Public Mock URL</span>
+                        <Globe size={14} className="text-[#2ec4c7]" />
+                        <span className="text-[10px] font-bold text-[#2ec4c7] uppercase tracking-wider">Public Mock URL</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <code className={`text-[11px] font-mono ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{mockUrl}</code>
                         <button
                             onClick={() => { navigator.clipboard.writeText(mockUrl); toast.success('URL copied'); }}
-                            className="p-1 hover:text-indigo-400 transition-colors"
+                            className="p-1 hover:text-[#2ec4c7] transition-colors"
                             title="Copy URL"
                         >
                             <Copy size={12} />
@@ -158,7 +158,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                             href={mockUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1 hover:text-indigo-400 transition-colors"
+                            className="p-1 hover:text-[#2ec4c7] transition-colors"
                             title="Open in new tab"
                         >
                             <ExternalLink size={12} />
@@ -177,7 +177,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                         <button
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-[10px] font-bold shadow-lg shadow-indigo-900/40 transition-all disabled:opacity-50"
+                            className="flex items-center gap-2 bg-[#1a7a7c] hover:bg-[#249d9f] text-white px-4 py-1.5 rounded-lg text-[10px] font-bold shadow-lg shadow-indigo-900/40 transition-all disabled:opacity-50"
                         >
                             {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                             SAVE CONFIG
@@ -197,7 +197,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                         <select
                             value={config.statusCode}
                             onChange={(e) => setConfig({ ...config, statusCode: parseInt(e.target.value) })}
-                            className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} text-[11px] outline-none focus:ring-1 focus:ring-indigo-500`}
+                            className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} text-[11px] outline-none focus:ring-1 focus:ring-[#249d9f]`}
                         >
                             <option value="200">200 OK</option>
                             <option value="201">201 Created</option>
@@ -228,7 +228,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                             type="number"
                             value={config.delay}
                             onChange={(e) => setConfig({ ...config, delay: parseInt(e.target.value) || 0 })}
-                            className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} text-[11px] outline-none focus:ring-1 focus:ring-indigo-500`}
+                            className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} text-[11px] outline-none focus:ring-1 focus:ring-[#249d9f]`}
                             placeholder="e.g. 500"
                         />
                     </div>
@@ -243,7 +243,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                         </div>
                         <button
                             onClick={addHeader}
-                            className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300"
+                            className="text-[10px] font-bold text-[#2ec4c7] hover:text-[#2ec4c7]"
                         >
                             + ADD
                         </button>
@@ -282,12 +282,12 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
             <div className={`p-4 rounded-xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50/50'}`}>
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <Filter size={14} className="text-indigo-400" />
-                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Conditional Rules (Override Default)</span>
+                        <Filter size={14} className="text-[#2ec4c7]" />
+                        <span className="text-[10px] font-bold text-[#2ec4c7] uppercase tracking-wider">Conditional Rules (Override Default)</span>
                     </div>
                     <button
                         onClick={addRule}
-                        className="text-[10px] font-bold bg-indigo-600/10 text-indigo-400 px-3 py-1 rounded hover:bg-indigo-600/20 transition-all"
+                        className="text-[10px] font-bold bg-[#1a7a7c]/10 text-[#2ec4c7] px-3 py-1 rounded hover:bg-[#1a7a7c]/20 transition-all"
                     >
                         + ADD RULE
                     </button>
@@ -384,7 +384,7 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                                 toast.error('Invalid JSON');
                             }
                         }}
-                        className="text-[9px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 border border-indigo-500/20 px-2 py-0.5 rounded"
+                        className="text-[9px] font-bold text-[#2ec4c7] hover:text-[#2ec4c7] flex items-center gap-1 border border-[#249d9f]/20 px-2 py-0.5 rounded"
                     >
                         <CheckCircle2 size={10} /> FORMAT JSON
                     </button>

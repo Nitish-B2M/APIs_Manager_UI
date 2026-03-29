@@ -154,7 +154,7 @@ function UrlBarComponent({
                     value={currentReq.method}
                     disabled={!canEdit}
                     onChange={(e) => onMethodChange(e.target.value as HttpMethod)}
-                    className={`flex-shrink-0 px-2 py-1.5 ${inputBg} border ${borderCol} rounded-lg font-bold ${textColor} focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 text-[11px]`}
+                    className={`flex-shrink-0 px-2 py-1.5 ${inputBg} border ${borderCol} rounded-lg font-bold ${textColor} focus:ring-1 focus:ring-[#249d9f] focus:outline-none disabled:opacity-50 text-[11px]`}
                 >
                     {methods.map(m => (
                         <option key={m}>{m}</option>
@@ -168,14 +168,14 @@ function UrlBarComponent({
                         readOnly={!canEdit}
                         onChange={handleUrlChange}
                         onKeyDown={handleKeyDown}
-                        className={`w-full px-3 py-1.5 border ${borderCol} rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none font-mono text-[11px] ${inputBg} text-transparent ${!canEdit ? 'cursor-default' : ''}`}
+                        className={`w-full px-3 py-1.5 border ${borderCol} rounded-lg focus:ring-1 focus:ring-[#249d9f] outline-none font-mono text-[11px] ${inputBg} text-transparent ${!canEdit ? 'cursor-default' : ''}`}
                         style={{ caretColor: theme === 'dark' ? '#e5e7eb' : '#1f2937' }}
                         placeholder="Enter Request URL"
                     />
                     <div className="absolute inset-y-0 right-0 z-20 flex items-center pr-2">
                         <button
                             onClick={onCopyUrl}
-                            className={`p-1 ${subTextColor} hover:text-indigo-400 hover:bg-gray-500/10 rounded-md transition-all`}
+                            className={`p-1 ${subTextColor} hover:text-[#2ec4c7] hover:bg-gray-500/10 rounded-md transition-all`}
                             title="Copy full URL"
                         >
                             <Copy size={12} />
@@ -196,7 +196,7 @@ function UrlBarComponent({
                                 <div
                                     key={s}
                                     onClick={() => handleSuggestionSelect(s)}
-                                    className={`px-3 py-1.5 text-[11px] cursor-pointer flex items-center justify-between ${idx === suggestionIndex ? 'bg-indigo-600 text-white' : `${subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}`}
+                                    className={`px-3 py-1.5 text-[11px] cursor-pointer flex items-center justify-between ${idx === suggestionIndex ? 'bg-[#1a7a7c] text-white' : `${subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}`}
                                 >
                                     <span className="font-mono">{`{{${s}}}`}</span>
                                     <span className="text-[9px] text-gray-500 truncate max-w-[100px]">{variables[s]}</span>
@@ -209,7 +209,7 @@ function UrlBarComponent({
                 <button
                     onClick={onSend}
                     disabled={isLoading}
-                    className="flex-shrink-0 px-5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 text-[11px] disabled:opacity-50"
+                    className="flex-shrink-0 px-5 py-1.5 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 text-[11px] disabled:opacity-50"
                     title="Send Request (Ctrl+Enter)"
                 >
                     {isLoading ? <span className="animate-spin text-xs">⌛</span> : <Send size={14} />}
@@ -232,14 +232,14 @@ function UrlBarComponent({
             <div className={`flex items-center gap-1 border-l pl-3 ${borderCol} flex-shrink-0`}>
                 <button
                     onClick={onCopyMarkdown}
-                    className={`p-1.5 ${subTextColor} hover:text-indigo-500 hover:bg-gray-500/10 rounded-md transition-all`}
+                    className={`p-1.5 ${subTextColor} hover:text-[#249d9f] hover:bg-gray-500/10 rounded-md transition-all`}
                     title="Copy Request Markdown"
                 >
                     <Copy size={16} />
                 </button>
                 <button
                     onClick={onPreviewMarkdown}
-                    className={`p-1.5 ${subTextColor} hover:text-indigo-400 hover:bg-gray-500/10 rounded-md transition-all`}
+                    className={`p-1.5 ${subTextColor} hover:text-[#2ec4c7] hover:bg-gray-500/10 rounded-md transition-all`}
                     title="Preview Markdown"
                 >
                     <FileText size={16} />

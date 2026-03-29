@@ -93,11 +93,11 @@ export function SnapshotDiffViewer({ snapshotName, oldData, newData, onClose }: 
 
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-8 bg-black/80 backdrop-blur-md">
-            <div className={`w-full max-w-4xl h-[85vh] rounded-3xl border shadow-2xl overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-[#0f0f1a] border-indigo-500/30' : 'bg-white border-gray-200'}`}>
+            <div className={`w-full max-w-4xl h-[85vh] rounded-3xl border shadow-2xl overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-[#0f0f1a] border-[#249d9f]/30' : 'bg-white border-gray-200'}`}>
                 {/* Header */}
-                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-indigo-500/5">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#249d9f]/5">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                        <div className="w-12 h-12 rounded-2xl bg-[#249d9f] flex items-center justify-center text-white shadow-lg shadow-[#249d9f]/20">
                             <Edit3 size={24} />
                         </div>
                         <div>
@@ -188,7 +188,7 @@ export function SnapshotDiffViewer({ snapshotName, oldData, newData, onClose }: 
 
                 {/* Footer */}
                 <div className="p-6 border-t border-white/5 flex justify-end gap-3 bg-black/20">
-                    <button onClick={onClose} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold shadow-lg transition-all active:scale-95">
+                    <button onClick={onClose} className="px-8 py-3 bg-[#1a7a7c] hover:bg-[#249d9f] text-white rounded-2xl font-bold shadow-lg transition-all active:scale-95">
                         Got it
                     </button>
                 </div>

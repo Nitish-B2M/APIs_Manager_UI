@@ -179,7 +179,7 @@ const SidebarComponent = ({
             'POST': 'text-blue-500',
             'PUT': 'text-amber-500',
             'DELETE': 'text-red-500',
-            'PATCH': 'text-purple-500',
+            'PATCH': 'text-[#249d9f]',
         };
         return colors[method] || 'text-gray-500';
     };
@@ -229,18 +229,18 @@ const SidebarComponent = ({
                 onDragOver={onDragOver}
                 onDragEnd={onDragEnd}
                 onClick={(e) => isSelectionMode ? toggleRequestSelection(ep.id || '', e) : onSelectEndpoint(endpoints.indexOf(ep))}
-                className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isActive && !isSelectionMode ? 'bg-indigo-600 text-white shadow-lg' : isSelected ? 'bg-indigo-500/20 ring-1 ring-indigo-500/30' : 'hover:bg-white/5'}`}
+                className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isActive && !isSelectionMode ? 'bg-[#1a7a7c] text-white shadow-lg' : isSelected ? 'bg-[#249d9f]/20 ring-1 ring-[#249d9f]/30' : 'hover:bg-white/5'}`}
             >
                 {otherUsersViewing.length > 0 && !isCollapsed && (
                     <div className="absolute -left-1 top-1/2 -translate-y-1/2 flex -space-x-1">
                         {otherUsersViewing.slice(0, 2).map(u => (
-                            <div key={u.id} className="w-1.5 h-3 rounded-full bg-indigo-400 animate-pulse border border-indigo-900" title={`${u.name} is viewing`} />
+                            <div key={u.id} className="w-1.5 h-3 rounded-full bg-[#2ec4c7] animate-pulse border border-indigo-900" title={`${u.name} is viewing`} />
                         ))}
                     </div>
                 )}
 
                 {isSelectionMode && (
-                    <div className={`w-3.5 h-3.5 rounded border transition-all flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-500 bg-white/5'}`}>
+                    <div className={`w-3.5 h-3.5 rounded border transition-all flex items-center justify-center ${isSelected ? 'bg-[#249d9f] border-[#249d9f]' : 'border-gray-500 bg-white/5'}`}>
                         {isSelected && <CheckCircle2 size={10} className="text-white" />}
                     </div>
                 )}
@@ -252,8 +252,8 @@ const SidebarComponent = ({
                 
                 {otherUsersViewing.length > 0 && (
                     <div className="flex items-center gap-0.5 opacity-60">
-                        <Eye size={10} className="text-indigo-400" />
-                        <span className="text-[8px] font-black uppercase text-indigo-400">{otherUsersViewing[0].metadata?.field || 'view'}</span>
+                        <Eye size={10} className="text-[#2ec4c7]" />
+                        <span className="text-[8px] font-black uppercase text-[#2ec4c7]">{otherUsersViewing[0].metadata?.field || 'view'}</span>
                     </div>
                 )}
 
@@ -303,7 +303,7 @@ const SidebarComponent = ({
                 <div className="flex items-center justify-between">
                     {!isCollapsed && (
                         <div className="flex items-center gap-2 overflow-hidden">
-                            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                            <div className="w-6 h-6 rounded-lg bg-[#1a7a7c] flex items-center justify-center flex-shrink-0 shadow-lg">
                                 <Database size={14} className="text-white" />
                             </div>
                             <h2 className={`font-bold ${textColor} truncate text-sm tracking-tight`} title={doc.title}>
@@ -316,12 +316,12 @@ const SidebarComponent = ({
                         {(onExportPostman || onExportOpenApi) && (
                             <div className="flex items-center gap-1">
                                 {onExportPostman && <button onClick={onExportPostman} className={`p-1.5 rounded-lg border ${borderCol} ${inputBg} ${subTextColor} hover:text-amber-400 transition-all`} title="Export Postman"><Download size={14} /></button>}
-                                {onExportOpenApi && <button onClick={onExportOpenApi} className={`p-1.5 rounded-lg border ${borderCol} ${inputBg} ${subTextColor} hover:text-indigo-400 transition-all`} title="Export OpenAPI 3.1"><Zap size={14} /></button>}
+                                {onExportOpenApi && <button onClick={onExportOpenApi} className={`p-1.5 rounded-lg border ${borderCol} ${inputBg} ${subTextColor} hover:text-[#2ec4c7] transition-all`} title="Export OpenAPI 3.1"><Zap size={14} /></button>}
                             </div>
                         )}
                         <button
                             onClick={onToggleCollapse}
-                            className={`p-1.5 rounded-lg ${subTextColor} hover:bg-white/10 hover:text-indigo-400 transition-all`}
+                            className={`p-1.5 rounded-lg ${subTextColor} hover:bg-white/10 hover:text-[#2ec4c7] transition-all`}
                         >
                             {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
                         </button>
@@ -335,7 +335,7 @@ const SidebarComponent = ({
                         {canEdit && (
                             <button
                                 onClick={onAddRequest}
-                                className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${isDark ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}
+                                className={`p-1.5 rounded flex-1 flex items-center justify-center gap-1 transition-all border ${isDark ? 'bg-[#1a7a7c]/20 text-[#2ec4c7] border-[#249d9f]/30' : 'bg-indigo-50 text-[#1a7a7c] border-indigo-100'}`}
                                 title="New Request"
                             >
                                 <Plus size={14} /> <span className="font-bold uppercase tracking-widest text-[9px]">Request</span>
@@ -364,7 +364,7 @@ const SidebarComponent = ({
                                 setIsSelectionMode(!isSelectionMode);
                                 if (!isSelectionMode) setSelectedRequestIds(new Set());
                             }}
-                            className={`p-1.5 rounded border transition-all ${isSelectionMode ? 'bg-violet-600 text-white border-violet-500 shadow-lg' : `${isDark ? 'bg-white/5 text-gray-400 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200'} hover:bg-white/10`}`}
+                            className={`p-1.5 rounded border transition-all ${isSelectionMode ? 'bg-[#1a7a7c] text-white border-[#249d9f] shadow-lg' : `${isDark ? 'bg-white/5 text-gray-400 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200'} hover:bg-white/10`}`}
                             title="Selection Mode"
                         >
                             <ListChecks size={14} />
@@ -376,7 +376,7 @@ const SidebarComponent = ({
                         <input
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className={`w-full pl-8 pr-3 py-1.5 rounded-lg border ${borderCol} ${inputBg} text-[11px] outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all`}
+                            className={`w-full pl-8 pr-3 py-1.5 rounded-lg border ${borderCol} ${inputBg} text-[11px] outline-none focus:ring-1 focus:ring-[#249d9f]/50 transition-all`}
                             placeholder="Filter requests..."
                         />
                     </div>
@@ -425,9 +425,9 @@ const SidebarComponent = ({
 
             {/* Selection Mode Actions */}
             {isSelectionMode && !isCollapsed && selectedRequestIds.size > 0 && (
-                <div className={`p-3 border-t ${borderCol} bg-indigo-600/10 animate-in slide-in-from-bottom-2`}>
+                <div className={`p-3 border-t ${borderCol} bg-[#1a7a7c]/10 animate-in slide-in-from-bottom-2`}>
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase text-indigo-400">{selectedRequestIds.size} Selected</span>
+                        <span className="text-[10px] font-black uppercase text-[#2ec4c7]">{selectedRequestIds.size} Selected</span>
                         <button onClick={() => setSelectedRequestIds(new Set())} className="text-[9px] font-bold text-gray-500 hover:text-white uppercase">Clear</button>
                     </div>
                     <div className="grid grid-cols-2 gap-2 relative">
@@ -459,7 +459,7 @@ const SidebarComponent = ({
                                         onClick={() => { if (onBulkMove) onBulkMove(Array.from(selectedRequestIds), f.id); setIsSelectionMode(false); setShowBulkMoveMenu(false); }}
                                         className={`w-full px-3 py-2 text-[10px] font-bold text-left flex items-center gap-2 ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'}`}
                                     >
-                                        <Folder size={12} className="text-indigo-400" /> {f.name}
+                                        <Folder size={12} className="text-[#2ec4c7]" /> {f.name}
                                     </button>
                                 ))}
                             </div>
@@ -474,14 +474,14 @@ const SidebarComponent = ({
                     <button
                         onClick={() => onAiToggle(!aiEnabled)}
                         className={`flex items-center justify-between w-full p-2.5 rounded-xl border transition-all ${aiEnabled
-                            ? 'bg-indigo-600/10 border-indigo-500/30 text-indigo-400 shadow-lg shadow-indigo-900/20'
+                            ? 'bg-[#1a7a7c]/10 border-[#249d9f]/30 text-[#2ec4c7] shadow-lg shadow-indigo-900/20'
                             : 'bg-black/20 border-white/5 text-gray-500 hover:bg-white/5'}`}
                     >
                         <div className="flex items-center gap-2">
-                            <Sparkles size={14} className={aiEnabled ? 'animate-pulse text-indigo-400' : 'text-gray-600'} />
+                            <Sparkles size={14} className={aiEnabled ? 'animate-pulse text-[#2ec4c7]' : 'text-gray-600'} />
                             <span className="text-[10px] font-black uppercase tracking-widest">AI Copilot</span>
                         </div>
-                        <div className={`w-7 h-4 rounded-full relative transition-colors ${aiEnabled ? 'bg-indigo-600' : 'bg-gray-800'}`}>
+                        <div className={`w-7 h-4 rounded-full relative transition-colors ${aiEnabled ? 'bg-[#1a7a7c]' : 'bg-gray-800'}`}>
                             <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all shadow-sm ${aiEnabled ? 'left-3.5' : 'left-0.5'}`} />
                         </div>
                     </button>
@@ -489,7 +489,7 @@ const SidebarComponent = ({
                     {activeUsers.length > 0 && (
                         <div className="flex -space-x-2 overflow-hidden px-1">
                             {activeUsers.slice(0, 5).map((u) => (
-                                <div key={u.id} className={`w-6 h-6 rounded-full border-2 ${isDark ? 'border-[#0a0a0b]' : 'border-white'} bg-indigo-600 flex items-center justify-center text-[8px] font-bold text-white shadow-sm`} title={u.name || u.email}>
+                                <div key={u.id} className={`w-6 h-6 rounded-full border-2 ${isDark ? 'border-[#0a0a0b]' : 'border-white'} bg-[#1a7a7c] flex items-center justify-center text-[8px] font-bold text-white shadow-sm`} title={u.name || u.email}>
                                     {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full rounded-full object-cover" /> : (u.name || 'U').charAt(0).toUpperCase()}
                                 </div>
                             ))}

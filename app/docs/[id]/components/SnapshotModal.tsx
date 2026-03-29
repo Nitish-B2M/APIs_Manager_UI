@@ -96,13 +96,13 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1a1a2e] border-indigo-500/30' : 'bg-white border-gray-200'
+            <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1a1a2e] border-[#249d9f]/30' : 'bg-white border-gray-200'
                 }`}>
                 {/* Header */}
-                <div className={`p-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-indigo-500/20 bg-indigo-500/5' : 'border-gray-100 bg-gray-50'
+                <div className={`p-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-[#249d9f]/20 bg-[#249d9f]/5' : 'border-gray-100 bg-gray-50'
                     }`}>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <div className="w-10 h-10 rounded-xl bg-[#249d9f]/20 flex items-center justify-center text-[#2ec4c7]">
                             <Camera size={22} />
                         </div>
                         <div>
@@ -126,15 +126,15 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                                 value={snapshotName}
                                 onChange={(e) => setSnapshotName(e.target.value)}
                                 placeholder="e.g., Before major API refactor"
-                                className={`flex-1 px-4 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${theme === 'dark'
-                                    ? 'bg-[#0f0f1a] border-indigo-500/20 text-gray-200 placeholder-gray-600'
+                                className={`flex-1 px-4 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#249d9f]/40 ${theme === 'dark'
+                                    ? 'bg-[#0f0f1a] border-[#249d9f]/20 text-gray-200 placeholder-gray-600'
                                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                                     }`}
                             />
                             <button
                                 onClick={() => snapshotName && createMutation.mutate(snapshotName)}
                                 disabled={!snapshotName || createMutation.isPending}
-                                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
+                                className="px-6 py-2.5 rounded-xl bg-[#1a7a7c] hover:bg-[#249d9f] disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-[#249d9f]/20 transition-all flex items-center gap-2"
                             >
                                 {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
                                 Snap
@@ -147,7 +147,7 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                         <label className={`text-xs font-bold uppercase tracking-wider ${themeClasses.subTextColor}`}>Snapshot History ({snapshots.length})</label>
                         {snapshotsLoading ? (
                             <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-50">
-                                <Loader2 size={32} className="animate-spin text-indigo-500" />
+                                <Loader2 size={32} className="animate-spin text-[#249d9f]" />
                                 <span className="text-sm">Loading history...</span>
                             </div>
                         ) : snapshots.length === 0 ? (
@@ -162,7 +162,7 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                                     <div
                                         key={s.id}
                                         className={`group p-4 rounded-2xl border transition-all flex items-center justify-between ${theme === 'dark'
-                                            ? 'bg-white/5 border-white/5 hover:border-indigo-500/30'
+                                            ? 'bg-white/5 border-white/5 hover:border-[#249d9f]/30'
                                             : 'bg-gray-50 border-gray-100 hover:border-indigo-200'
                                             }`}
                                     >
@@ -182,8 +182,8 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                                                 <button
                                                     onClick={() => handleCompare(s)}
                                                     className={`p-2.5 rounded-xl transition-all ${theme === 'dark'
-                                                        ? 'hover:bg-indigo-500/20 text-indigo-400 opacity-0 group-hover:opacity-100'
-                                                        : 'hover:bg-indigo-50 text-indigo-600 opacity-0 group-hover:opacity-100'
+                                                        ? 'hover:bg-[#249d9f]/20 text-[#2ec4c7] opacity-0 group-hover:opacity-100'
+                                                        : 'hover:bg-indigo-50 text-[#1a7a7c] opacity-0 group-hover:opacity-100'
                                                         }`}
                                                     title="Compare with current state"
                                                 >
@@ -239,7 +239,7 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                 </div>
 
                 {/* Footer Info */}
-                <div className={`p-4 px-6 text-[11px] flex items-center gap-2 ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-300' : 'bg-indigo-50 text-indigo-600'
+                <div className={`p-4 px-6 text-[11px] flex items-center gap-2 ${theme === 'dark' ? 'bg-[#249d9f]/10 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'
                     }`}>
                     <AlertTriangle size={12} className="flex-shrink-0" />
                     <span>Restoring a snapshot will replace the current state of the collection. This action cannot be undone unless you create a snapshot of the current state first.</span>

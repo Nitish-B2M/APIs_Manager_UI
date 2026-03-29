@@ -113,35 +113,35 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                 <button 
                     onClick={() => setActiveSection('notes')}
                     className={`flex items-center gap-2 px-1 py-1 text-[10px] font-black uppercase tracking-widest transition-all relative ${
-                        activeSection === 'notes' ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'
+                        activeSection === 'notes' ? 'text-[#2ec4c7]' : 'text-gray-500 hover:text-gray-300'
                     }`}
                 >
                     <StickyNote size={14} />
                     Linked Notes
                     {notes.length > 0 && (
-                        <span className="bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded text-[8px] ml-1">
+                        <span className="bg-[#249d9f]/20 text-[#2ec4c7] px-1.5 py-0.5 rounded text-[8px] ml-1">
                             {notes.length}
                         </span>
                     )}
                     {activeSection === 'notes' && (
-                        <div className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
+                        <div className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-[#249d9f] rounded-full" />
                     )}
                 </button>
                 <button 
                     onClick={() => setActiveSection('tasks')}
                     className={`flex items-center gap-2 px-1 py-1 text-[10px] font-black uppercase tracking-widest transition-all relative ${
-                        activeSection === 'tasks' ? 'text-violet-400' : 'text-gray-500 hover:text-gray-300'
+                        activeSection === 'tasks' ? 'text-[#2ec4c7]' : 'text-gray-500 hover:text-gray-300'
                     }`}
                 >
                     <CheckSquare size={14} />
                     Linked Tasks
                     {todos.length > 0 && (
-                        <span className="bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded text-[8px] ml-1">
+                        <span className="bg-[#249d9f]/20 text-[#2ec4c7] px-1.5 py-0.5 rounded text-[8px] ml-1">
                             {todos.length}
                         </span>
                     )}
                     {activeSection === 'tasks' && (
-                        <div className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-violet-500 rounded-full" />
+                        <div className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-[#249d9f] rounded-full" />
                     )}
                 </button>
             </div>
@@ -155,7 +155,7 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                                 <button 
                                     onClick={handleAddNote}
                                     disabled={createNoteMutation.isPending}
-                                    className="p-1 px-3 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 rounded-xl flex items-center gap-2 font-black text-[9px] border border-indigo-500/30 transition-all uppercase tracking-widest"
+                                    className="p-1 px-3 bg-[#1a7a7c]/10 text-[#2ec4c7] hover:bg-[#1a7a7c]/20 rounded-xl flex items-center gap-2 font-black text-[9px] border border-[#249d9f]/30 transition-all uppercase tracking-widest"
                                 >
                                     {createNoteMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                                     New Note
@@ -165,7 +165,7 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
 
                         {notesLoading ? (
                             <div className="py-10 flex flex-col items-center justify-center opacity-30 gap-3">
-                                <Loader2 size={32} className="animate-spin text-indigo-500" />
+                                <Loader2 size={32} className="animate-spin text-[#249d9f]" />
                                 <span className="text-[10px] font-black tracking-widest">FETCHING NOTES...</span>
                             </div>
                         ) : notes.length === 0 ? (
@@ -181,11 +181,11 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                                 {notes.map((note: any) => (
                                     <div 
                                         key={note.id}
-                                        className={`group p-4 rounded-2xl border ${themeClasses.borderCol} ${themeClasses.inputBg} hover:border-indigo-500/50 transition-all cursor-pointer relative overflow-hidden`}
+                                        className={`group p-4 rounded-2xl border ${themeClasses.borderCol} ${themeClasses.inputBg} hover:border-[#249d9f]/50 transition-all cursor-pointer relative overflow-hidden`}
                                         onClick={() => window.open(`/modules/notes?id=${note.id}`, '_blank')}
                                     >
                                         <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-bold text-sm text-white group-hover:text-indigo-400 transition-colors">{note.title}</h4>
+                                            <h4 className="font-bold text-sm text-white group-hover:text-[#2ec4c7] transition-colors">{note.title}</h4>
                                             {canEdit && (
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); deleteNoteMutation.mutate(note.id); }}
@@ -197,9 +197,9 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                                         </div>
                                         <div className="flex items-center gap-3 text-[10px] text-gray-500">
                                             <span className="flex items-center gap-1"><Clock size={12} /> {new Date(note.updatedAt).toLocaleDateString()}</span>
-                                            <span className="flex items-center gap-1 uppercase tracking-tighter bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded">Endpoint Context</span>
+                                            <span className="flex items-center gap-1 uppercase tracking-tighter bg-[#249d9f]/10 text-[#2ec4c7] px-1.5 py-0.5 rounded">Endpoint Context</span>
                                         </div>
-                                        <div className="absolute right-0 top-0 bottom-0 w-1 bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#249d9f] opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
                                 ))}
                             </div>
@@ -213,7 +213,7 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                                 <button 
                                     onClick={handleAddTask}
                                     disabled={createTodoMutation.isPending}
-                                    className="p-1 px-3 bg-violet-600/10 text-violet-400 hover:bg-violet-600/20 rounded-xl flex items-center gap-2 font-black text-[9px] border border-violet-500/30 transition-all uppercase tracking-widest"
+                                    className="p-1 px-3 bg-[#1a7a7c]/10 text-[#2ec4c7] hover:bg-[#1a7a7c]/20 rounded-xl flex items-center gap-2 font-black text-[9px] border border-[#249d9f]/30 transition-all uppercase tracking-widest"
                                 >
                                     {createTodoMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                                     Add Task
@@ -223,7 +223,7 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
 
                         {todosLoading ? (
                             <div className="py-10 flex flex-col items-center justify-center opacity-30 gap-3">
-                                <Loader2 size={32} className="animate-spin text-violet-500" />
+                                <Loader2 size={32} className="animate-spin text-[#249d9f]" />
                                 <span className="text-[10px] font-black tracking-widest">FETCHING TASKS...</span>
                             </div>
                         ) : todos.length === 0 ? (
@@ -239,14 +239,14 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                                 {todos.map((todo: any) => (
                                     <div 
                                         key={todo.id}
-                                        className={`group flex items-center gap-4 p-3 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} hover:border-violet-500/50 transition-all`}
+                                        className={`group flex items-center gap-4 p-3 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} hover:border-[#249d9f]/50 transition-all`}
                                     >
                                         <button 
                                             onClick={() => toggleTodoMutation.mutate(todo)}
                                             className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
                                                 todo.is_completed 
-                                                ? 'bg-violet-500 border-violet-500 text-white' 
-                                                : 'border-white/10 hover:border-violet-500'
+                                                ? 'bg-[#249d9f] border-[#249d9f] text-white' 
+                                                : 'border-white/10 hover:border-[#249d9f]'
                                             }`}
                                         >
                                             {todo.is_completed && <CheckCircle2 size={14} />}
@@ -279,10 +279,10 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
             </div>
 
             {/* Hint Footer */}
-            <div className="mt-6 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-start gap-4">
-                <AlertCircle size={18} className="text-indigo-400 shrink-0" />
+            <div className="mt-6 p-4 rounded-2xl bg-[#249d9f]/5 border border-[#249d9f]/10 flex items-start gap-4">
+                <AlertCircle size={18} className="text-[#2ec4c7] shrink-0" />
                 <p className="text-[10px] text-gray-400 leading-relaxed italic">
-                    <span className="font-bold text-indigo-400 uppercase mr-1">Pro Tip:</span> 
+                    <span className="font-bold text-[#2ec4c7] uppercase mr-1">Pro Tip:</span> 
                     These items are linked specifically to this endpoint. You can view 
                     all your notes and tasks in their respective modules, but this view 
                     keeps you focused on the current context.

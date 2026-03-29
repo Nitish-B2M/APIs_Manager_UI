@@ -42,7 +42,7 @@ const getMethodColor = (method: HttpMethod): string => {
         case 'POST': return 'bg-blue-600/20 text-blue-500';
         case 'PUT': return 'bg-yellow-600/20 text-yellow-600';
         case 'DELETE': return 'bg-red-600/20 text-red-500';
-        case 'PATCH': return 'bg-purple-600/20 text-purple-500';
+        case 'PATCH': return 'bg-[#1a7a7c]/20 text-[#249d9f]';
         default: return 'bg-gray-700 text-gray-400';
     }
 };
@@ -79,7 +79,7 @@ function FolderItemComponent({
     const subTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
     const hoverBg = theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100';
     const folderBg = theme === 'dark' ? 'bg-gray-750' : 'bg-gray-50';
-    const dragOverBg = theme === 'dark' ? 'bg-indigo-600/20' : 'bg-indigo-50';
+    const dragOverBg = theme === 'dark' ? 'bg-[#1a7a7c]/20' : 'bg-indigo-50';
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -224,8 +224,8 @@ function FolderItemComponent({
                                 onDragEnd={() => canEdit && onDragEndRequest()}
                                 className={`group flex items-center gap-2 px-2 py-1.5 cursor-pointer border-l-2 transition-all ${isSelected
                                     ? theme === 'dark'
-                                        ? 'bg-indigo-600/20 border-indigo-500'
-                                        : 'bg-indigo-50 border-indigo-500'
+                                        ? 'bg-[#1a7a7c]/20 border-[#249d9f]'
+                                        : 'bg-indigo-50 border-[#249d9f]'
                                     : `border-transparent ${hoverBg}`
                                     } ${draggedRequestIdx === globalIdx ? 'opacity-50' : ''}`}
                             >

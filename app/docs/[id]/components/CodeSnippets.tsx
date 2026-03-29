@@ -65,7 +65,7 @@ export default function CodeSnippets({ request, variables }: CodeSnippetsProps) 
 
     const codeBg = theme === 'dark' ? 'bg-gray-950' : 'bg-gray-900';
     const tabBg = theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100';
-    const activeBg = theme === 'dark' ? 'bg-indigo-600' : 'bg-indigo-600';
+    const activeBg = theme === 'dark' ? 'bg-[#1a7a7c]' : 'bg-[#1a7a7c]';
     const borderColor = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
 
     if (!request) {

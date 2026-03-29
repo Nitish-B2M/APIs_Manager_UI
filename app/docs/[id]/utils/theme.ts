@@ -37,7 +37,7 @@ export function getMethodColor(method: string, theme: Theme): string {
         case 'DELETE':
             return 'bg-red-600/20 text-red-500';
         case 'PATCH':
-            return 'bg-purple-600/20 text-purple-500';
+            return 'bg-[#1a7a7c]/20 text-[#249d9f]';
         default:
             return theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600';
     }

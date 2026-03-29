@@ -10,7 +10,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
     loading: () => (
         <div className="h-full w-full flex items-center justify-center bg-black/10 min-h-[200px]">
-            <Loader2 size={20} className="animate-spin text-indigo-500" />
+            <Loader2 size={20} className="animate-spin text-[#249d9f]" />
         </div>
     )
 });
@@ -105,15 +105,15 @@ export function DocumentationView({
                             <button
                                 onClick={handleGenerateAiReadme}
                                 disabled={isGenerating}
-                                className={`flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-[10px] font-bold hover:bg-purple-600/30 transition-all shadow-sm disabled:opacity-50`}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c]/20 text-[#2ec4c7] border border-[#249d9f]/30 rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c]/30 transition-all shadow-sm disabled:opacity-50`}
                             >
                                 {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                 AI README
                             </button>
-                            <button onClick={onCopyMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
+                            <button onClick={onCopyMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
                                 <Copy size={12} /> COPY MD
                             </button>
-                            <button onClick={onDownloadMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
+                            <button onClick={onDownloadMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
                                 <Download size={12} /> MD
                             </button>
 
@@ -124,11 +124,11 @@ export function DocumentationView({
                             )}
 
                             {onExportOpenApi && (
-                                <button onClick={onExportOpenApi} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
+                                <button onClick={onExportOpenApi} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
                                     <Zap size={12} /> OPENAPI 3.1
                                 </button>
                             )}
-                            <button onClick={onDownloadPdf} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-md">
+                            <button onClick={onDownloadPdf} className="flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c] text-white rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] transition-all shadow-md">
                                 <FileText size={12} /> PDF
                             </button>
                         </div>
@@ -144,7 +144,7 @@ export function DocumentationView({
                                 <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
                             </div>
 
-                            <div className={`px-4 py-3 rounded-xl font-mono text-[12px] mb-6 ${theme === 'dark' ? 'bg-gray-800/50 text-indigo-300 border border-gray-700' : 'bg-indigo-50/50 text-indigo-700 border border-indigo-100'} break-all`}>
+                            <div className={`px-4 py-3 rounded-xl font-mono text-[12px] mb-6 ${theme === 'dark' ? 'bg-gray-800/50 text-[#2ec4c7] border border-gray-700' : 'bg-indigo-50/50 text-[#1a7a7c] border border-indigo-100'} break-all`}>
                                 {resolveUrl(ep)}
                             </div>
 
@@ -171,7 +171,7 @@ export function DocumentationView({
                                             <tbody className="divide-y divide-gray-700/10">
                                                 {ep.headers.filter((h: any) => h.key).map((h: any, hi: number) => (
                                                     <tr key={hi} className={theme === 'dark' ? 'hover:bg-gray-800/30' : 'hover:bg-gray-50/50 transition-colors'}>
-                                                        <td className="px-4 py-3 font-mono text-[11px] text-indigo-400">{h.key}</td>
+                                                        <td className="px-4 py-3 font-mono text-[11px] text-[#2ec4c7]">{h.key}</td>
                                                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{resolveAll(h.value, ep)}</td>
                                                     </tr>
                                                 ))}
