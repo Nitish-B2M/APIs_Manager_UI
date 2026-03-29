@@ -114,7 +114,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
     if (isLoading) {
         return (
             <div className="h-full flex items-center justify-center">
-                <Loader2 size={24} className="animate-spin text-indigo-500" />
+                <Loader2 size={24} className="animate-spin text-[#249d9f]" />
             </div>
         );
     }
@@ -130,7 +130,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                 {canAdmin && (
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-900/20"
+                        className="flex items-center gap-2 bg-[#1a7a7c] hover:bg-[#249d9f] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-900/20"
                     >
                         <Plus size={16} /> ADD WEBHOOK
                     </button>
@@ -140,11 +140,36 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
             {/* Webhook List */}
             <div className="space-y-4">
                 {webhooks.length === 0 && (
-                    <div className="text-center py-20 rounded-3xl border-2 border-dashed border-gray-500/10 bg-black/5 flex flex-col items-center gap-4">
-                        <Webhook size={48} className="text-gray-500 opacity-20" />
-                        <div className="max-w-xs">
-                            <p className={`text-sm font-bold ${themeClasses.textColor}`}>No webhooks configured</p>
-                            <p className="text-[11px] text-gray-500 mt-1">Connect your workspace to external services like Slack, Discord, or your own API.</p>
+                    <div className="py-16 rounded-xl border border-dashed border-white/[0.08] flex flex-col items-center gap-5">
+                        <Webhook size={32} className="text-[#6E7681] opacity-50" />
+                        <div className="text-center max-w-sm">
+                            <p className="text-[#E6EDF3] text-sm font-medium mb-1">Connect to Slack, Discord or your own endpoint</p>
+                            <p className="text-[#6E7681] text-xs mb-5">Receive real-time notifications when collection events occur.</p>
+
+                            {/* Quick-connect pills */}
+                            <div className="flex justify-center gap-2 mb-5">
+                                {[
+                                    { name: 'Slack', icon: '💬', color: '#4A154B' },
+                                    { name: 'Discord', icon: '🎮', color: '#5865F2' },
+                                    { name: 'Custom', icon: '🔗', color: '#21262D' },
+                                ].map(svc => (
+                                    <button
+                                        key={svc.name}
+                                        onClick={() => setShowAddModal(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] hover:border-white/[0.16] transition-all"
+                                        style={{ background: `${svc.color}20`, color: svc.color === '#21262D' ? '#8B949E' : svc.color }}
+                                    >
+                                        <span>{svc.icon}</span> {svc.name}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                className="px-5 py-2.5 rounded-lg bg-[#249d9f] text-white text-xs font-semibold hover:bg-[#1a7a7c] transition-colors"
+                            >
+                                + Add Webhook
+                            </button>
                         </div>
                     </div>
                 )}
@@ -156,7 +181,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                     >
                         <div className="p-4 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-xl ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                <div className={`p-3 rounded-xl ${theme === 'dark' ? 'bg-[#249d9f]/10 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'}`}>
                                     <Webhook size={20} />
                                 </div>
                                 <div>
@@ -166,7 +191,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                                             <Globe size={12} />
                                             <span className="truncate max-w-[200px]">{webhook.url}</span>
                                         </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-bold bg-indigo-400/10 px-1.5 py-0.5 rounded">
+                                        <div className="flex items-center gap-1.5 text-[10px] text-[#2ec4c7] font-bold bg-[#2ec4c7]/10 px-1.5 py-0.5 rounded">
                                             <Activity size={10} />
                                             {webhook.events.length} Events
                                         </div>
@@ -208,7 +233,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Recent Deliveries</h4>
                                     <button 
                                         onClick={() => fetchLogs(webhook.id)}
-                                        className="text-[9px] font-bold text-indigo-400 hover:underline"
+                                        className="text-[9px] font-bold text-[#2ec4c7] hover:underline"
                                     >
                                         Refresh
                                     </button>
@@ -216,7 +241,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
 
                                 {isLoadingLogs[webhook.id] ? (
                                     <div className="py-8 flex justify-center">
-                                        <Loader2 size={16} className="animate-spin text-indigo-500" />
+                                        <Loader2 size={16} className="animate-spin text-[#249d9f]" />
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
@@ -241,7 +266,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                                                         {log.statusCode || 'ERROR'}
                                                     </div>
                                                     <details className="relative">
-                                                        <summary className="cursor-pointer list-none text-[10px] font-bold text-indigo-400 hover:underline uppercase">Details</summary>
+                                                        <summary className="cursor-pointer list-none text-[10px] font-bold text-[#2ec4c7] hover:underline uppercase">Details</summary>
                                                         <div className={`absolute right-0 bottom-full mb-2 w-64 p-3 rounded-xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#1a1b26]' : 'bg-white'} shadow-2xl z-[60]`}>
                                                             <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Response Body</div>
                                                             <pre className="text-[10px] font-mono p-2 rounded bg-black/10 overflow-x-auto max-h-40 whitespace-pre-wrap">
@@ -262,7 +287,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
 
             {/* Add Webhook Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
                     <div className={`w-full max-w-xl rounded-3xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#1a1b26]' : 'bg-white'} shadow-2xl p-6 flex flex-col gap-6 animate-in zoom-in-95 duration-200`}>
                         <div>
                             <h2 className={`text-xl font-black tracking-tight ${themeClasses.textColor}`}>New Webhook</h2>
@@ -276,7 +301,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                                     type="text"
                                     value={newWebhook.name}
                                     onChange={(e) => setNewWebhook({ ...newWebhook, name: e.target.value })}
-                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all`}
+                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-[#249d9f]/20 focus:border-[#249d9f] transition-all`}
                                     placeholder="e.g. My Slack App"
                                 />
                             </div>
@@ -287,7 +312,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                                     type="text"
                                     value={newWebhook.url}
                                     onChange={(e) => setNewWebhook({ ...newWebhook, url: e.target.value })}
-                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all`}
+                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-[#249d9f]/20 focus:border-[#249d9f] transition-all`}
                                     placeholder="https://hooks.slack.com/services/..."
                                 />
                             </div>
@@ -300,7 +325,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                                         type="password"
                                         value={newWebhook.secret}
                                         onChange={(e) => setNewWebhook({ ...newWebhook, secret: e.target.value })}
-                                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all`}
+                                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.textColor} text-sm outline-none focus:ring-2 focus:ring-[#249d9f]/20 focus:border-[#249d9f] transition-all`}
                                         placeholder="Used for HMAC signature verification"
                                     />
                                 </div>
@@ -315,11 +340,11 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                                             onClick={() => toggleEvent(event.id)}
                                             className={`p-3 rounded-2xl border text-left transition-all flex items-start gap-3 ${
                                                 newWebhook.events.includes(event.id)
-                                                    ? 'border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/20'
+                                                    ? 'border-[#249d9f] bg-[#249d9f]/5 ring-1 ring-[#249d9f]/20'
                                                     : `${themeClasses.borderCol} ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'} hover:border-gray-400`
                                             }`}
                                         >
-                                            <div className={`mt-0.5 rounded-full border-2 p-0.5 flex items-center justify-center ${newWebhook.events.includes(event.id) ? 'border-indigo-500 bg-indigo-500' : 'border-gray-400'}`}>
+                                            <div className={`mt-0.5 rounded-full border-2 p-0.5 flex items-center justify-center ${newWebhook.events.includes(event.id) ? 'border-[#249d9f] bg-[#249d9f]' : 'border-gray-400'}`}>
                                                 <div className="w-1.5 h-1.5 rounded-full bg-white" />
                                             </div>
                                             <div>
@@ -342,7 +367,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
                             <button
                                 onClick={handleCreate}
                                 disabled={isCreating}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-[#1a7a7c] text-white text-sm font-bold hover:bg-[#249d9f] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Save className="hidden md:block" size={16} />}
                                 CREATE WEBHOOK

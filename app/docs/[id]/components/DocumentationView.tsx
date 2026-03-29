@@ -4,13 +4,13 @@ import React, { useState } from 'react';
 import { X, Users, UserPlus, Shield, Trash2, Mail, Loader2, Check, ExternalLink, Clock, ChevronDown, Globe, Copy, Save, Download, FileText, Zap, Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Endpoint, Documentation } from '@/types';
-import { getThemeClasses } from '../utils/theme';
+import { getThemeClasses, getRequestLabel, getRequestBadgeClass } from '../utils/theme';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
     loading: () => (
         <div className="h-full w-full flex items-center justify-center bg-black/10 min-h-[200px]">
-            <Loader2 size={20} className="animate-spin text-indigo-500" />
+            <Loader2 size={20} className="animate-spin text-[#249d9f]" />
         </div>
     )
 });
@@ -73,10 +73,7 @@ export function DocumentationView({
                             }}
                             className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-white'} transition-colors`}
                         >
-                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
-                                ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
-                                    'bg-gray-600/20 text-gray-500'
-                                }`}>{ep.method}</span>
+                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${getRequestBadgeClass(ep.method, ep.protocol)}`}>{getRequestLabel(ep.method, ep.protocol)}</span>
                             <span className="truncate">{ep.name || 'Untitled'}</span>
                         </a>
                     ))}
@@ -105,15 +102,15 @@ export function DocumentationView({
                             <button
                                 onClick={handleGenerateAiReadme}
                                 disabled={isGenerating}
-                                className={`flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-[10px] font-bold hover:bg-purple-600/30 transition-all shadow-sm disabled:opacity-50`}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c]/20 text-[#2ec4c7] border border-[#249d9f]/30 rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c]/30 transition-all shadow-sm disabled:opacity-50`}
                             >
                                 {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                 AI README
                             </button>
-                            <button onClick={onCopyMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
+                            <button onClick={onCopyMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
                                 <Copy size={12} /> COPY MD
                             </button>
-                            <button onClick={onDownloadMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
+                            <button onClick={onDownloadMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
                                 <Download size={12} /> MD
                             </button>
 
@@ -124,11 +121,11 @@ export function DocumentationView({
                             )}
 
                             {onExportOpenApi && (
-                                <button onClick={onExportOpenApi} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm`}>
+                                <button onClick={onExportOpenApi} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
                                     <Zap size={12} /> OPENAPI 3.1
                                 </button>
                             )}
-                            <button onClick={onDownloadPdf} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-md">
+                            <button onClick={onDownloadPdf} className="flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c] text-white rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] transition-all shadow-md">
                                 <FileText size={12} /> PDF
                             </button>
                         </div>
@@ -137,14 +134,11 @@ export function DocumentationView({
                     {endpoints.map((ep, idx) => (
                         <div key={idx} id={`endpoint-${idx}`} className="mb-12 scroll-mt-6 last:mb-0">
                             <div className="flex items-center gap-3 mb-4">
-                                <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500 border border-green-500/20' :
-                                    ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500 border border-blue-500/20' :
-                                        'bg-gray-600/20 text-gray-500 border border-gray-600/20'
-                                    }`}>{ep.method}</span>
+                                <span className={`text-[10px] font-black px-2 py-1 rounded ${getRequestBadgeClass(ep.method, ep.protocol)}`}>{getRequestLabel(ep.method, ep.protocol)}</span>
                                 <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
                             </div>
 
-                            <div className={`px-4 py-3 rounded-xl font-mono text-[12px] mb-6 ${theme === 'dark' ? 'bg-gray-800/50 text-indigo-300 border border-gray-700' : 'bg-indigo-50/50 text-indigo-700 border border-indigo-100'} break-all`}>
+                            <div className={`px-4 py-3 rounded-xl font-mono text-[12px] mb-6 ${theme === 'dark' ? 'bg-gray-800/50 text-[#2ec4c7] border border-gray-700' : 'bg-indigo-50/50 text-[#1a7a7c] border border-indigo-100'} break-all`}>
                                 {resolveUrl(ep)}
                             </div>
 
@@ -171,7 +165,7 @@ export function DocumentationView({
                                             <tbody className="divide-y divide-gray-700/10">
                                                 {ep.headers.filter((h: any) => h.key).map((h: any, hi: number) => (
                                                     <tr key={hi} className={theme === 'dark' ? 'hover:bg-gray-800/30' : 'hover:bg-gray-50/50 transition-colors'}>
-                                                        <td className="px-4 py-3 font-mono text-[11px] text-indigo-400">{h.key}</td>
+                                                        <td className="px-4 py-3 font-mono text-[11px] text-[#2ec4c7]">{h.key}</td>
                                                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{resolveAll(h.value, ep)}</td>
                                                     </tr>
                                                 ))}

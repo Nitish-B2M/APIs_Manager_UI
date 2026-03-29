@@ -74,7 +74,7 @@ function ResponsePaneComponent({
                             <span className={`${subTextColor} font-mono text-[10px]`}>{response.time}ms</span>
                             <button
                                 onClick={onToggleAbsoluteTime}
-                                className={`text-[9px] ${subTextColor} hover:text-indigo-400 flex items-center gap-1.5 ${inputBg} px-2 py-1 rounded-lg border ${borderCol} transition-all hover:border-indigo-500/30 font-bold`}
+                                className={`text-[9px] ${subTextColor} hover:text-[#2ec4c7] flex items-center gap-1.5 ${inputBg} px-2 py-1 rounded-lg border ${borderCol} transition-all hover:border-[#249d9f]/30 font-bold`}
                             >
                                 <Clock size={10} />
                                 {showAbsoluteTime
@@ -95,7 +95,7 @@ function ResponsePaneComponent({
                                             value={filter}
                                             onChange={(e) => setFilter(e.target.value)}
                                             placeholder="Highlight..."
-                                            className={`px-3 py-1.5 text-[11px] ${inputBg} border ${borderCol} rounded-xl focus:ring-2 focus:ring-indigo-500/30 outline-none w-40 ${textColor} transition-all placeholder-gray-600`}
+                                            className={`px-3 py-1.5 text-[11px] ${inputBg} border ${borderCol} rounded-xl focus:ring-2 focus:ring-[#249d9f]/30 outline-none w-40 ${textColor} transition-all placeholder-gray-600`}
                                             autoFocus
                                         />
                                     </div>
@@ -109,7 +109,7 @@ function ResponsePaneComponent({
                             ) : (
                                 <button
                                     onClick={() => setShowFilter(true)}
-                                    className={`p-1.5 px-3 text-[10px] ${subTextColor} hover:text-indigo-400 ${inputBg} hover:bg-white/5 rounded-xl border ${borderCol} flex items-center gap-1.5 transition-all mr-1 font-black uppercase tracking-widest`}
+                                    className={`p-1.5 px-3 text-[10px] ${subTextColor} hover:text-[#2ec4c7] ${inputBg} hover:bg-white/5 rounded-xl border ${borderCol} flex items-center gap-1.5 transition-all mr-1 font-black uppercase tracking-widest`}
                                 >
                                     SEARCH
                                 </button>
@@ -124,7 +124,7 @@ function ResponsePaneComponent({
                     )}
                     <button
                         onClick={onToggleHistory}
-                        className={`p-2 rounded-xl transition-all duration-300 ${showHistory ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
+                        className={`p-2 rounded-xl transition-all duration-300 ${showHistory ? 'bg-[#1a7a7c] text-white shadow-lg shadow-[#1a7a7c]/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
                         title="History"
                     >
                         <History size={16} />
@@ -132,7 +132,7 @@ function ResponsePaneComponent({
                     {response && isApiResponse(response) && (
                         <button
                             onClick={() => setWrapLines(!wrapLines)}
-                            className={`p-2 rounded-xl transition-all duration-300 ${wrapLines ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
+                            className={`p-2 rounded-xl transition-all duration-300 ${wrapLines ? 'bg-[#1a7a7c] text-white shadow-lg shadow-[#1a7a7c]/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
                             title={wrapLines ? 'Disable Word Wrap' : 'Enable Word Wrap'}
                         >
                             <WrapText size={16} />
@@ -140,14 +140,14 @@ function ResponsePaneComponent({
                     )}
                     <button
                         onClick={() => onLayoutChange('horizontal')}
-                        className={`p-2 rounded-xl transition-all duration-300 ${paneLayout === 'horizontal' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
+                        className={`p-2 rounded-xl transition-all duration-300 ${paneLayout === 'horizontal' ? 'bg-[#1a7a7c] text-white shadow-lg shadow-[#1a7a7c]/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
                         title="Layout Right"
                     >
                         <Columns2 size={16} />
                     </button>
                     <button
                         onClick={() => onLayoutChange('vertical')}
-                        className={`p-2 rounded-xl transition-all duration-300 ${paneLayout === 'vertical' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
+                        className={`p-2 rounded-xl transition-all duration-300 ${paneLayout === 'vertical' ? 'bg-[#1a7a7c] text-white shadow-lg shadow-[#1a7a7c]/20' : `${subTextColor} hover:bg-white/10 hover:text-white`}`}
                         title="Layout Bottom"
                     >
                         <Rows2 size={16} />
@@ -162,7 +162,7 @@ function ResponsePaneComponent({
                     <div className={`absolute inset-0 z-20 ${isDark ? 'bg-black/80 backdrop-blur-2xl' : 'bg-white/90 backdrop-blur-md'} border-r ${borderCol} p-6 overflow-y-auto animate-in slide-in-from-right duration-500 shadow-2xl`}>
                         <div className="flex justify-between items-center mb-6">
                             <h4 className={`font-black uppercase tracking-[0.2em] ${textColor} text-xs flex items-center gap-3`}>
-                                <div className="p-2 bg-indigo-600/20 rounded-xl text-indigo-400">
+                                <div className="p-2 bg-[#1a7a7c]/20 rounded-xl text-[#2ec4c7]">
                                     <RotateCcw size={16} />
                                 </div>
                                 Snapshot History
@@ -181,9 +181,9 @@ function ResponsePaneComponent({
                                 <div
                                     key={i}
                                     onClick={() => onLoadFromHistory(item)}
-                                    className={`p-4 border ${borderCol} rounded-2xl ${isDark ? 'bg-white/5' : 'bg-gray-50'} hover:border-indigo-500/50 hover:bg-indigo-600/5 cursor-pointer transition-all duration-300 relative group overflow-hidden`}
+                                    className={`p-4 border ${borderCol} rounded-2xl ${isDark ? 'bg-white/5' : 'bg-gray-50'} hover:border-[#249d9f]/50 hover:bg-[#1a7a7c]/5 cursor-pointer transition-all duration-300 relative group overflow-hidden`}
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/0 to-indigo-600/0 group-hover:from-indigo-600/5 transition-all duration-500" />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-[#1a7a7c]/0 to-[#1a7a7c]/0 group-hover:from-[#1a7a7c]/5 transition-all duration-500" />
                                     <div className="flex justify-between items-start mb-2 relative z-10">
                                         <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg shadow-sm ${item.lastResponse && item.lastResponse.status >= 200 && item.lastResponse.status < 300
                                             ? 'bg-emerald-600/20 text-emerald-400'
@@ -195,11 +195,11 @@ function ResponsePaneComponent({
                                             {new Date(item.timestamp).toLocaleTimeString()}
                                         </span>
                                     </div>
-                                    <div className={`text-[12px] font-bold ${textColor} truncate tracking-tight mb-1 relative z-10 group-hover:text-indigo-400 transition-colors`}>
+                                    <div className={`text-[12px] font-bold ${textColor} truncate tracking-tight mb-1 relative z-10 group-hover:text-[#2ec4c7] transition-colors`}>
                                         {item.method} {item.url}
                                     </div>
                                     <div className={`text-[10px] ${subTextColor} flex items-center gap-2 relative z-10 font-medium`}>
-                                        <span className="text-indigo-500 font-bold">{item.lastResponse?.time}ms</span>
+                                        <span className="text-[#249d9f] font-bold">{item.lastResponse?.time}ms</span>
                                         <span className="opacity-30">•</span>
                                         <span className="truncate">{item.name || 'Untitled Snap'}</span>
                                     </div>
@@ -211,13 +211,13 @@ function ResponsePaneComponent({
 
                 {/* History Viewing Banner */}
                 {isViewingHistory && (
-                    <div className="absolute top-0 left-0 right-0 z-30 bg-indigo-900 border-b border-indigo-500/30 px-4 py-2 flex justify-between items-center animate-in fade-in duration-200">
+                    <div className="absolute top-0 left-0 right-0 z-30 bg-indigo-900 border-b border-[#249d9f]/30 px-4 py-2 flex justify-between items-center animate-in fade-in duration-200">
                         <span className="text-[10px] text-indigo-200 font-bold flex items-center gap-2">
                             <Clock size={12} /> VIEWING HISTORICAL SNAPSHOT
                         </span>
                         <button
                             onClick={onBackToLatest}
-                            className="text-[9px] bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500 font-bold transition-colors shadow-lg"
+                            className="text-[9px] bg-[#1a7a7c] text-white px-2 py-1 rounded hover:bg-[#249d9f] font-bold transition-colors shadow-lg"
                         >
                             BACK TO LATEST
                         </button>
@@ -240,12 +240,12 @@ function ResponsePaneComponent({
                 {isLoading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/40 backdrop-blur-sm z-50">
                         <div className="relative">
-                            <div className="w-16 h-16 rounded-full border-t-2 border-indigo-500 animate-spin" />
+                            <div className="w-16 h-16 rounded-full border-t-2 border-[#249d9f] animate-spin" />
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <Sparkles size={24} className="text-indigo-400 animate-pulse" />
+                                <Sparkles size={24} className="text-[#2ec4c7] animate-pulse" />
                             </div>
                         </div>
-                        <div className="text-[11px] font-black text-indigo-400 uppercase tracking-[0.4em] animate-pulse">
+                        <div className="text-[11px] font-black text-[#2ec4c7] uppercase tracking-[0.4em] animate-pulse">
                             Processing Request...
                         </div>
                     </div>
@@ -286,7 +286,7 @@ function ResponsePaneComponent({
                                         style: {
                                             display: 'block',
                                             backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
-                                            borderLeft: '2px solid #6366f1',
+                                            borderLeft: '2px solid #249d9f',
                                             paddingLeft: '4px',
                                             marginLeft: '-6px'
                                         }

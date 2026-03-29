@@ -66,7 +66,7 @@ export function ProxySettings() {
         }
     };
 
-    const inputClass = `w-full px-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-200 text-gray-900'
+    const inputClass = `w-full px-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#249d9f]/40 transition-all ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-200 text-gray-900'
         }`;
 
     const containerStyle = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200 shadow-sm';
@@ -75,7 +75,7 @@ export function ProxySettings() {
         <div className={`p-8 rounded-xl border flex flex-col gap-8 ${containerStyle}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                    <div className={`p-3 rounded-xl ${theme === 'dark' ? 'bg-[#249d9f]/10 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'}`}>
                         <Network size={24} />
                     </div>
                     <div>
@@ -106,9 +106,9 @@ export function ProxySettings() {
                                     value={t}
                                     checked={config.type === t}
                                     onChange={() => setConfig({ ...config, type: t as any })}
-                                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                    className="w-4 h-4 text-[#1a7a7c] focus:ring-[#249d9f] border-gray-300"
                                 />
-                                <span className={`text-sm font-medium transition-colors group-hover:text-indigo-500 ${config.type === t ? 'text-indigo-500' : themeClasses.textColor}`}>
+                                <span className={`text-sm font-medium transition-colors group-hover:text-[#249d9f] ${config.type === t ? 'text-[#249d9f]' : themeClasses.textColor}`}>
                                     {t === 'none' ? 'Direct (No Proxy)' : t.toUpperCase()}
                                 </span>
                             </label>
@@ -157,7 +157,7 @@ export function ProxySettings() {
                 <button
                     onClick={handleSave}
                     disabled={saving || updateMutation.isPending || (config.type !== 'none' && !config.host)}
-                    className="flex items-center gap-2 px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold transition-all shadow-lg hover:shadow-indigo-500/30"
+                    className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[#1a7a7c] hover:bg-[#1a7a7c] disabled:opacity-50 text-white font-bold transition-all shadow-lg hover:shadow-[#249d9f]/30"
                 >
                     {saving || updateMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                     Apply Settings

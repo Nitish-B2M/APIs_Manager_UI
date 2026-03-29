@@ -87,130 +87,104 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className={`w-[840px] max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-[#1a1a2e] border border-gray-800' : 'bg-white border border-gray-200'
-                }`}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+            <div className="max-h-[85vh] overflow-hidden flex flex-col" style={{ background: '#161B22', borderRadius: 12, border: '1px solid rgba(255,255,255,0.16)', minWidth: 640, maxWidth: '78vw', width: '72vw' }} onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
-                <div className={`px-6 py-4 flex items-center justify-between border-b ${themeClasses.borderCol}`}>
-                    <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-purple-600/20' : 'bg-purple-100'
-                            }`}>
-                            <Zap size={18} className="text-purple-500" />
-                        </div>
-                        <div>
-                            <h2 className={`text-base font-bold ${themeClasses.textColor}`}>Collection Runner</h2>
-                            <p className={`text-xs ${themeClasses.subTextColor}`}>
-                                Run {selectedEndpoints.length} of {endpoints.length} requests sequentially
-                            </p>
-                        </div>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(36,157,159,0.1)', color: '#249d9f', flexShrink: 0 }}>
+                        <Zap size={18} />
                     </div>
-                    <button onClick={onClose} className={`p-2 rounded-lg ${themeClasses.hoverBg} ${themeClasses.subTextColor} transition-colors`}>
-                        <X size={18} />
-                    </button>
+                    <div style={{ flex: 1 }}>
+                        <h2 style={{ fontSize: 16, fontWeight: 600, color: '#E6EDF3', margin: 0 }}>Collection Runner</h2>
+                        <p style={{ fontSize: 13, color: '#8B949E', margin: '2px 0 0' }}>Run {selectedEndpoints.length} of {endpoints.length} requests sequentially</p>
+                    </div>
+                    <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8B949E', background: 'none', border: 'none', cursor: 'pointer' }}><X size={16} /></button>
                 </div>
 
-                {/* Controls Bar */}
-                <div className={`px-6 py-3 flex items-center gap-4 border-b ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#16162a]' : 'bg-gray-50'
-                    }`}>
-                    {!isRunning ? (
-                        <button
-                            onClick={handleStart}
-                            disabled={selectedEndpoints.length === 0}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-green-600/20"
-                        >
-                            <Play size={14} /> Run Collection
-                        </button>
-                    ) : (
-                        <button
-                            onClick={stop}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors shadow-md shadow-red-600/20"
-                        >
-                            <Square size={14} /> Stop
-                        </button>
-                    )}
+                {/* Controls: Run button full-width + delay right-aligned */}
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: results.length > 0 ? 12 : 0 }}>
+                        {!isRunning ? (
+                            <button
+                                onClick={handleStart}
+                                disabled={selectedEndpoints.length === 0}
+                                style={{ flex: 1, height: 44, borderRadius: 8, background: '#249d9f', color: 'white', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: selectedEndpoints.length === 0 ? 0.4 : 1 }}
+                            >
+                                <Play size={16} /> Run Collection
+                            </button>
+                        ) : (
+                            <button
+                                onClick={stop}
+                                style={{ flex: 1, height: 44, borderRadius: 8, background: '#F85149', color: 'white', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                            >
+                                <Square size={16} /> Stop
+                            </button>
+                        )}
 
-                    <div className="flex items-center gap-2">
-                        <label className={`text-xs font-medium ${themeClasses.subTextColor}`}>Delay</label>
-                        <input
-                            type="number"
-                            min={0}
-                            max={5000}
-                            step={100}
-                            value={delay}
-                            onChange={e => setDelay(Number(e.target.value))}
-                            disabled={isRunning}
-                            className={`w-20 px-2 py-1 rounded-md text-xs border transition-colors ${theme === 'dark'
-                                ? 'bg-[#1e1e2e] border-gray-700 text-gray-200'
-                                : 'bg-white border-gray-300 text-gray-800'
-                                } disabled:opacity-50`}
-                        />
-                        <span className={`text-xs ${themeClasses.subTextColor}`}>ms</span>
+                        {/* Delay stepper — right-aligned */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            <span style={{ fontSize: 12, color: '#6E7681' }}>Delay</span>
+                            <div style={{ display: 'flex', alignItems: 'center', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                                <button onClick={() => setDelay(Math.max(0, delay - 100))} disabled={isRunning} style={{ width: 28, height: 32, background: '#21262D', border: 'none', color: '#8B949E', cursor: 'pointer', fontSize: 14 }}>−</button>
+                                <input
+                                    type="number" min={0} max={5000} step={100} value={delay}
+                                    onChange={e => setDelay(Number(e.target.value))} disabled={isRunning}
+                                    style={{ width: 56, height: 32, textAlign: 'center', background: '#161B22', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.08)', borderRight: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 12, outline: 'none' }}
+                                />
+                                <button onClick={() => setDelay(Math.min(5000, delay + 100))} disabled={isRunning} style={{ width: 28, height: 32, background: '#21262D', border: 'none', color: '#8B949E', cursor: 'pointer', fontSize: 14 }}>+</button>
+                            </div>
+                            <span style={{ fontSize: 11, color: '#6E7681' }}>ms</span>
+                        </div>
                     </div>
 
                     {isBeta && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 ml-2">
-                            <label className={`text-[10px] font-black uppercase tracking-widest text-indigo-400 cursor-pointer flex items-center gap-2`}>
-                                <input
-                                    type="checkbox"
-                                    checked={isChainingEnabled}
-                                    onChange={e => setIsChainingEnabled(e.target.checked)}
-                                    className="accent-indigo-500"
-                                />
-                                Smart Chaining
-                            </label>
-                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8B949E', cursor: 'pointer', marginTop: 8 }}>
+                            <input type="checkbox" checked={isChainingEnabled} onChange={e => setIsChainingEnabled(e.target.checked)} className="accent-[#249d9f]" />
+                            Smart Chaining
+                        </label>
                     )}
 
                     {results.length > 0 && (
-                        <div className="flex items-center gap-3 ml-auto text-xs font-bold">
-                            <span className="text-green-400">{stats.passed} passed</span>
-                            <span className="text-red-400">{stats.failed} failed</span>
-                            <span className={themeClasses.subTextColor}>
-                                <Clock size={12} className="inline mr-1" />
-                                {stats.totalTime}ms
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, fontWeight: 600, marginTop: 8 }}>
+                            <span style={{ color: '#3FB950' }}>{stats.passed} passed</span>
+                            <span style={{ color: '#F85149' }}>{stats.failed} failed</span>
+                            <span style={{ color: '#8B949E' }}><Clock size={11} className="inline mr-1" />{stats.totalTime}ms</span>
                         </div>
                     )}
                 </div>
 
-                {/* Main Content */}
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1.5">
-                    {/* Request checklist (before run) */}
+                {/* Request list */}
+                <div className="flex-1 overflow-y-auto" style={{ padding: '16px 24px' }}>
                     {results.length === 0 && !isRunning && (
                         <>
-                            <div className="flex items-center justify-between mb-3">
-                                <button onClick={toggleAll} className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                <button onClick={toggleAll} style={{ fontSize: 12, color: '#249d9f', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
                                     {selectedIds.size === endpoints.filter(e => e.id).length ? 'Deselect All' : 'Select All'}
                                 </button>
                             </div>
                             {endpoints.map((ep) => {
                                 if (!ep.id) return null;
                                 const isSelected = selectedIds.has(ep.id);
+                                const displayLabel = ep.protocol === 'WS' ? 'WS' : ep.protocol === 'SSE' ? 'SSE' : ep.protocol === 'GRAPHQL' ? 'GQL' : ep.method;
+                                const dotColor = ep.protocol === 'WS' ? '#BC8CFF' : ep.protocol === 'SSE' ? '#D29922' : ep.protocol === 'GRAPHQL' ? '#FF6B9D' : ep.method === 'GET' ? '#3FB950' : ep.method === 'POST' ? '#58A6FF' : ep.method === 'DELETE' ? '#F85149' : ep.method === 'PATCH' ? '#D29922' : '#8B949E';
                                 return (
                                     <label
                                         key={ep.id}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all border ${isSelected
-                                            ? theme === 'dark'
-                                                ? 'bg-[#22224a] border-purple-800/40'
-                                                : 'bg-blue-50 border-blue-200'
-                                            : theme === 'dark'
-                                                ? 'bg-[#1e1e36] border-transparent hover:bg-[#25254a]'
-                                                : 'bg-gray-50 border-transparent hover:bg-gray-100'
-                                            }`}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                                            borderRadius: 8, cursor: 'pointer', marginBottom: 4, transition: 'all 0.15s',
+                                            background: isSelected ? '#1C2128' : 'transparent',
+                                            border: `1px solid ${isSelected ? 'rgba(255,255,255,0.08)' : 'transparent'}`,
+                                        }}
                                     >
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => toggleEndpoint(ep.id!)}
-                                            className="accent-purple-500"
-                                        />
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getMethodColor(ep.method, theme)}`}>
-                                            {ep.method}
-                                        </span>
-                                        <span className={`text-xs font-medium truncate ${themeClasses.textColor}`}>
+                                        <input type="checkbox" checked={isSelected} onChange={() => toggleEndpoint(ep.id!)} className="accent-[#249d9f]" />
+                                        {/* Colored dot by method */}
+                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                        <span style={{ fontSize: 10, fontWeight: 600, color: dotColor, width: 42, flexShrink: 0 }}>{displayLabel}</span>
+                                        <span style={{ fontSize: 13, fontWeight: 500, color: '#E6EDF3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {ep.name || ep.url}
                                         </span>
-                                        <span className={`text-[10px] ml-auto truncate max-w-[280px] ${themeClasses.subTextColor}`}>
+                                        <span style={{ fontSize: 11, color: '#6E7681', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                             {ep.url}
                                         </span>
                                     </label>
@@ -304,7 +278,7 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                 <div className="mt-4">
                                     <button
                                         onClick={() => setShowExtracted(!showExtracted)}
-                                        className={`flex items-center gap-2 text-xs font-bold ${themeClasses.subTextColor} hover:text-purple-400 transition-colors`}
+                                        className={`flex items-center gap-2 text-xs font-bold ${themeClasses.subTextColor} hover:text-[#2ec4c7] transition-colors`}
                                     >
                                         {showExtracted ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                                         <ArrowRight size={12} />
@@ -317,7 +291,7 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                                 .filter(([key]) => runVariables[key] !== variables[key])
                                                 .map(([key, val]) => (
                                                     <div key={key} className="flex items-center gap-2 text-xs">
-                                                        <code className="text-purple-400">{`{{${key}}}`}</code>
+                                                        <code className="text-[#2ec4c7]">{`{{${key}}}`}</code>
                                                         <ArrowRight size={10} className={themeClasses.subTextColor} />
                                                         <code className="text-green-400 truncate max-w-[400px]">{val}</code>
                                                     </div>

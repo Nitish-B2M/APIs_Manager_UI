@@ -19,7 +19,7 @@ const SchedulerCalendar = dynamic(() => import('@/app/components/SchedulerCalend
     ssr: false,
     loading: () => (
         <div className="flex-1 flex flex-col items-center justify-center bg-black/5 rounded-2xl border-2 border-dashed border-gray-500/10">
-            <Loader2 size={40} className="animate-spin text-indigo-500 mb-4" />
+            <Loader2 size={40} className="animate-spin text-[#249d9f] mb-4" />
             <p className="text-sm font-bold text-gray-500 uppercase tracking-widest animate-pulse">Loading Calendar Engine...</p>
         </div>
     )
@@ -183,7 +183,7 @@ export default function SchedulerPage() {
                 {/* Header */}
                 <header className={`flex items-center justify-between px-6 py-4 border-b ${themeClasses.borderCol} ${themeClasses.secondaryBg}`}>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-lg">
+                        <div className="p-2 bg-[#1a7a7c] rounded-lg">
                             <CalendarIcon className="text-white" size={20} />
                         </div>
                         <div>
@@ -195,7 +195,7 @@ export default function SchedulerPage() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleOptimize}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-[#1a7a7c]/20"
                         >
                             <RefreshCw size={16} />
                             Optimize Schedule
@@ -239,10 +239,10 @@ export default function SchedulerPage() {
                     {!isSidebarCollapsed && (
                         <div
                             onMouseDown={() => setIsResizing(true)}
-                            className={`absolute top-0 bottom-0 z-50 w-1.5 cursor-col-resize hover:bg-indigo-500/30 transition-colors flex items-center justify-center group/resize`}
+                            className={`absolute top-0 bottom-0 z-50 w-1.5 cursor-col-resize hover:bg-[#249d9f]/30 transition-colors flex items-center justify-center group/resize`}
                             style={{ left: sidebarWidth - 3 }}
                         >
-                            <div className={`opacity-0 group-hover/resize:opacity-100 p-0.5 bg-indigo-500 rounded-full text-white shadow-lg pointer-events-none transform -translate-y-1/2`}>
+                            <div className={`opacity-0 group-hover/resize:opacity-100 p-0.5 bg-[#249d9f] rounded-full text-white shadow-lg pointer-events-none transform -translate-y-1/2`}>
                                 <GripVertical size={12} />
                             </div>
                         </div>
@@ -254,7 +254,7 @@ export default function SchedulerPage() {
                         className={`absolute z-50 top-1/2 -translate-y-1/2 p-1.5 rounded-full border ${themeClasses.borderCol} ${themeClasses.secondaryBg} ${themeClasses.hoverBg} shadow-[0_0_15px_rgba(0,0,0,0.2)] transition-all transform hover:scale-110 active:scale-95`}
                         style={{ left: isSidebarCollapsed ? 0 : sidebarWidth - 12 }}
                     >
-                        {isSidebarCollapsed ? <ChevronRight size={14} className="text-indigo-500" /> : <ChevronLeft size={14} className="text-indigo-500" />}
+                        {isSidebarCollapsed ? <ChevronRight size={14} className="text-[#249d9f]" /> : <ChevronLeft size={14} className="text-[#249d9f]" />}
                     </button>
 
                     {/* Calendar View */}

@@ -69,7 +69,7 @@ function CheckDetailModal({ check, anchor, onClose, theme }: CheckDetailModalPro
 
     // Arrow tracks the real click point relative to the (clamped) modal
     const arrowLeft = pos ? Math.max(10, Math.min(anchor.x - pos.left, MODAL_W - 14)) : MODAL_W / 2;
-    const arrowCls = `absolute w-3 h-3 rotate-45 border ${theme === 'dark' ? 'bg-[#12121f] border-indigo-500/30' : 'bg-white border-gray-200'
+    const arrowCls = `absolute w-3 h-3 rotate-45 border ${theme === 'dark' ? 'bg-[#12121f] border-[#249d9f]/30' : 'bg-white border-gray-200'
         }`;
 
     return (
@@ -85,7 +85,7 @@ function CheckDetailModal({ check, anchor, onClose, theme }: CheckDetailModalPro
                 visibility: pos ? 'visible' : 'hidden',
             }}
             className={`rounded-2xl border shadow-2xl text-xs ${theme === 'dark'
-                ? 'bg-[#12121f] border-indigo-500/30 text-gray-200'
+                ? 'bg-[#12121f] border-[#249d9f]/30 text-gray-200'
                 : 'bg-white border-gray-200 text-gray-800'
                 }`}
         >
@@ -116,7 +116,7 @@ function CheckDetailModal({ check, anchor, onClose, theme }: CheckDetailModalPro
                 </div>
                 <div className="flex justify-between">
                     <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>Response</span>
-                    <span className="font-mono font-bold text-indigo-400">
+                    <span className="font-mono font-bold text-[#2ec4c7]">
                         {check.responseTime != null ? `${check.responseTime}ms` : '—'}
                     </span>
                 </div>
@@ -215,13 +215,13 @@ function ResponseChart({ history, theme }: { history: any[]; theme: string }) {
                 >
                     <defs>
                         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
-                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                            <stop offset="0%" stopColor="#249d9f" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#249d9f" stopOpacity="0" />
                         </linearGradient>
                     </defs>
 
                     <polygon points={areaPoints} fill={`url(#${gradId})`} />
-                    <polyline points={polyPoints} fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinejoin="round" />
+                    <polyline points={polyPoints} fill="none" stroke="#249d9f" strokeWidth="1.5" strokeLinejoin="round" />
 
                     {/* Hover crosshair */}
                     {hover !== null && (
@@ -259,7 +259,7 @@ function ResponseChart({ history, theme }: { history: any[]; theme: string }) {
                 {hover !== null && (
                     <div
                         className={`absolute pointer-events-none px-2.5 py-1.5 rounded-xl text-[11px] shadow-lg border ${theme === 'dark'
-                            ? 'bg-[#1a1a2e] border-indigo-500/30 text-gray-200'
+                            ? 'bg-[#1a1a2e] border-[#249d9f]/30 text-gray-200'
                             : 'bg-white border-gray-200 text-gray-800'
                             }`}
                         style={{
@@ -273,7 +273,7 @@ function ResponseChart({ history, theme }: { history: any[]; theme: string }) {
                         <span className={history[hover.idx].isSuccess ? 'text-emerald-400' : 'text-red-400'}>
                             {history[hover.idx].isSuccess ? '●' : '●'}
                         </span>{' '}
-                        <span className="font-mono font-bold text-indigo-400">
+                        <span className="font-mono font-bold text-[#2ec4c7]">
                             {history[hover.idx].responseTime != null ? `${history[hover.idx].responseTime}ms` : '—'}
                         </span>{' '}
                         <span className={`font-mono ${history[hover.idx].statusCode >= 200 && history[hover.idx].statusCode < 400 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -366,7 +366,7 @@ function LatencyHeatmap({ heatmapData, theme }: { heatmapData: any[]; theme: str
             {hover !== null && (
                 <div
                     className={`fixed pointer-events-none px-3 py-2 rounded-xl text-xs shadow-lg border z-[9999] ${theme === 'dark'
-                        ? 'bg-[#1a1a2e] border-indigo-500/30 text-gray-200'
+                        ? 'bg-[#1a1a2e] border-[#249d9f]/30 text-gray-200'
                         : 'bg-white border-gray-200 text-gray-800'
                         }`}
                     style={{
@@ -395,7 +395,7 @@ function LatencyHeatmap({ heatmapData, theme }: { heatmapData: any[]; theme: str
                             </div>
                             <div className="flex justify-between gap-4">
                                 <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Avg Latency</span>
-                                <span className="font-mono font-bold text-indigo-400">{hover.bin.avgResponseTime}ms</span>
+                                <span className="font-mono font-bold text-[#2ec4c7]">{hover.bin.avgResponseTime}ms</span>
                             </div>
                         </div>
                     )}
@@ -516,7 +516,7 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
 
     return (
         <div className={`rounded-2xl border transition-all ${theme === 'dark'
-            ? 'bg-white/5 border-white/5 hover:border-indigo-500/20'
+            ? 'bg-white/5 border-white/5 hover:border-[#249d9f]/20'
             : 'bg-white border-gray-100 hover:border-indigo-200 shadow-sm'
             }`}>
             {/* Header */}
@@ -535,7 +535,7 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
                         </span>
                     </div>
                     <p className={`text-[11px] truncate ${themeClasses.subTextColor}`}>
-                        <span className={`font-mono text-[9px] px-1 py-0.5 rounded mr-1 ${theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                        <span className={`font-mono text-[9px] px-1 py-0.5 rounded mr-1 ${theme === 'dark' ? 'bg-[#249d9f]/20 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'}`}>
                             {monitor.method}
                         </span>
                         {monitor.url}
@@ -561,7 +561,7 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
                     </div>
                     {monitor.webhookUrl && (
                         <div className="text-center" title={`${monitor.webhookType} webhook configured`}>
-                            <Bell size={14} className="text-indigo-400 mx-auto" />
+                            <Bell size={14} className="text-[#2ec4c7] mx-auto" />
                             <p className={`text-[10px] ${themeClasses.subTextColor}`}>Alerts</p>
                         </div>
                     )}
@@ -569,7 +569,7 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
 
                 <div className="flex items-center gap-1 flex-shrink-0">
                     <button onClick={() => checkMutation.mutate()} disabled={checkMutation.isPending}
-                        className={`p-2 rounded-lg transition-all ${theme === 'dark' ? 'hover:bg-white/10 text-gray-400 hover:text-indigo-400' : 'hover:bg-gray-100 text-gray-500 hover:text-indigo-600'}`}
+                        className={`p-2 rounded-lg transition-all ${theme === 'dark' ? 'hover:bg-white/10 text-gray-400 hover:text-[#2ec4c7]' : 'hover:bg-gray-100 text-gray-500 hover:text-[#1a7a7c]'}`}
                         title="Run check now">
                         {checkMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                     </button>
@@ -594,7 +594,7 @@ function MonitorCard({ monitor, documentationId, theme, themeClasses }: {
             {expanded && (
                 <div className={`border-t px-4 pb-4 pt-3 space-y-3 ${theme === 'dark' ? 'border-white/5' : 'border-gray-100'}`}>
                     {histLoading || heatLoading ? (
-                        <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-indigo-400" /></div>
+                        <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-[#2ec4c7]" /></div>
                     ) : (
                         <>
                             <div>
@@ -694,8 +694,8 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
         return { total, success, upCount, activeCount, avgMs, uptime: total > 0 ? ((success / total) * 100).toFixed(1) : null };
     }, [monitors]);
 
-    const inputClass = `w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all ${theme === 'dark'
-        ? 'bg-[#0f0f1a] border-indigo-500/20 text-gray-200 placeholder-gray-600'
+    const inputClass = `w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#249d9f]/40 transition-all ${theme === 'dark'
+        ? 'bg-[#0f0f1a] border-[#249d9f]/20 text-gray-200 placeholder-gray-600'
         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
         }`;
 
@@ -704,7 +704,7 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <div className="w-10 h-10 rounded-xl bg-[#249d9f]/20 flex items-center justify-center text-[#2ec4c7]">
                         <Activity size={22} />
                     </div>
                     <div>
@@ -721,7 +721,7 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
                     </div>
                 </div>
                 <button onClick={() => setShowForm(!showForm)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1a7a7c] hover:bg-[#249d9f] text-white text-sm font-bold shadow-lg shadow-[#249d9f]/20 transition-all">
                     <Plus size={16} /> New Monitor
                 </button>
             </div>
@@ -731,9 +731,9 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                         { label: 'Overall Uptime', value: overallStats.uptime ? `${overallStats.uptime}%` : '—', icon: <CheckCircle2 size={16} />, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-                        { label: 'Monitors Up', value: `${overallStats.upCount} / ${overallStats.activeCount}`, icon: <Wifi size={16} />, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+                        { label: 'Monitors Up', value: `${overallStats.upCount} / ${overallStats.activeCount}`, icon: <Wifi size={16} />, color: 'text-[#2ec4c7]', bg: 'bg-[#249d9f]/10' },
                         { label: 'Avg Response', value: overallStats.avgMs ? `${overallStats.avgMs}ms` : '—', icon: <Clock size={16} />, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                        { label: 'Total Checks', value: overallStats.total.toLocaleString(), icon: <Activity size={16} />, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                        { label: 'Total Checks', value: overallStats.total.toLocaleString(), icon: <Activity size={16} />, color: 'text-[#2ec4c7]', bg: 'bg-[#249d9f]/10' },
                     ].map(stat => (
                         <div key={stat.label} className={`p-4 rounded-2xl border flex items-center gap-3 ${theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${stat.bg} ${stat.color}`}>{stat.icon}</div>
@@ -748,44 +748,90 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
 
             {/* Create form */}
             {showForm && (
-                <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'}`}>
-                    <h3 className={`text-sm font-bold mb-4 ${themeClasses.textColor}`}>Configure New Monitor</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <input className={inputClass} placeholder="Monitor name (e.g., Production API Health)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                        <input className={inputClass} placeholder="URL to monitor (https://...)" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} />
-                        <select className={inputClass} value={form.method} onChange={e => setForm(f => ({ ...f, method: e.target.value }))}>
-                            {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                        <select className={inputClass} value={form.frequency} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}>
-                            {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                        </select>
-                        <input className={`${inputClass} md:col-span-2`} placeholder="Alert email (optional)" value={form.notifyEmail} onChange={e => setForm(f => ({ ...f, notifyEmail: e.target.value }))} />
-
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {/* Section A — Endpoint */}
+                    <div style={{ padding: 20, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 12 }}>Endpoint</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <input
-                                className={`${inputClass} md:col-span-2`}
-                                placeholder="Webhook URL (Slack or Custom)"
-                                value={form.webhookUrl}
-                                onChange={e => setForm(f => ({ ...f, webhookUrl: e.target.value }))}
+                                placeholder="Monitor name (e.g., Production API Health)"
+                                value={form.name}
+                                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
                             />
-                            <select
-                                className={inputClass}
-                                value={form.webhookType}
-                                onChange={e => setForm(f => ({ ...f, webhookType: e.target.value }))}
-                            >
-                                <option value="generic">Generic Webhook</option>
-                                <option value="slack">Slack Webhook</option>
-                            </select>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <select
+                                    value={form.method}
+                                    onChange={e => setForm(f => ({ ...f, method: e.target.value }))}
+                                    style={{ width: 120, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none', flexShrink: 0 }}
+                                >
+                                    {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                                <input
+                                    placeholder="URL to monitor (https://...)"
+                                    value={form.url}
+                                    onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                                    style={{ flex: 1, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                                />
+                            </div>
                         </div>
                     </div>
-                    <div className="flex gap-2 mt-4">
-                        <button onClick={() => createMutation.mutate()} disabled={!form.name || !form.url || createMutation.isPending}
-                            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold transition-all">
-                            {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
+
+                    {/* Section B — Schedule */}
+                    <div style={{ padding: 20, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 12 }}>Schedule</span>
+                        <select
+                            value={form.frequency}
+                            onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                        >
+                            {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Section C — Alerts */}
+                    <div style={{ padding: 20, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 12 }}>Alerts</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <input
+                                placeholder="Alert email (optional)"
+                                value={form.notifyEmail}
+                                onChange={e => setForm(f => ({ ...f, notifyEmail: e.target.value }))}
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                            />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                    placeholder="Webhook URL (Slack or Custom)"
+                                    value={form.webhookUrl}
+                                    onChange={e => setForm(f => ({ ...f, webhookUrl: e.target.value }))}
+                                    style={{ flex: 1, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                                />
+                                <select
+                                    value={form.webhookType}
+                                    onChange={e => setForm(f => ({ ...f, webhookType: e.target.value }))}
+                                    style={{ width: 160, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none', flexShrink: 0 }}
+                                >
+                                    <option value="generic">Generic Webhook</option>
+                                    <option value="slack">Slack Webhook</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            onClick={() => createMutation.mutate()}
+                            disabled={!form.name || !form.url || createMutation.isPending}
+                            style={{ flex: 1, height: 44, borderRadius: 8, background: '#249d9f', color: 'white', fontSize: 14, fontWeight: 600, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: (!form.name || !form.url || createMutation.isPending) ? 0.4 : 1 }}
+                        >
+                            {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />}
                             Create Monitor
                         </button>
-                        <button onClick={() => setShowForm(false)}
-                            className={`px-4 py-2 rounded-xl text-sm transition-all ${theme === 'dark' ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}>
+                        <button
+                            onClick={() => setShowForm(false)}
+                            style={{ padding: '0 20px', height: 44, borderRadius: 8, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#8B949E', fontSize: 13, fontWeight: 500 }}
+                        >
                             Cancel
                         </button>
                     </div>
@@ -795,7 +841,7 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
             {/* Monitor list */}
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3 opacity-50">
-                    <Loader2 size={32} className="animate-spin text-indigo-400" />
+                    <Loader2 size={32} className="animate-spin text-[#2ec4c7]" />
                     <p className="text-sm">Loading monitors...</p>
                 </div>
             ) : monitors.length === 0 ? (
@@ -806,7 +852,7 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
                         <p className="text-xs mt-1">Create a monitor to track API uptime and performance</p>
                     </div>
                     <button onClick={() => setShowForm(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-all">
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1a7a7c] hover:bg-[#249d9f] text-white text-sm font-bold transition-all">
                         <Plus size={14} /> Create first monitor
                     </button>
                 </div>

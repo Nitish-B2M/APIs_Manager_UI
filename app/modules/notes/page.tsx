@@ -490,7 +490,7 @@ export default function NotesPage() {
                                 onClick={handleManualSave}
                                 disabled={saving}
                                 className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium text-white transition-colors
-                                    ${saving ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                    ${saving ? 'bg-gray-400' : 'bg-[#1a7a7c] hover:bg-[#1a7a7c]'}`}
                             >
                                 <Save size={14} />
                                 {saving ? 'Saving...' : 'Save Now'}

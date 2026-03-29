@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 
 const DefaultFallback = () => (
     <div className="flex items-center justify-center p-8">
-        <Loader2 size={24} className="animate-spin text-indigo-500" />
+        <Loader2 size={24} className="animate-spin text-[#249d9f]" />
     </div>
 );
 

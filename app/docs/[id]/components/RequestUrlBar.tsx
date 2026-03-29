@@ -80,7 +80,7 @@ function HighlightedText({
                         <span
                             key={i}
                             className={`rounded-sm ${isDynamic
-                                ? theme === 'dark' ? 'bg-purple-600/30 text-purple-400' : 'bg-purple-100 text-purple-600'
+                                ? theme === 'dark' ? 'bg-[#1a7a7c]/30 text-[#2ec4c7]' : 'bg-purple-100 text-[#1a7a7c]'
                                 : isSet
                                     ? theme === 'dark' ? 'bg-blue-600/30 text-blue-400' : 'bg-blue-100 text-blue-600'
                                     : theme === 'dark' ? 'bg-red-600/30 text-red-400' : 'bg-red-100 text-red-600'
@@ -196,7 +196,7 @@ export function RequestUrlBar({
                         value={currentReq.protocol || 'REST'}
                         disabled={!canEdit}
                         onChange={(e) => onProtocolChange(e.target.value as ProtocolType)}
-                        className={`flex-shrink-0 px-3 py-2 ${isDark ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/20' : 'bg-indigo-50 text-indigo-600 border-indigo-200'} border rounded-xl appearance-none font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none text-[10px] uppercase tracking-widest cursor-pointer transition-all hover:bg-indigo-600/20`}
+                        className={`flex-shrink-0 px-3 py-2 ${isDark ? 'bg-[#1a7a7c]/10 text-[#2ec4c7] border-[#249d9f]/20' : 'bg-indigo-50 text-[#1a7a7c] border-indigo-200'} border rounded-xl appearance-none font-bold focus:ring-2 focus:ring-[#249d9f]/50 outline-none text-[10px] uppercase tracking-widest cursor-pointer transition-all hover:bg-[#1a7a7c]/20`}
                     >
                         <option value="REST">REST</option>
                         <option value="WS">WS</option>
@@ -209,7 +209,7 @@ export function RequestUrlBar({
                             value={currentReq.method}
                             disabled={!canEdit}
                             onChange={(e) => onMethodChange(e.target.value)}
-                            className={`flex-shrink-0 px-3 py-2 ${inputBg} border ${borderCol} rounded-xl appearance-none font-bold ${textColor} focus:ring-2 focus:ring-indigo-500/50 outline-none text-[11px] cursor-pointer transition-all hover:bg-white/10`}
+                            className={`flex-shrink-0 px-3 py-2 ${inputBg} border ${borderCol} rounded-xl appearance-none font-bold ${textColor} focus:ring-2 focus:ring-[#249d9f]/50 outline-none text-[11px] cursor-pointer transition-all hover:bg-white/10`}
                         >
                             <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
                         </select>
@@ -222,7 +222,7 @@ export function RequestUrlBar({
                         <input
                             type="text" value={currentReq?.url || ''} readOnly={!canEdit} onChange={handleUrlChange} onKeyDown={handleKeyDown}
                             onFocus={() => onFocus?.('url')}
-                            className={`w-full border ${borderCol} rounded-xl focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono !text-[12px] ${inputBg} ${!canEdit ? 'cursor-default' : ''} transition-all`}
+                            className={`w-full border ${borderCol} rounded-xl focus:ring-2 focus:ring-[#249d9f]/30 outline-none font-mono !text-[12px] ${inputBg} ${!canEdit ? 'cursor-default' : ''} transition-all`}
                             style={{ color: 'transparent', caretColor: isDark ? '#fff' : '#000', padding: '8px 40px 8px 14px', height: '38px', boxSizing: 'border-box' }}
                             placeholder="Enter request URL..."
                         />
@@ -232,8 +232,8 @@ export function RequestUrlBar({
                         {suggestions.length > 0 && (
                             <div className={`absolute left-0 top-full mt-2 w-full max-w-sm ${secondaryBg} border ${borderCol} rounded-xl shadow-2xl z-50 py-1.5 max-h-64 overflow-y-auto`}>
                                 {suggestions.map((s, idx) => (
-                                    <div key={s.value} onClick={() => handleSuggestionSelect(s)} className={`px-3 py-2.5 text-[11px] cursor-pointer flex items-center gap-3 transition-colors ${idx === suggestionIndex ? 'bg-indigo-600 text-white' : `${subTextColor} hover:bg-white/5`}`}>
-                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${idx === suggestionIndex ? 'bg-indigo-500 text-white' : s.type === 'dynamic' ? 'bg-purple-600/20 text-purple-400' : s.type === 'env' ? 'bg-blue-600/20 text-blue-400' : 'bg-green-600/20 text-green-400'}`}>
+                                    <div key={s.value} onClick={() => handleSuggestionSelect(s)} className={`px-3 py-2.5 text-[11px] cursor-pointer flex items-center gap-3 transition-colors ${idx === suggestionIndex ? 'bg-[#1a7a7c] text-white' : `${subTextColor} hover:bg-white/5`}`}>
+                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${idx === suggestionIndex ? 'bg-[#249d9f] text-white' : s.type === 'dynamic' ? 'bg-[#1a7a7c]/20 text-[#2ec4c7]' : s.type === 'env' ? 'bg-blue-600/20 text-blue-400' : 'bg-green-600/20 text-green-400'}`}>
                                             {s.type === 'dynamic' ? 'DYN' : s.type === 'env' ? 'ENV' : 'URL'}
                                         </span>
                                         <span className="font-mono flex-1 truncate">{s.displayValue}</span>
@@ -245,7 +245,7 @@ export function RequestUrlBar({
 
                     <button
                         onClick={onSend} disabled={reqLoading}
-                        className={`flex-shrink-0 px-6 py-2 ${currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'} text-white rounded-xl font-bold flex items-center gap-2.5 transition-all shadow-xl active:scale-[0.98] text-[11px] disabled:opacity-50 uppercase tracking-wider`}
+                        className={`flex-shrink-0 px-6 py-2 ${currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20' : 'bg-[#1a7a7c] hover:bg-[#249d9f] shadow-[#249d9f]/20'} text-white rounded-xl font-bold flex items-center gap-2.5 transition-all shadow-xl active:scale-[0.98] text-[11px] disabled:opacity-50 uppercase tracking-wider`}
                     >
                         {reqLoading ? <Loader2 size={16} className="animate-spin" /> : (currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? <Zap size={16} /> : <Send size={16} />)}
                         {currentReq.protocol === 'WS' || currentReq.protocol === 'SSE' ? 'Connect' : 'Send'}
@@ -264,7 +264,7 @@ export function RequestUrlBar({
 
                 <div className={`flex items-center gap-2 border-l pl-4 ${borderCol} flex-shrink-0`}>
                     <button onClick={onDownloadMarkdown} className={`p-2 ${subTextColor} hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all`} title="Download Markdown"><Download size={18} /></button>
-                    <button onClick={onCopyMarkdown} className={`p-2 ${subTextColor} hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all`} title="Copy Markdown"><Copy size={18} /></button>
+                    <button onClick={onCopyMarkdown} className={`p-2 ${subTextColor} hover:text-[#2ec4c7] hover:bg-[#249d9f]/10 rounded-xl transition-all`} title="Copy Markdown"><Copy size={18} /></button>
                 </div>
             </div>
         </div>

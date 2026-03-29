@@ -129,6 +129,39 @@ export function ResponsePanel({
     const [wrapLines, setWrapLines] = useState(false);
     const [showTestResults, setShowTestResults] = useState(true);
     const [showDiff, setShowDiff] = useState(false);
+
+    // Diff logic:
+    // - history[0] = most recent saved, history[1] = previous
+    // - Default diff: compare current response vs history[1] (previous)
+    // - When viewing history item: compare that item vs latest response (history[0])
+    // - If only 0 or 1 history entries: diff not available
+    const history = currentReq?.history || [];
+    const hasDiffData = history.length >= 2 || (isViewingHistory && history.length >= 1);
+
+    const getDiffOriginal = (): string => {
+        if (isViewingHistory) {
+            // Viewing old history entry — original is the selected history response
+            const data = response?.data;
+            return typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+        // Default — original is the PREVIOUS response (second-to-last history)
+        if (history.length >= 2) {
+            const prev = history[1]?.lastResponse?.data;
+            return typeof prev === 'string' ? prev : JSON.stringify(prev, null, 2);
+        }
+        return '';
+    };
+
+    const getDiffModified = (): string => {
+        if (isViewingHistory) {
+            // Modified is the LATEST response (most recent history)
+            const latest = history[0]?.lastResponse?.data;
+            return typeof latest === 'string' ? latest : JSON.stringify(latest, null, 2);
+        }
+        // Default — modified is the CURRENT live response
+        const data = response?.data;
+        return typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    };
     const [showSchemaErrors, setShowSchemaErrors] = useState(false);
     const [isExplaining, setIsExplaining] = useState(false);
     const [explanation, setExplanation] = useState<string | null>(null);
@@ -193,7 +226,7 @@ export function ResponsePanel({
                             <span className={themeClasses.subTextColor}>{formatSize(response.size)}</span>
                             <button
                                 onClick={() => setShowAbsoluteTime(!showAbsoluteTime)}
-                                className={`text-[9px] ${themeClasses.subTextColor} hover:text-indigo-500 flex items-center gap-1 ${themeClasses.inputBg} px-1.5 py-0.5 rounded border ${themeClasses.borderCol}`}
+                                className={`text-[9px] ${themeClasses.subTextColor} hover:text-[#249d9f] flex items-center gap-1 ${themeClasses.inputBg} px-1.5 py-0.5 rounded border ${themeClasses.borderCol}`}
                             >
                                 {showAbsoluteTime
                                     ? new Date(response.timestamp || Date.now()).toLocaleTimeString()
@@ -261,22 +294,26 @@ export function ResponsePanel({
                             </button>
                             <button
                                 onClick={handleCopyResponse}
-                                className={`p-1 px-2 text-[9px] ${themeClasses.subTextColor} hover:text-indigo-500 ${themeClasses.inputBg} hover:bg-opacity-50 rounded border ${themeClasses.borderCol} flex items-center gap-1 transition-all mr-1 font-bold`}
+                                className={`p-1 px-2 text-[9px] ${themeClasses.subTextColor} hover:text-[#249d9f] ${themeClasses.inputBg} hover:bg-opacity-50 rounded border ${themeClasses.borderCol} flex items-center gap-1 transition-all mr-1 font-bold`}
                             >
                                 <Copy size={10} /> COPY
                             </button>
                             <button
                                 onClick={() => setWrapLines(!wrapLines)}
-                                className={`p-1 rounded transition-all ${wrapLines ? 'bg-indigo-600 text-white' : `${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`}`}
+                                className={`p-1 rounded transition-all ${wrapLines ? 'bg-[#1a7a7c] text-white' : `${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`}`}
                                 title={wrapLines ? 'Disable Word Wrap' : 'Enable Word Wrap'}
                             >
                                 <WrapText size={14} />
                             </button>
                             <button
                                 onClick={() => setShowDiff(!showDiff)}
-                                className={`p-1 rounded transition-all ${showDiff ? 'bg-indigo-600 text-white' : `${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`} ${!currentReq?.lastResponse ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                title={showDiff ? 'Current View' : 'Compare with Saved'}
-                                disabled={!currentReq?.lastResponse}
+                                className={`p-1 rounded transition-all ${showDiff ? 'bg-[#1a7a7c] text-white' : `${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`} ${!hasDiffData ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                title={showDiff
+                                    ? 'Exit diff view'
+                                    : isViewingHistory
+                                        ? 'Compare with latest response'
+                                        : 'Compare with previous response'}
+                                disabled={!hasDiffData}
                             >
                                 <Split size={14} />
                             </button>
@@ -284,21 +321,21 @@ export function ResponsePanel({
                     )}
                     <button
                         onClick={() => setShowHistory(!showHistory)}
-                        className={`p-1 rounded ${showHistory ? 'bg-indigo-600 text-white' : `${themeClasses.subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}`}
+                        className={`p-1 rounded ${showHistory ? 'bg-[#1a7a7c] text-white' : `${themeClasses.subTextColor} hover:bg-opacity-10 hover:bg-gray-400`}`}
                         title="History"
                     >
                         <History size={14} />
                     </button>
                     <button
                         onClick={() => onLayoutChange('horizontal')}
-                        className={`p-1 rounded ${paneLayout === 'horizontal' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-700'}`}
+                        className={`p-1 rounded ${paneLayout === 'horizontal' ? 'bg-[#1a7a7c] text-white' : 'text-gray-500 hover:bg-gray-700'}`}
                         title="Layout Right"
                     >
                         <Columns2 size={14} />
                     </button>
                     <button
                         onClick={() => onLayoutChange('vertical')}
-                        className={`p-1 rounded ${paneLayout === 'vertical' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-700'}`}
+                        className={`p-1 rounded ${paneLayout === 'vertical' ? 'bg-[#1a7a7c] text-white' : 'text-gray-500 hover:bg-gray-700'}`}
                         title="Layout Bottom"
                     >
                         <Rows2 size={14} />
@@ -313,7 +350,7 @@ export function ResponsePanel({
                     <div className={`absolute inset-0 z-20 ${themeClasses.secondaryBg} backdrop-blur-sm border-r ${themeClasses.borderCol} p-4 overflow-y-auto animate-in slide-in-from-right duration-200 shadow-2xl`}>
                         <div className="flex justify-between items-center mb-4">
                             <h4 className={`font-bold ${themeClasses.textColor} text-sm flex items-center gap-2 p-2`}>
-                                <RotateCcw size={16} className="text-indigo-500" />
+                                <RotateCcw size={16} className="text-[#249d9f]" />
                                 Response History
                             </h4>
                             <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-gray-800 rounded-full">
@@ -330,7 +367,7 @@ export function ResponsePanel({
                                 <div
                                     key={i}
                                     onClick={() => handleHistoryClick(item)}
-                                    className={`p-3 border ${themeClasses.borderCol} rounded-lg hover:border-indigo-500 hover:bg-indigo-500/5 cursor-pointer transition-all relative group`}
+                                    className={`p-3 border ${themeClasses.borderCol} rounded-lg hover:border-[#249d9f] hover:bg-[#249d9f]/5 cursor-pointer transition-all relative group`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
                                         <span className={`text-[9px] font-bold px-1 rounded ${item.lastResponse?.status >= 200 && item.lastResponse?.status < 300
@@ -352,23 +389,27 @@ export function ResponsePanel({
 
                 {/* Viewing History Banner */}
                 {isViewingHistory && (
-                    <div className="absolute top-0 left-0 right-0 z-30 bg-indigo-900 border-b border-indigo-500/30 px-4 py-2 flex justify-between items-center animate-in fade-in duration-200">
+                    <div className="absolute top-0 left-0 right-0 z-30 bg-indigo-900 border-b border-[#249d9f]/30 px-4 py-2 flex justify-between items-center animate-in fade-in duration-200">
                         <span className="text-[10px] text-indigo-200 font-bold flex items-center gap-2">
                             <Clock size={12} /> VIEWING HISTORICAL SNAPSHOT
                         </span>
                         <button
                             onClick={onBackToLatest}
-                            className="text-[9px] bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500 font-bold transition-colors shadow-lg"
+                            className="text-[9px] bg-[#1a7a7c] text-white px-2 py-1 rounded hover:bg-[#249d9f] font-bold transition-colors shadow-lg"
                         >
                             BACK TO LATEST
                         </button>
                     </div>
                 )}
 
-                {/* Empty State */}
+                {/* Empty State — subtle, bottom-third */}
                 {!response && !reqLoading && (currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol) && (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-[11px] font-bold">
-                        HIT SEND TO SEE RESPONSE
+                    <div className="absolute inset-0 flex flex-col items-center justify-end pb-[25%]">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6E7681" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-3 opacity-60">
+                            <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                        <p className="text-[#8B949E] text-sm font-medium mb-1">Send a request to see the response</p>
+                        <p className="text-[#6E7681] text-xs">Press <kbd className="px-1.5 py-0.5 rounded bg-[#21262D] border border-white/[0.08] text-[10px] font-mono">Send</kbd> or use <kbd className="px-1.5 py-0.5 rounded bg-[#21262D] border border-white/[0.08] text-[10px] font-mono">Ctrl+Enter</kbd></p>
                     </div>
                 )}
 
@@ -390,7 +431,7 @@ export function ResponsePanel({
                 {/* Loading State */}
                 {reqLoading && (
                     <div className="absolute inset-0 flex items-center justify-center text-gray-400 z-40 bg-inherit/50">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1a7a7c]"></div>
                     </div>
                 )}
 
@@ -403,27 +444,37 @@ export function ResponsePanel({
                     return (
                         <div className={`absolute inset-0 w-full h-full ${isVisible ? 'block' : 'hidden'}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
                             <div className="w-full h-full overflow-hidden">
-                                {showDiff && currentReq?.lastResponse ? (
-                                    <DiffEditor
-                                        key="diff-editor"
-                                        height="100%"
-                                        language={lang}
-                                        original={typeof currentReq.lastResponse.data === 'string'
-                                            ? currentReq.lastResponse.data
-                                            : JSON.stringify(currentReq.lastResponse.data, null, 2)}
-                                        modified={responseText}
-                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                        options={{
-                                            readOnly: true,
-                                            fontSize: 13,
-                                            renderSideBySide: true,
-                                            minimap: { enabled: false },
-                                            scrollBeyondLastLine: false,
-                                            automaticLayout: true,
-                                            wordWrap: wrapLines ? 'on' : 'off',
-                                            padding: { top: 20, bottom: 20 },
-                                        }}
-                                    />
+                                {showDiff && hasDiffData ? (
+                                    <div className="w-full h-full flex flex-col">
+                                        {/* Diff header */}
+                                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.08] flex-shrink-0" style={{ background: '#161B22' }}>
+                                            <div className="flex items-center gap-4 text-[10px]">
+                                                <span className="text-[#F85149] font-medium">● {isViewingHistory ? 'Selected history' : 'Previous response'}</span>
+                                                <span className="text-[#6E7681]">vs</span>
+                                                <span className="text-[#3FB950] font-medium">● {isViewingHistory ? 'Latest response' : 'Current response'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <DiffEditor
+                                                key={`diff-${isViewingHistory}`}
+                                                height="100%"
+                                                language={lang}
+                                                original={getDiffOriginal()}
+                                                modified={getDiffModified()}
+                                                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                                options={{
+                                                    readOnly: true,
+                                                    fontSize: 12,
+                                                    renderSideBySide: true,
+                                                    minimap: { enabled: false },
+                                                    scrollBeyondLastLine: false,
+                                                    automaticLayout: true,
+                                                    wordWrap: wrapLines ? 'on' : 'off',
+                                                    padding: { top: 12, bottom: 12 },
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
                                 ) : (
                                     <Editor
                                         key="normal-editor"
@@ -466,7 +517,7 @@ export function ResponsePanel({
                                 <button
                                     onClick={handleExplainError}
                                     disabled={isExplaining}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap ${isExplaining ? 'bg-indigo-600/50 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap ${isExplaining ? 'bg-[#1a7a7c]/50 cursor-not-allowed' : 'bg-[#1a7a7c] hover:bg-[#249d9f] text-white shadow-lg shadow-indigo-900/40'}`}
                                 >
                                     {isExplaining ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                     EXPLAIN WITH AI
@@ -475,8 +526,8 @@ export function ResponsePanel({
                         </div>
 
                         {explanation && (
-                            <div className={`mt-2 p-4 rounded-xl border ${theme === 'dark' ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                                <div className="flex items-center gap-2 mb-2 text-indigo-400 font-bold text-[10px] uppercase tracking-wider">
+                            <div className={`mt-2 p-4 rounded-xl border ${theme === 'dark' ? 'bg-indigo-900/20 border-[#249d9f]/30' : 'bg-indigo-50 border-indigo-200'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                                <div className="flex items-center gap-2 mb-2 text-[#2ec4c7] font-bold text-[10px] uppercase tracking-wider">
                                     <Lightbulb size={14} />
                                     AI Explanation
                                 </div>
@@ -494,7 +545,7 @@ export function ResponsePanel({
                 <div className={`border-t ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#16162a]' : 'bg-gray-50'}`}>
                     <button
                         onClick={() => setShowTestResults(p => !p)}
-                        className={`w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold ${themeClasses.subTextColor} hover:text-indigo-400 transition-colors`}
+                        className={`w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold ${themeClasses.subTextColor} hover:text-[#2ec4c7] transition-colors`}
                     >
                         <span className="flex items-center gap-2">
                             <FlaskConical size={12} />

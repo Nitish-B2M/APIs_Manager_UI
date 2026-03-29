@@ -10,16 +10,71 @@ export function getHeaders() {
     };
 }
 
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+/**
+ * Try to refresh the access token using the httpOnly refresh cookie.
+ * Returns the new access token or null if refresh failed.
+ */
+async function tryRefreshToken(): Promise<string | null> {
+    // Prevent multiple simultaneous refresh calls
+    if (isRefreshing && refreshPromise) return refreshPromise;
+
+    isRefreshing = true;
+    refreshPromise = (async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include', // Send httpOnly cookie
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const json = await res.json();
+            if (json.status && json.data?.token) {
+                localStorage.setItem('token', json.data.token);
+                return json.data.token as string;
+            }
+            return null;
+        } catch {
+            return null;
+        } finally {
+            isRefreshing = false;
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
     const headers = {
         ...getHeaders(),
         ...options.headers,
     };
 
-    const response = await fetch(`${API_URL}/api${path}`, {
+    let response = await fetch(`${API_URL}/api${path}`, {
         ...options,
         headers,
+        credentials: 'include', // Always send cookies for refresh token
     });
+
+    // If 401, try refreshing the token once
+    if (response.status === 401 && !path.includes('/auth/refresh') && !path.includes('/auth/login')) {
+        const newToken = await tryRefreshToken();
+        if (newToken) {
+            // Retry the original request with the new token
+            const retryHeaders = {
+                ...options.headers,
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${newToken}`,
+            };
+            response = await fetch(`${API_URL}/api${path}`, {
+                ...options,
+                headers: retryHeaders,
+                credentials: 'include',
+            });
+        }
+    }
 
     const json = await response.json();
     if (!json.status) {
@@ -40,7 +95,10 @@ export const api = {
         verifyEmail: (token: string) => apiFetch('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
         resendVerification: () => apiFetch('/auth/resend-verification', { method: 'POST' }),
         refreshToken: () => apiFetch('/auth/refresh', { method: 'POST' }),
-        logout: () => apiFetch('/auth/logout', { method: 'POST' }),
+        logout: async () => {
+            try { await apiFetch('/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
+            localStorage.removeItem('token');
+        },
         getPresence: (docId: string) => apiFetch(`/collaboration/presence/${docId}`),
     },
     documentation: {
@@ -89,8 +147,6 @@ export const api = {
             apiFetch(`/documentation/environments/${environmentId}`, { method: 'DELETE' }),
         setActive: (documentationId: string, environmentId: string | null) =>
             apiFetch(`/documentation/${documentationId}/environments/set-active`, { method: 'PATCH', body: JSON.stringify({ environmentId }) }),
-
-        // Global Environments
         listGlobal: () => apiFetch('/documentation/global/list'),
         createGlobal: (data: { name: string; variables?: Record<string, string>; isActive?: boolean; secrets?: string[] }) =>
             apiFetch('/documentation/global', { method: 'POST', body: JSON.stringify(data) }),
@@ -105,17 +161,17 @@ export const api = {
         generateReadme: (data: { title: string; endpoints: any[] }) => apiFetch('/ai/generate-readme', { method: 'POST', body: JSON.stringify(data) }),
     },
     collaboration: {
-        listCollaborators: (docId: string) => apiFetch(`/collaboration/documentation/${docId}/collaborators`),
-        addCollaborator: (docId: string, email: string, role: string) => apiFetch(`/collaboration/documentation/${docId}/collaborators`, { method: 'POST', body: JSON.stringify({ email, role }) }),
-        updateCollaborator: (docId: string, collabId: string, role: string) => apiFetch(`/collaboration/documentation/${docId}/collaborators/${collabId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
-        removeCollaborator: (id: string) => apiFetch(`/collaboration/collaborator/${id}`, { method: 'DELETE' }),
-        updatePresence: (docId: string, metadata: any) => apiFetch(`/collaboration/presence/${docId}`, { method: 'POST', body: JSON.stringify({ metadata }) }),
+        listCollaborators: (docId: string) => apiFetch(`/collaboration/${docId}/collaborators`),
+        addCollaborator: (docId: string, email: string, role: string) => apiFetch('/collaboration/invite', { method: 'POST', body: JSON.stringify({ email, role, documentationId: docId }) }),
+        updateCollaborator: (docId: string, collabId: string, role: string) => apiFetch(`/collaboration/collaborators/${collabId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+        removeCollaborator: (id: string) => apiFetch(`/collaboration/collaborators/${id}`, { method: 'DELETE' }),
+        updatePresence: (docId: string, metadata: any) => apiFetch(`/collaboration/presence/${docId}/update`, { method: 'POST', body: JSON.stringify({ metadata }) }),
         invite: (data: any) => apiFetch('/collaboration/invite', { method: 'POST', body: JSON.stringify(data) }),
-        updateRole: (id: string, role: string) => apiFetch(`/collaboration/collaborator/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
-        cancelInvite: (id: string) => apiFetch(`/collaboration/invite/${id}`, { method: 'DELETE' }),
-        listMyInvitations: () => apiFetch('/collaboration/invitations/me'),
-        acceptInvite: (token: string) => apiFetch(`/collaboration/invite/${token}/accept`, { method: 'POST' }),
-        rejectInvite: (token: string) => apiFetch(`/collaboration/invite/${token}/reject`, { method: 'POST' }),
+        updateRole: (id: string, role: string) => apiFetch(`/collaboration/collaborators/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+        cancelInvite: (id: string) => apiFetch(`/collaboration/invitations/${id}`, { method: 'DELETE' }),
+        listMyInvitations: () => apiFetch('/collaboration/my-invitations'),
+        acceptInvite: (token: string) => apiFetch('/collaboration/accept', { method: 'POST', body: JSON.stringify({ token }) }),
+        rejectInvite: (token: string) => apiFetch('/collaboration/accept', { method: 'POST', body: JSON.stringify({ token, reject: true }) }),
     },
     monitor: {
         create: (data: any) => apiFetch('/monitor/create', { method: 'POST', body: JSON.stringify(data) }),
@@ -140,11 +196,11 @@ export const api = {
         createTemplate: (data: any) => apiFetch('/admin/templates', { method: 'POST', body: JSON.stringify(data) }),
     },
     snapshot: {
-        list: (id: string) => apiFetch(`/documentation/${id}/snapshots`),
-        create: (data: { documentationId: string; name: string }) => apiFetch('/documentation/snapshots', { method: 'POST', body: JSON.stringify(data) }),
-        restore: (id: string) => apiFetch(`/documentation/snapshots/${id}/restore`, { method: 'POST' }),
-        delete: (id: string) => apiFetch(`/documentation/snapshots/${id}`, { method: 'DELETE' }),
-        getOne: (id: string) => apiFetch(`/documentation/snapshots/${id}`),
+        list: (id: string) => apiFetch(`/snapshot/list/${id}`),
+        create: (data: { documentationId: string; name: string }) => apiFetch('/snapshot/create', { method: 'POST', body: JSON.stringify(data) }),
+        restore: (id: string) => apiFetch(`/snapshot/restore/${id}`, { method: 'POST' }),
+        delete: (id: string) => apiFetch(`/snapshot/${id}`, { method: 'DELETE' }),
+        getOne: (id: string) => apiFetch(`/snapshot/${id}`),
     },
     todos: {
         list: (referenceId?: string, referenceType?: string) => {

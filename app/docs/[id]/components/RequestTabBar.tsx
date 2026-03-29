@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Layout, FileText, ChevronRight, CornerDownRight } from 'lucide-react';
 import { Endpoint } from '@/types';
+import { getRequestLabel, getRequestBadgeClass } from '../utils/theme';
 
 interface RequestTabBarProps {
     openTabs: any[];
@@ -26,16 +27,11 @@ export function RequestTabBar({ openTabs, activeTabId, onTabSelect, onTabClose, 
                         className={`group relative flex items-center min-w-[140px] max-w-[220px] h-11 px-4 cursor-pointer border-r transition-all duration-300 animate-in fade-in slide-in-from-left-2 ${index === 0 ? 'border-l' : ''
                             } ${theme === 'dark'
                                 ? `border-white/5 ${isActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`
-                                : `border-gray-200 ${isActive ? 'bg-white text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`
+                                : `border-gray-200 ${isActive ? 'bg-white text-[#1a7a7c]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`
                             }`}
                     >
                         <div className="flex items-center gap-2.5 w-full pr-6 overflow-hidden">
-                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 tracking-tighter ${tab.method === 'GET' ? 'bg-emerald-600/20 text-emerald-500' :
-                                    tab.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
-                                        tab.method === 'PUT' ? 'bg-amber-600/20 text-amber-500' :
-                                            tab.method === 'DELETE' ? 'bg-red-600/20 text-red-500' :
-                                                'bg-gray-600/20 text-gray-500'
-                                }`}>{tab.method}</span>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 tracking-tighter ${getRequestBadgeClass(tab.method, tab.protocol)}`}>{getRequestLabel(tab.method, tab.protocol)}</span>
                             <span className={`text-[12px] ${isActive ? 'font-bold' : 'font-medium'} truncate tracking-tight transition-all`}>
                                 {tab.name || 'Untitled'}
                             </span>
@@ -50,7 +46,7 @@ export function RequestTabBar({ openTabs, activeTabId, onTabSelect, onTabClose, 
                         </button>
 
                         {isActive && (
-                            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 shadow-[0_-2px_15px_rgba(99,102,241,0.5)]" />
+                            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#249d9f] via-[#249d9f] to-[#249d9f] shadow-[0_-2px_15px_rgba(99,102,241,0.5)]" />
                         )}
                     </div>
                 );

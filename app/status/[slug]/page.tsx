@@ -98,7 +98,7 @@ function PublicLatencyHeatmap({ heatmapData }: { heatmapData: any[] }) {
                             </div>
                             <div className="flex justify-between gap-6">
                                 <span className="text-gray-500">Avg Latency</span>
-                                <span className="font-mono font-bold text-indigo-500">{hover.bin.avgResponseTime}ms</span>
+                                <span className="font-mono font-bold text-[#249d9f]">{hover.bin.avgResponseTime}ms</span>
                             </div>
                         </div>
                     )}
@@ -123,7 +123,7 @@ export default function PublicStatusPage() {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 size={40} className="animate-spin text-indigo-500" />
+                <Loader2 size={40} className="animate-spin text-[#249d9f]" />
             </div>
         );
     }
@@ -138,7 +138,7 @@ export default function PublicStatusPage() {
                 </p>
                 <button
                     onClick={() => router.push('/')}
-                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+                    className="px-6 py-3 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2"
                 >
                     <ArrowLeft size={18} /> Return Home
                 </button>
@@ -156,15 +156,15 @@ export default function PublicStatusPage() {
     const isOperational = monitors.length === 0 || allUp;
 
     return (
-        <div className="min-h-screen bg-[#fafafa] text-gray-900 font-sans selection:bg-indigo-500/30">
+        <div className="min-h-screen bg-[#fafafa] text-gray-900 font-sans selection:bg-[#249d9f]/30">
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
                 <div className="max-w-4xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div>
                         <h1 className="text-xl font-black tracking-tight text-gray-900">{documentation.title}</h1>
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-500 mt-1">Status Center</p>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#249d9f] mt-1">Status Center</p>
                     </div>
-                    <a href={`/public/${slug}`} className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors flex items-center gap-2">
+                    <a href={`/public/${slug}`} className="text-sm font-bold text-gray-500 hover:text-[#1a7a7c] transition-colors flex items-center gap-2">
                         View Documentation <ArrowLeft size={14} className="rotate-180" />
                     </a>
                 </div>

@@ -88,7 +88,7 @@ export function SearchBar({ endpoints, onSelect, onClose, isOpen }: SearchBarPro
             case 'POST': return 'bg-blue-600/20 text-blue-500';
             case 'PUT': return 'bg-yellow-600/20 text-yellow-600';
             case 'DELETE': return 'bg-red-600/20 text-red-500';
-            case 'PATCH': return 'bg-purple-600/20 text-purple-500';
+            case 'PATCH': return 'bg-[#1a7a7c]/20 text-[#249d9f]';
             default: return 'bg-gray-700 text-gray-400';
         }
     };
@@ -118,7 +118,7 @@ export function SearchBar({ endpoints, onSelect, onClose, isOpen }: SearchBarPro
                         className={`flex-1 bg-transparent outline-none ${textColor} placeholder:${subTextColor}`}
                     />
                     {query && (
-                        <button onClick={() => setQuery('')} className={`p-1 ${subTextColor} hover:text-indigo-400`}>
+                        <button onClick={() => setQuery('')} className={`p-1 ${subTextColor} hover:text-[#2ec4c7]`}>
                             <X size={16} />
                         </button>
                     )}
@@ -142,7 +142,7 @@ export function SearchBar({ endpoints, onSelect, onClose, isOpen }: SearchBarPro
                                     onClose();
                                 }}
                                 className={`w-full flex items-center gap-3 p-3 text-left transition-colors ${idx === selectedResultIdx
-                                    ? 'bg-indigo-600/20'
+                                    ? 'bg-[#1a7a7c]/20'
                                     : 'hover:bg-gray-700/30'
                                     }`}
                             >

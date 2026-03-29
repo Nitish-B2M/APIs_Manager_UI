@@ -20,7 +20,7 @@ export function DeleteConfirmModal({ isOpen, itemName, itemType = 'request', onC
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }} onClick={onCancel}>
             <div
                 className={`w-[400px] rounded-2xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1a1a2e] border border-gray-800' : 'bg-white border border-gray-200'
                     }`}

@@ -54,7 +54,7 @@ export function FormDataEditor({ fields, canEdit, onChange }: FormDataEditorProp
                 {canEdit && (
                     <button
                         onClick={handleAddField}
-                        className="text-[10px] text-indigo-400 font-bold hover:text-indigo-300 transition-colors flex items-center gap-1"
+                        className="text-[10px] text-[#2ec4c7] font-bold hover:text-[#2ec4c7] transition-colors flex items-center gap-1"
                     >
                         <Plus size={10} /> ADD FIELD
                     </button>
@@ -68,7 +68,7 @@ export function FormDataEditor({ fields, canEdit, onChange }: FormDataEditorProp
                     {canEdit && (
                         <button
                             onClick={handleAddField}
-                            className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 font-bold transition-colors"
+                            className="mt-2 text-xs text-[#2ec4c7] hover:text-[#2ec4c7] font-bold transition-colors"
                         >
                             + Add your first field
                         </button>
@@ -104,7 +104,7 @@ export function FormDataEditor({ fields, canEdit, onChange }: FormDataEditorProp
                         readOnly={!canEdit}
                         onChange={(e) => handleUpdateField(i, { key: e.target.value })}
                         placeholder="Key"
-                        className={`flex-1 min-w-0 text-xs px-2 py-1 rounded border ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} outline-none focus:ring-1 focus:ring-indigo-500`}
+                        className={`flex-1 min-w-0 text-xs px-2 py-1 rounded border ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} outline-none focus:ring-1 focus:ring-[#249d9f]`}
                     />
 
                     {/* Value — text input or file picker */}
@@ -114,7 +114,7 @@ export function FormDataEditor({ fields, canEdit, onChange }: FormDataEditorProp
                             readOnly={!canEdit}
                             onChange={(e) => handleUpdateField(i, { value: e.target.value })}
                             placeholder="Value"
-                            className={`flex-1 min-w-0 text-xs px-2 py-1 rounded border ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} outline-none focus:ring-1 focus:ring-indigo-500`}
+                            className={`flex-1 min-w-0 text-xs px-2 py-1 rounded border ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} outline-none focus:ring-1 focus:ring-[#249d9f]`}
                         />
                     ) : (
                         <div className="flex-1 flex items-center gap-1.5 min-w-0">
@@ -128,8 +128,8 @@ export function FormDataEditor({ fields, canEdit, onChange }: FormDataEditorProp
                                 onClick={() => fileInputRefs.current[i]?.click()}
                                 disabled={!canEdit}
                                 className={`text-[10px] font-bold px-2 py-1 rounded border transition-colors ${theme === 'dark'
-                                    ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-600/30'
-                                    : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'
+                                    ? 'bg-[#1a7a7c]/20 text-[#2ec4c7] border-[#249d9f]/30 hover:bg-[#1a7a7c]/30'
+                                    : 'bg-indigo-50 text-[#1a7a7c] border-indigo-200 hover:bg-indigo-100'
                                     } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <Upload size={10} className="inline mr-1" />

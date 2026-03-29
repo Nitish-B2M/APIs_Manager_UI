@@ -116,14 +116,14 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                 {/* Header */}
                 <div className={`flex items-center justify-between px-6 py-4 border-b ${themeClasses.borderCol} ${themeClasses.secondaryBg}`}>
                     <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Zap className="text-indigo-500" size={24} />
+                        <Zap className="text-[#249d9f]" size={24} />
                         {isEditing ? 'Edit Task' : 'Task Details'}
                     </h2>
                     <div className="flex items-center gap-2">
                         {!isEditing && (
                             <>
                                 <button onClick={() => setIsEditing(true)} className={`p-2 rounded-lg hover:${themeClasses.hoverBg} transition-colors`} title="Edit">
-                                    <Edit2 size={18} className="text-gray-400 hover:text-indigo-500" />
+                                    <Edit2 size={18} className="text-gray-400 hover:text-[#249d9f]" />
                                 </button>
                                 {showDeleteConfirm ? (
                                     <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20">
@@ -158,7 +158,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                                     type="text"
                                     value={editForm.title}
                                     onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all`}
+                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-[#249d9f] outline-none transition-all`}
                                     required
                                 />
                             </div>
@@ -169,7 +169,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                                     value={editForm.description}
                                     onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                                     rows={4}
-                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none`}
+                                    className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-[#249d9f] outline-none transition-all resize-none`}
                                     placeholder="Add notes or details..."
                                 />
                             </div>
@@ -180,7 +180,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                                     <select
                                         value={editForm.priority}
                                         onChange={(e) => setEditForm({ ...editForm, priority: Number(e.target.value) })}
-                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.mainBg} focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none`}
+                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.mainBg} focus:ring-2 focus:ring-[#249d9f] outline-none transition-all appearance-none`}
                                     >
                                         <option value={1}>1 - Essential</option>
                                         <option value={2}>2 - Important</option>
@@ -194,7 +194,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                                         type="number"
                                         value={editForm.duration_minutes}
                                         onChange={(e) => setEditForm(prev => ({ ...prev, duration_minutes: Number(e.target.value) }))}
-                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all`}
+                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-[#249d9f] outline-none transition-all`}
                                         min="5"
                                         step="5"
                                     />
@@ -208,7 +208,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                                         type="datetime-local"
                                         value={editForm.scheduled_start}
                                         onChange={(e) => setEditForm(prev => ({ ...prev, scheduled_start: e.target.value }))}
-                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all`}
+                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-[#249d9f] outline-none transition-all`}
                                     />
                                 </div>
                                 <div>
@@ -217,7 +217,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                                         type="datetime-local"
                                         value={editForm.scheduled_end}
                                         onChange={(e) => setEditForm(prev => ({ ...prev, scheduled_end: e.target.value }))}
-                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all`}
+                                        className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:ring-2 focus:ring-[#249d9f] outline-none transition-all`}
                                     />
                                 </div>
                             </div>
@@ -226,7 +226,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
                                 <button type="button" onClick={() => setIsEditing(false)} className={`px-4 py-2 rounded-xl text-sm font-medium hover:${themeClasses.secondaryBg} transition-colors border ${themeClasses.borderCol}`}>
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={loading} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50">
+                                <button type="submit" disabled={loading} className="px-6 py-2 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-xl text-sm font-medium shadow-lg shadow-[#249d9f]/30 transition-all active:scale-95 disabled:opacity-50">
                                     {loading ? 'Saving...' : 'Save Changes'}
                                 </button>
                             </div>
@@ -245,7 +245,7 @@ export function TaskDetailModal({ isOpen, onClose, onSuccess, taskId }: TaskDeta
 
                             <div className={`p-4 rounded-xl border ${themeClasses.borderCol} ${themeClasses.secondaryBg} grid grid-cols-2 gap-4`}>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                    <div className="w-8 h-8 rounded-lg bg-[#249d9f]/10 flex items-center justify-center text-[#249d9f]">
                                         <Clock size={16} />
                                     </div>
                                     <div>

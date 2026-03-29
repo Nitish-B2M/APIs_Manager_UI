@@ -36,8 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem('token');
                 setUser(null);
             }
-        } catch (error) {
-            console.error('Failed to fetch user:', error);
+        } catch (error: any) {
+            // If "Authentication required" — the auto-refresh in apiFetch already tried.
+            // If it still fails, the token is truly expired and can't be refreshed.
+            console.error('Failed to fetch user:', error.message);
             localStorage.removeItem('token');
             setUser(null);
         } finally {
@@ -49,7 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshUser();
     }, [refreshUser]);
 
-    const logout = useCallback(() => {
+    const logout = useCallback(async () => {
+        try {
+            await api.auth.logout();
+        } catch { /* ignore — server logout is best-effort */ }
         localStorage.removeItem('token');
         localStorage.removeItem('settings');
         setUser(null);

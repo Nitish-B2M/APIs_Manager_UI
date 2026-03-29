@@ -44,13 +44,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${isActive ? 'bg-indigo-500/10 text-indigo-400 font-medium' : 'text-muted hover:text-foreground hover:bg-white/5'}`}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${isActive ? 'bg-[#249d9f]/10 text-[#2ec4c7] font-medium' : 'text-muted hover:text-foreground hover:bg-white/5'}`}
                                 title={!isSidebarOpen ? item.label : undefined}
                             >
                                 {isActive && (
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#249d9f] rounded-r-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
                                 )}
-                                <div className={`${isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-foreground'} transition-colors ${!isSidebarOpen && 'mx-auto'}`}>
+                                <div className={`${isActive ? 'text-[#2ec4c7]' : 'text-slate-400 group-hover:text-foreground'} transition-colors ${!isSidebarOpen && 'mx-auto'}`}>
                                     {item.icon}
                                 </div>
                                 {isSidebarOpen && (
@@ -64,7 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* Main Content Area */}
             <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#249d9f]/5 blur-[120px] pointer-events-none rounded-full" />
                 {children}
             </main>
         </div>

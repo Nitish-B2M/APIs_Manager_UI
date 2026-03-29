@@ -103,7 +103,7 @@ export default function ProfilePage() {
     if (isLoading) {
         return (
             <div className={`min-h-[calc(100vh-64px)] ${mainBg} flex items-center justify-center`}>
-                <div className="animate-pulse text-indigo-500 text-lg">Loading profile...</div>
+                <div className="animate-pulse text-[#249d9f] text-lg">Loading profile...</div>
             </div>
         );
     }
@@ -120,7 +120,7 @@ export default function ProfilePage() {
                             <ArrowLeft size={20} />
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-indigo-500">Profile Settings</h1>
+                            <h1 className="text-2xl font-bold text-[#249d9f]">Profile Settings</h1>
                             <p className={`text-sm ${subTextColor}`}>Manage your account and preferences</p>
                         </div>
                     </div>
@@ -136,7 +136,7 @@ export default function ProfilePage() {
                                         onClick={() => document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${theme === 'dark'
                                             ? 'hover:bg-gray-800 text-gray-400 hover:text-white'
-                                            : 'hover:bg-white hover:shadow-sm text-gray-500 hover:text-indigo-600'
+                                            : 'hover:bg-white hover:shadow-sm text-gray-500 hover:text-[#1a7a7c]'
                                             }`}
                                     >
                                         <span className="opacity-70">{section.icon}</span>
@@ -157,11 +157,11 @@ export default function ProfilePage() {
                                                 <img
                                                     src={avatarUrl}
                                                     alt="Avatar"
-                                                    className="w-20 h-20 rounded-full object-cover border-4 border-indigo-500/30"
+                                                    className="w-20 h-20 rounded-full object-cover border-4 border-[#249d9f]/30"
                                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                                 />
                                             ) : (
-                                                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center border-4 border-indigo-500/30">
+                                                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#249d9f] to-[#249d9f] flex items-center justify-center border-4 border-[#249d9f]/30">
                                                     <UserIcon size={32} className="text-white" />
                                                 </div>
                                             )}
@@ -195,7 +195,7 @@ export default function ProfilePage() {
                                                 value={name}
                                                 onChange={(e) => setName(e.target.value)}
                                                 placeholder="Enter your display name"
-                                                className={`w-full rounded-lg px-4 py-3 border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputBg}`}
+                                                className={`w-full rounded-lg px-4 py-3 border focus:outline-none focus:ring-2 focus:ring-[#249d9f] ${inputBg}`}
                                                 maxLength={100}
                                             />
                                         </div>
@@ -209,7 +209,7 @@ export default function ProfilePage() {
                                                 value={avatarUrl}
                                                 onChange={(e) => setAvatarUrl(e.target.value)}
                                                 placeholder="https://example.com/avatar.png"
-                                                className={`w-full rounded-lg px-4 py-3 border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputBg}`}
+                                                className={`w-full rounded-lg px-4 py-3 border focus:outline-none focus:ring-2 focus:ring-[#249d9f] ${inputBg}`}
                                                 maxLength={500}
                                             />
                                             <p className={`text-xs ${subTextColor} mt-1`}>Paste a URL to an image for your profile picture</p>
@@ -219,7 +219,7 @@ export default function ProfilePage() {
                                             <button
                                                 type="submit"
                                                 disabled={isSaving}
-                                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+                                                className="px-6 py-3 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-lg shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
                                             >
                                                 <Save size={16} />
                                                 {isSaving ? 'Saving...' : 'Save Changes'}
@@ -233,7 +233,7 @@ export default function ProfilePage() {
                             <section id="preferences" className="scroll-mt-24">
                                 <div className={`${cardBg} border rounded-xl p-8`}>
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-[#249d9f]/10 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'}`}>
                                             <Clock size={20} />
                                         </div>
                                         <div>
@@ -243,7 +243,7 @@ export default function ProfilePage() {
                                     </div>
 
                                     <div className="space-y-6">
-                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-indigo-500/30 transition-all">
+                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-[#249d9f]/30 transition-all">
                                             <div className="flex-1">
                                                 <p className="font-bold text-sm">Header Flip Clock</p>
                                                 <p className={`text-xs ${subTextColor}`}>Display an animated vintage flip clock and calendar in the header</p>
@@ -251,14 +251,14 @@ export default function ProfilePage() {
                                             <button
                                                 onClick={handleToggleClock}
                                                 disabled={updateMutation.isPending}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${me?.settings?.showFlipClock ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#249d9f] focus:ring-offset-2 ${me?.settings?.showFlipClock ? 'bg-[#1a7a7c]' : 'bg-gray-300'}`}
                                             >
                                                 <span
                                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${me?.settings?.showFlipClock ? 'translate-x-6' : 'translate-x-1'}`}
                                                 />
                                             </button>
                                         </div>
-                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-indigo-500/30 transition-all">
+                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-[#249d9f]/30 transition-all">
                                             <div className="flex-1">
                                                 <p className="font-bold text-sm">Copy as Single Line</p>
                                                 <p className={`text-xs ${subTextColor}`}>Remove all whitespace when copying request URL, body, docs, or response to clipboard</p>
@@ -266,14 +266,14 @@ export default function ProfilePage() {
                                             <button
                                                 onClick={handleToggleCopySingleLine}
                                                 disabled={updateMutation.isPending}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${me?.settings?.copySingleLine ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#249d9f] focus:ring-offset-2 ${me?.settings?.copySingleLine ? 'bg-[#1a7a7c]' : 'bg-gray-300'}`}
                                             >
                                                 <span
                                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${me?.settings?.copySingleLine ? 'translate-x-6' : 'translate-x-1'}`}
                                                 />
                                             </button>
                                         </div>
-                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-indigo-500/30 transition-all">
+                                        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-500/5 border border-transparent hover:border-[#249d9f]/30 transition-all">
                                             <div className="flex-1">
                                                 <p className="font-bold text-sm">Live Collaboration & Cursors</p>
                                                 <p className={`text-xs ${subTextColor}`}>See who else is viewing the workspace and show your active field to team members</p>
@@ -281,7 +281,7 @@ export default function ProfilePage() {
                                             <button
                                                 onClick={handleToggleLivePresence}
                                                 disabled={updateMutation.isPending}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${me?.settings?.enableLivePresence !== false ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#249d9f] focus:ring-offset-2 ${me?.settings?.enableLivePresence !== false ? 'bg-[#1a7a7c]' : 'bg-gray-300'}`}
                                             >
                                                 <span
                                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${me?.settings?.enableLivePresence !== false ? 'translate-x-6' : 'translate-x-1'}`}
@@ -297,7 +297,7 @@ export default function ProfilePage() {
                                 <div className={`${cardBg} border rounded-xl p-8`}>
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-[#249d9f]/10 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'}`}>
                                                 <Beaker size={20} />
                                             </div>
                                             <div>
@@ -307,14 +307,14 @@ export default function ProfilePage() {
                                         </div>
                                         <button
                                             onClick={toggleBeta}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isBeta ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#249d9f] focus:ring-offset-2 ${isBeta ? 'bg-[#1a7a7c]' : 'bg-gray-300'}`}
                                         >
                                             <span
                                                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isBeta ? 'translate-x-6' : 'translate-x-1'}`}
                                             />
                                         </button>
                                     </div>
-                                    <div className={`p-4 rounded-lg text-sm border ${theme === 'dark' ? 'bg-indigo-500/5 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-100 text-indigo-700'}`}>
+                                    <div className={`p-4 rounded-lg text-sm border ${theme === 'dark' ? 'bg-[#249d9f]/5 border-[#249d9f]/20 text-[#2ec4c7]' : 'bg-indigo-50 border-indigo-100 text-[#1a7a7c]'}`}>
                                         <p className="font-medium mb-1">Current Active Beta (Phase 1):</p>
                                         <ul className="list-disc list-inside space-y-1 opacity-80">
                                             <li>Rendered Public Documentation Viewer</li>

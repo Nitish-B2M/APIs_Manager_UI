@@ -126,7 +126,7 @@ export default function CreateFolderModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+            className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
             onClick={onClose}
         >
             <div
@@ -168,7 +168,7 @@ export default function CreateFolderModal({
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g. User Endpoints"
-                            className={`w-full rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 border ${formErrors.name ? inputErrorBg : inputBg}`}
+                            className={`w-full rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#249d9f] border ${formErrors.name ? inputErrorBg : inputBg}`}
                             autoFocus
                             aria-invalid={!!formErrors.name}
                             aria-describedby={formErrors.name ? 'name-error' : undefined}
@@ -192,7 +192,7 @@ export default function CreateFolderModal({
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Brief description of this folder..."
                             rows={2}
-                            className={`w-full rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 border resize-none ${inputBg}`}
+                            className={`w-full rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#249d9f] border resize-none ${inputBg}`}
                         />
                     </div>
 
@@ -201,14 +201,14 @@ export default function CreateFolderModal({
                         <button
                             type="button"
                             onClick={onClose}
-                            className={`px-4 py-2 text-sm ${subTextColor} hover:text-indigo-500 transition-colors`}
+                            className={`px-4 py-2 text-sm ${subTextColor} hover:text-[#249d9f] transition-colors`}
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-4 py-2 text-sm bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             {isSubmitting ? 'Saving...' : (editingFolder ? 'Save Changes' : 'Create Folder')}
                         </button>

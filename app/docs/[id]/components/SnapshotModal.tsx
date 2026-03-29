@@ -95,14 +95,21 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
     const snapshots = snapshotsRes?.data || [];
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1a1a2e] border-indigo-500/30' : 'bg-white border-gray-200'
-                }`}>
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+            onClick={onClose}
+        >
+            <div
+                className="overflow-hidden flex flex-col"
+                style={{ background: '#161B22', borderRadius: 12, border: '1px solid rgba(255,255,255,0.16)', minWidth: 640, maxWidth: '78vw', width: '72vw', maxHeight: '85vh' }}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
-                <div className={`p-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-indigo-500/20 bg-indigo-500/5' : 'border-gray-100 bg-gray-50'
+                <div className={`p-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-[#249d9f]/20 bg-[#249d9f]/5' : 'border-gray-100 bg-gray-50'
                     }`}>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <div className="w-10 h-10 rounded-xl bg-[#249d9f]/20 flex items-center justify-center text-[#2ec4c7]">
                             <Camera size={22} />
                         </div>
                         <div>
@@ -116,133 +123,96 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
                     </button>
                 </div>
 
-                <div className="p-6 space-y-8 max-h-[70vh] overflow-y-auto">
-                    {/* Create New Snapshot */}
-                    <div className="space-y-3">
-                        <label className={`text-xs font-bold uppercase tracking-wider ${themeClasses.subTextColor}`}>Create New Snapshot</label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={snapshotName}
-                                onChange={(e) => setSnapshotName(e.target.value)}
-                                placeholder="e.g., Before major API refactor"
-                                className={`flex-1 px-4 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${theme === 'dark'
-                                    ? 'bg-[#0f0f1a] border-indigo-500/20 text-gray-200 placeholder-gray-600'
-                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                                    }`}
-                            />
-                            <button
-                                onClick={() => snapshotName && createMutation.mutate(snapshotName)}
-                                disabled={!snapshotName || createMutation.isPending}
-                                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
-                            >
-                                {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                                Snap
-                            </button>
+                <div style={{ padding: 24, overflowY: 'auto', maxHeight: '70vh', flex: 1 }}>
+                    {/* Create: input + button same row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+                        <input
+                            type="text"
+                            value={snapshotName}
+                            onChange={(e) => setSnapshotName(e.target.value)}
+                            placeholder="e.g., Before major API refactor"
+                            style={{ flex: 1, padding: '10px 14px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                        />
+                        <button
+                            onClick={() => snapshotName && createMutation.mutate(snapshotName)}
+                            disabled={!snapshotName || createMutation.isPending}
+                            style={{ width: 80, height: 40, borderRadius: 6, background: '#249d9f', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: (!snapshotName || createMutation.isPending) ? 0.4 : 1, flexShrink: 0 }}
+                        >
+                            {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                            Snap
+                        </button>
+                    </div>
+
+                    {/* History */}
+                    <div style={{ marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681' }}>
+                            History ({snapshots.length})
+                        </span>
+                    </div>
+
+                    {snapshotsLoading ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: 12, opacity: 0.5 }}>
+                            <Loader2 size={24} className="animate-spin" style={{ color: '#249d9f' }} />
+                            <span style={{ fontSize: 13, color: '#8B949E' }}>Loading...</span>
                         </div>
-                    </div>
-
-                    {/* Snapshot History */}
-                    <div className="space-y-4">
-                        <label className={`text-xs font-bold uppercase tracking-wider ${themeClasses.subTextColor}`}>Snapshot History ({snapshots.length})</label>
-                        {snapshotsLoading ? (
-                            <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-50">
-                                <Loader2 size={32} className="animate-spin text-indigo-500" />
-                                <span className="text-sm">Loading history...</span>
-                            </div>
-                        ) : snapshots.length === 0 ? (
-                            <div className={`flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-2xl gap-3 ${theme === 'dark' ? 'border-white/5 text-gray-600' : 'border-gray-100 text-gray-400'
-                                }`}>
-                                <Clock size={32} className="opacity-20" />
-                                <span className="text-sm font-medium">No snapshots yet</span>
-                            </div>
-                        ) : (
-                            <div className="grid gap-3">
-                                {snapshots.map((s: any) => (
-                                    <div
-                                        key={s.id}
-                                        className={`group p-4 rounded-2xl border transition-all flex items-center justify-between ${theme === 'dark'
-                                            ? 'bg-white/5 border-white/5 hover:border-indigo-500/30'
-                                            : 'bg-gray-50 border-gray-100 hover:border-indigo-200'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-white/5 text-gray-400' : 'bg-white text-gray-500 shadow-sm'
-                                                }`}>
-                                                <RotateCcw size={18} />
-                                            </div>
-                                            <div>
-                                                <h4 className={`text-sm font-bold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>{s.name}</h4>
-                                                <p className="text-[11px] text-gray-500">{new Date(s.createdAt).toLocaleString()}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            {isBeta && (
-                                                <button
-                                                    onClick={() => handleCompare(s)}
-                                                    className={`p-2.5 rounded-xl transition-all ${theme === 'dark'
-                                                        ? 'hover:bg-indigo-500/20 text-indigo-400 opacity-0 group-hover:opacity-100'
-                                                        : 'hover:bg-indigo-50 text-indigo-600 opacity-0 group-hover:opacity-100'
-                                                        }`}
-                                                    title="Compare with current state"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                            )}
-                                            {confirmRestore === s.id ? (
-                                                <div className="flex items-center gap-2 animate-in slide-in-from-right-2 duration-200">
-                                                    <button
-                                                        onClick={() => restoreMutation.mutate(s.id)}
-                                                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5"
-                                                    >
-                                                        <CheckCircle2 size={12} /> Confirm Restore
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setConfirmRestore(null)}
-                                                        className={`p-1.5 rounded-lg text-[11px] font-bold ${theme === 'dark' ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-200 text-gray-500'
-                                                            }`}
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => setConfirmRestore(s.id)}
-                                                        className={`p-2.5 rounded-xl transition-all ${theme === 'dark'
-                                                            ? 'hover:bg-emerald-500/20 text-emerald-400 opacity-0 group-hover:opacity-100'
-                                                            : 'hover:bg-emerald-50 text-emerald-600 opacity-0 group-hover:opacity-100'
-                                                            }`}
-                                                        title="Restore this version"
-                                                    >
-                                                        <RotateCcw size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => deleteMutation.mutate(s.id)}
-                                                        className={`p-2.5 rounded-xl transition-all ${theme === 'dark'
-                                                            ? 'hover:bg-red-500/20 text-red-400 opacity-0 group-hover:opacity-100'
-                                                            : 'hover:bg-red-50 text-red-600 opacity-0 group-hover:opacity-100'
-                                                            }`}
-                                                        title="Delete snapshot"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
+                    ) : snapshots.length === 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: 8, border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 8 }}>
+                            <Clock size={24} style={{ color: '#6E7681', opacity: 0.3 }} />
+                            <span style={{ fontSize: 13, color: '#6E7681' }}>No snapshots yet</span>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {snapshots.map((s: any) => (
+                                <div
+                                    key={s.id}
+                                    className="group"
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128', transition: 'border-color 0.15s' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(36,157,159,0.3)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                                >
+                                    {/* Left: name + timestamp */}
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: 14, fontWeight: 600, color: '#E6EDF3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                                        <div style={{ fontSize: 11, color: '#6E7681', marginTop: 2 }}>{new Date(s.createdAt).toLocaleString()}</div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+
+                                    {/* Right: actions */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                        {isBeta && (
+                                            <button onClick={() => handleCompare(s)} title="Compare" className="opacity-0 group-hover:opacity-100" style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: '#249d9f', transition: 'opacity 0.15s' }}>
+                                                <Eye size={15} />
+                                            </button>
+                                        )}
+                                        {confirmRestore === s.id ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <button onClick={() => restoreMutation.mutate(s.id)} style={{ padding: '5px 12px', borderRadius: 6, background: '#249d9f', color: 'white', fontSize: 11, fontWeight: 600, border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <CheckCircle2 size={12} /> Confirm
+                                                </button>
+                                                <button onClick={() => setConfirmRestore(null)} style={{ padding: '5px 8px', borderRadius: 6, background: 'none', border: 'none', color: '#8B949E', fontSize: 11 }}>
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <button onClick={() => setConfirmRestore(s.id)} title="Restore" className="opacity-0 group-hover:opacity-100" style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: '#3FB950', transition: 'opacity 0.15s' }}>
+                                                    <RotateCcw size={15} />
+                                                </button>
+                                                <button onClick={() => deleteMutation.mutate(s.id)} title="Delete" className="opacity-0 group-hover:opacity-100" style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: '#F85149', transition: 'opacity 0.15s' }}>
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                {/* Footer Info */}
-                <div className={`p-4 px-6 text-[11px] flex items-center gap-2 ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-300' : 'bg-indigo-50 text-indigo-600'
-                    }`}>
-                    <AlertTriangle size={12} className="flex-shrink-0" />
-                    <span>Restoring a snapshot will replace the current state of the collection. This action cannot be undone unless you create a snapshot of the current state first.</span>
+                {/* Footer */}
+                <div style={{ padding: '12px 24px', borderTop: '1px solid rgba(255,255,255,0.08)', background: '#1C2128', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#D29922' }}>
+                    <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+                    <span>Restoring a snapshot replaces the current state. Create a snapshot first to preserve it.</span>
                 </div>
             </div>
 

@@ -28,8 +28,8 @@ export default function Header() {
                 <div className="flex items-center gap-8">
                     <Link href="/" className="text-xl font-bold transition-all flex items-center gap-2.5 hover:opacity-90 group relative">
                         <div className="relative w-8 h-8 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-xl rotate-45 opacity-20 blur-md group-hover:opacity-50 transition-all duration-500 group-hover:rotate-90" />
-                            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 via-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.4)] relative z-10 overflow-hidden transition-transform duration-300 group-hover:scale-110">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-[#249d9f] to-[#249d9f] rounded-xl rotate-45 opacity-20 blur-md group-hover:opacity-50 transition-all duration-500 group-hover:rotate-90" />
+                            <div className="w-8 h-8 bg-gradient-to-br from-[#249d9f] via-[#249d9f] to-[#1a7a7c] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.4)] relative z-10 overflow-hidden transition-transform duration-300 group-hover:scale-110">
                                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-30 mix-blend-overlay"></div>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white relative z-20">
                                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -40,7 +40,7 @@ export default function Header() {
                         </div>
                         <TextGradient className="text-2xl tracking-tighter">DevManus</TextGradient>
                         {isBeta && (
-                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest text-indigo-400 shadow-sm animate-pulse">
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#249d9f]/10 border border-[#249d9f]/20 text-[10px] font-black uppercase tracking-widest text-[#2ec4c7] shadow-sm animate-pulse">
                                 <Beaker size={10} /> Beta
                             </span>
                         )}
@@ -69,13 +69,13 @@ export default function Header() {
                         className="p-2 rounded-xl transition-all hover:bg-white/5 text-secondary hover:text-white"
                         title={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
                     >
-                        {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-400" />}
+                        {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-[#2ec4c7]" />}
                     </button>
 
                     {isLoggedIn ? (
                         <div className="flex items-center gap-3">
-                            <Link href="/profile" className="flex items-center gap-2 group p-1 pr-3 rounded-full bg-white/5 border border-white/5 hover:border-violet-500/30 transition-all">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border border-white/10 shadow-inner flex items-center justify-center overflow-hidden">
+                            <Link href="/profile" className="flex items-center gap-2 group p-1 pr-3 rounded-full bg-white/5 border border-white/5 hover:border-[#249d9f]/30 transition-all">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#249d9f] to-[#249d9f] border border-white/10 shadow-inner flex items-center justify-center overflow-hidden">
                                     <User size={18} className="text-white" />
                                 </div>
                                 <span className="text-xs font-semibold text-secondary group-hover:text-white transition-colors">{user?.name || 'Profile'}</span>
@@ -119,7 +119,7 @@ function NavLink({ href, icon, active, label }: { href: string, icon: React.Reac
             {icon}
             {label}
             {active && (
-                <span className="absolute -bottom-[21px] left-0 w-full h-0.5 bg-gradient-premium rounded-full shadow-[0_0_8px_rgba(140,43,238,0.5)]" />
+                <span className="absolute -bottom-[21px] left-0 w-full h-0.5 bg-gradient-premium rounded-full shadow-[0_0_8px_rgba(36,157,159,0.5)]" />
             )}
         </Link>
     );

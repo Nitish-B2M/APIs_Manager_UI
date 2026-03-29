@@ -18,7 +18,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
     loading: () => (
         <div className="h-full w-full flex items-center justify-center bg-black/10 min-h-[200px]">
-            <Search size={20} className="animate-spin text-indigo-500" />
+            <Search size={20} className="animate-spin text-[#249d9f]" />
         </div>
     )
 });
@@ -78,7 +78,7 @@ export const RequestTabs = memo(({
 
     const [wrapLines, setWrapLines] = React.useState(false);
 
-    const allTabs: TabType[] = ['params', 'headers', 'auth', 'body', 'tests', 'schema', 'mocking', 'notes', 'docs', 'code'];
+    const allTabs: TabType[] = ['body', 'headers', 'params', 'auth', 'tests', 'code', 'docs', 'schema', 'notes', 'mocking'];
     const tabs = React.useMemo(() => {
         const protocol = currentReq?.protocol || 'REST';
         switch (protocol) {
@@ -132,34 +132,61 @@ export const RequestTabs = memo(({
         onRequestChange({ params: newParams });
     };
 
+    const requestTabs = tabs.filter(t => ['body', 'params', 'headers', 'auth'].includes(t));
+    const metaTabs = tabs.filter(t => !['body', 'params', 'headers', 'auth'].includes(t));
+
     return (
-        <div className={`h-full border-r ${borderCol} flex flex-col min-h-0 min-w-0 ${mainBg}`}>
-            {/* Tab Headers */}
-            <div className={`flex border-b p-1.5 ${borderCol} ${secondaryBg} overflow-x-auto scrollbar-none`}>
-                {tabs.map(tab => (
+        <div className={`h-full border-r ${borderCol} flex flex-col min-h-0 min-w-0`} style={{ background: 'var(--bg-primary)' }}>
+            {/* Group A — REQUEST tabs: pill-style, 13px, 32px height */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', background: 'var(--bg-secondary)', flexShrink: 0, overflowX: 'auto' }} className="scrollbar-none">
+                {requestTabs.map(tab => (
                     <button
                         key={tab}
                         onClick={() => onTabChange(tab)}
-                        className={`px-4 py-2 font-bold text-[10px] transition-all duration-300 capitalize flex items-center gap-1.5 rounded-lg mr-1 relative group tracking-wider ${activeTab === tab
-                            ? 'text-white bg-indigo-600/20'
-                            : `${subTextColor} hover:text-gray-200 hover:bg-white/5`
-                            }`}
+                        style={{
+                            height: 32, padding: '0 14px', borderRadius: 6, fontSize: 13, fontWeight: 500,
+                            border: 'none', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s',
+                            background: activeTab === tab ? '#21262D' : 'transparent',
+                            color: activeTab === tab ? '#E6EDF3' : '#8B949E',
+                        }}
                     >
-                        {tab === 'body' && currentReq?.protocol === 'WS' ? 'Messages' : tab}
-                        {tab === 'tests' && (currentReq?.assertions?.length || 0) > 0 && (
-                            <span className={`text-[9px] rounded-full px-1.5 py-0.5 font-black flex-shrink-0 transition-all ${activeTab === 'tests'
-                                ? 'bg-indigo-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)]'
-                                : 'bg-white/10 text-gray-400 group-hover:bg-white/20'
-                                }`}>
-                                {currentReq.assertions.length}
-                            </span>
-                        )}
-                        {activeTab === tab && (
-                            <div className="absolute bottom-1 left-3 right-3 h-[2px] bg-indigo-500 rounded-full" />
-                        )}
+                        {tab === 'body' && currentReq?.protocol === 'WS' ? 'Messages' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                     </button>
                 ))}
             </div>
+
+            {/* Separator */}
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+
+            {/* Group B — META tabs: 12px, 2px bottom border indicator */}
+            {metaTabs.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', flexShrink: 0, overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.06)' }} className="scrollbar-none">
+                    {metaTabs.map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => onTabChange(tab)}
+                            style={{
+                                padding: '8px 12px', fontSize: 12, fontWeight: 400,
+                                border: 'none', whiteSpace: 'nowrap', flexShrink: 0, position: 'relative',
+                                transition: 'color 0.15s', background: 'transparent',
+                                color: activeTab === tab ? '#E6EDF3' : '#6E7681',
+                                borderBottom: activeTab === tab ? '2px solid #249d9f' : '2px solid transparent',
+                            }}
+                        >
+                            {tab === 'code' ? 'Code' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'tests' && (currentReq?.assertions?.length || 0) > 0 && (
+                                <span style={{
+                                    fontSize: 9, borderRadius: 4, padding: '1px 5px', marginLeft: 6, fontWeight: 600,
+                                    background: activeTab === 'tests' ? '#249d9f' : '#21262D',
+                                    color: activeTab === 'tests' ? 'white' : '#8B949E',
+                                }}>
+                                    {currentReq.assertions.length}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Tab Content */}
             <div className={`flex-1 overflow-y-auto ${activeTab === 'code' ? 'p-0' : 'p-3'}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
@@ -175,14 +202,14 @@ export const RequestTabs = memo(({
                                     value={h.key}
                                     readOnly={!canEdit}
                                     onChange={(e) => handleHeaderChange(i, 'key', e.target.value)}
-                                    className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600 font-mono`}
+                                    className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] focus:ring-2 focus:ring-[#249d9f]/30 outline-none transition-all placeholder-gray-600 font-mono`}
                                     placeholder="Key"
                                 />
                                 <input
                                     value={h.value}
                                     readOnly={!canEdit}
                                     onChange={(e) => handleHeaderChange(i, 'value', e.target.value)}
-                                    className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600 font-mono`}
+                                    className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] focus:ring-2 focus:ring-[#249d9f]/30 outline-none transition-all placeholder-gray-600 font-mono`}
                                     placeholder="Value"
                                 />
                                 {canEdit && (
@@ -198,7 +225,7 @@ export const RequestTabs = memo(({
                         {canEdit && (
                             <button
                                 onClick={handleAddHeader}
-                                className="w-full mt-2 py-2 border-2 border-dashed border-white/5 rounded-xl text-[10px] text-gray-500 font-black hover:border-indigo-500/30 hover:text-indigo-400 transition-all uppercase tracking-widest"
+                                className="w-full mt-2 py-2 border-2 border-dashed border-white/5 rounded-xl text-[10px] text-gray-500 font-black hover:border-[#249d9f]/30 hover:text-[#2ec4c7] transition-all uppercase tracking-widest"
                             >
                                 + ADD NEW HEADER
                             </button>
@@ -220,31 +247,31 @@ export const RequestTabs = memo(({
                         <div className="mb-3 flex justify-between items-center text-[10px] text-gray-500 font-bold h-6">
                             <div className="flex items-center gap-4">
                                 <label
-                                    className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group font-black tracking-widest ${(currentReq?.body?.mode || 'raw') === 'raw' ? 'text-indigo-400' : subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
+                                    className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group font-black tracking-widest ${(currentReq?.body?.mode || 'raw') === 'raw' ? 'text-[#2ec4c7]' : subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
                                     onClick={() => canEdit && onRequestChange({ body: { ...currentReq.body, mode: 'raw' } })}
                                 >
                                     <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${(currentReq?.body?.mode || 'raw') === 'raw'
-                                        ? 'border-indigo-500 bg-indigo-500/20'
+                                        ? 'border-[#249d9f] bg-[#249d9f]/20'
                                         : 'border-white/10 bg-white/5'
                                         }`}>
-                                        {(currentReq?.body?.mode || 'raw') === 'raw' && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,1)]" />}
+                                        {(currentReq?.body?.mode || 'raw') === 'raw' && <div className="w-1.5 h-1.5 rounded-full bg-[#249d9f] shadow-[0_0_8px_rgba(99,102,241,1)]" />}
                                     </div>
                                     RAW
                                 </label>
                                 <label
-                                    className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group font-black tracking-widest ${currentReq?.body?.mode === 'formdata' ? 'text-indigo-400' : subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
+                                    className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group font-black tracking-widest ${currentReq?.body?.mode === 'formdata' ? 'text-[#2ec4c7]' : subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
                                     onClick={() => canEdit && onRequestChange({ body: { ...currentReq.body, mode: 'formdata', formdata: currentReq.body?.formdata || [] } })}
                                 >
                                     <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${currentReq?.body?.mode === 'formdata'
-                                        ? 'border-indigo-500 bg-indigo-500/20'
+                                        ? 'border-[#249d9f] bg-[#249d9f]/20'
                                         : 'border-white/10 bg-white/5'
                                         }`}>
-                                        {currentReq?.body?.mode === 'formdata' && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,1)]" />}
+                                        {currentReq?.body?.mode === 'formdata' && <div className="w-1.5 h-1.5 rounded-full bg-[#249d9f] shadow-[0_0_8px_rgba(99,102,241,1)]" />}
                                     </div>
                                     FORM
                                 </label>
                                 <label
-                                    className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group font-black tracking-widest ${currentReq?.body?.mode === 'graphql' ? 'text-indigo-400' : subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
+                                    className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'} group font-black tracking-widest ${currentReq?.body?.mode === 'graphql' ? 'text-[#2ec4c7]' : subTextColor} ${!canEdit ? 'opacity-70' : ''}`}
                                     onClick={() => canEdit && onRequestChange({
                                         body: {
                                             ...currentReq.body,
@@ -254,15 +281,15 @@ export const RequestTabs = memo(({
                                     })}
                                 >
                                     <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${currentReq?.body?.mode === 'graphql'
-                                        ? 'border-indigo-500 bg-indigo-500/20'
+                                        ? 'border-[#249d9f] bg-[#249d9f]/20'
                                         : 'border-white/10 bg-white/5'
                                         }`}>
-                                        {currentReq?.body?.mode === 'graphql' && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,1)]" />}
+                                        {currentReq?.body?.mode === 'graphql' && <div className="w-1.5 h-1.5 rounded-full bg-[#249d9f] shadow-[0_0_8px_rgba(99,102,241,1)]" />}
                                     </div>
                                     GQL
                                 </label>
                                 {(currentReq?.body?.mode || 'raw') === 'raw' && (
-                                    <button onClick={onCopyBody} className="text-gray-500 hover:text-indigo-400 flex items-center gap-1.5 transition-all font-black uppercase tracking-widest px-2 py-1 rounded hover:bg-white/5">
+                                    <button onClick={onCopyBody} className="text-gray-500 hover:text-[#2ec4c7] flex items-center gap-1.5 transition-all font-black uppercase tracking-widest px-2 py-1 rounded hover:bg-white/5">
                                         <Copy size={12} /> COPY
                                     </button>
                                 )}
@@ -271,14 +298,14 @@ export const RequestTabs = memo(({
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setWrapLines(!wrapLines)}
-                                        className={`px-2 py-1 rounded-lg border flex items-center gap-1.5 font-black transition-all text-[9px] uppercase tracking-widest ${wrapLines ? 'bg-indigo-600 text-white border-indigo-500' : 'hover:bg-white/10 text-gray-500 border-white/10'}`}
+                                        className={`px-2 py-1 rounded-lg border flex items-center gap-1.5 font-black transition-all text-[9px] uppercase tracking-widest ${wrapLines ? 'bg-[#1a7a7c] text-white border-[#249d9f]' : 'hover:bg-white/10 text-gray-500 border-white/10'}`}
                                         title={wrapLines ? 'Disable Word Wrap' : 'Enable Word Wrap'}
                                     >
                                         <WrapText size={12} /> {wrapLines ? 'WRAP ON' : 'WRAP OFF'}
                                     </button>
                                     <button
                                         onClick={onFormatJson}
-                                        className="px-2 py-1 hover:bg-indigo-600/20 text-indigo-400 rounded-lg border border-indigo-500/20 flex items-center gap-1.5 font-black text-[9px] uppercase tracking-widest transition-all"
+                                        className="px-2 py-1 hover:bg-[#1a7a7c]/20 text-[#2ec4c7] rounded-lg border border-[#249d9f]/20 flex items-center gap-1.5 font-black text-[9px] uppercase tracking-widest transition-all"
                                     >
                                         <CheckCircle2 size={12} /> FORMAT
                                     </button>
@@ -339,7 +366,7 @@ export const RequestTabs = memo(({
                         ) : (
                             <div className={`relative flex-1 flex flex-col gap-3`}>
                                 <div className={`flex-1 rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
-                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-indigo-500 opacity-60 pointer-events-none tracking-widest">QUERY</div>
+                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-[#249d9f] opacity-60 pointer-events-none tracking-widest">QUERY</div>
                                     <Editor
                                         key="gql-query-editor"
                                         height="100%"
@@ -366,7 +393,7 @@ export const RequestTabs = memo(({
                                     />
                                 </div>
                                 <div className={`relative h-[180px] rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
-                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-purple-500 opacity-60 pointer-events-none tracking-widest">VARIABLES</div>
+                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-[#249d9f] opacity-60 pointer-events-none tracking-widest">VARIABLES</div>
                                     <Editor
                                         key="gql-vars-editor"
                                         height="100%"
@@ -430,7 +457,7 @@ export const RequestTabs = memo(({
                                     value={currentReq.name}
                                     readOnly={!canEdit}
                                     onChange={(e) => onRequestChange({ name: e.target.value })}
-                                    className={`w-full text-lg font-bold px-4 py-2.5 ${inputBg} border ${borderCol} ${textColor} rounded-xl focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all ${!canEdit ? 'bg-transparent border-transparent px-0 text-2xl' : ''}`}
+                                    className={`w-full text-lg font-bold px-4 py-2.5 ${inputBg} border ${borderCol} ${textColor} rounded-xl focus:ring-2 focus:ring-[#249d9f]/30 outline-none transition-all ${!canEdit ? 'bg-transparent border-transparent px-0 text-2xl' : ''}`}
                                 />
                                 <button
                                     onClick={() => {
@@ -445,7 +472,7 @@ export const RequestTabs = memo(({
                             </div>
                             <button
                                 onClick={onCopyMarkdown}
-                                className="mb-0.5 p-2.5 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 rounded-xl flex items-center gap-2 font-black text-[10px] transition-all border border-indigo-500/20 active:scale-95 uppercase tracking-widest cursor-pointer"
+                                className="mb-0.5 p-2.5 bg-[#1a7a7c]/10 text-[#2ec4c7] hover:bg-[#1a7a7c]/20 rounded-xl flex items-center gap-2 font-black text-[10px] transition-all border border-[#249d9f]/20 active:scale-95 uppercase tracking-widest cursor-pointer"
                                 title="Copy as Markdown"
                             >
                                 <Copy size={16} /> COPY MKD
@@ -457,14 +484,14 @@ export const RequestTabs = memo(({
                                 value={currentReq.description || ''}
                                 readOnly={!canEdit}
                                 onChange={(e) => onRequestChange({ description: e.target.value })}
-                                className={`w-full h-48 p-4 ${inputBg} border ${borderCol} ${textColor} rounded-2xl focus:ring-2 focus:ring-indigo-500/30 outline-none resize-none text-[13px] leading-relaxed transition-all placeholder-gray-600 ${!canEdit ? 'bg-transparent border-transparent px-0 h-auto min-h-[120px] text-gray-400' : ''}`}
+                                className={`w-full h-48 p-4 ${inputBg} border ${borderCol} ${textColor} rounded-2xl focus:ring-2 focus:ring-[#249d9f]/30 outline-none resize-none text-[13px] leading-relaxed transition-all placeholder-gray-600 ${!canEdit ? 'bg-transparent border-transparent px-0 h-auto min-h-[120px] text-gray-400' : ''}`}
                                 placeholder="Describe this endpoint's purpose, parameters, and expected results..."
                             />
                         </div>
 
                         {canEdit && (
                             <div className={`pt-6 border-t ${borderCol}`}>
-                                <label className="text-[10px] font-black text-indigo-400 uppercase mb-3 flex items-center gap-2 tracking-[0.2em]">
+                                <label className="text-[10px] font-black text-[#2ec4c7] uppercase mb-3 flex items-center gap-2 tracking-[0.2em]">
                                     <Sparkles size={14} className="animate-pulse" />
                                     AI COPILOT COMMAND
                                 </label>
@@ -472,13 +499,13 @@ export const RequestTabs = memo(({
                                     <textarea
                                         value={aiCommand}
                                         onChange={(e) => onAiCommandChange(e.target.value)}
-                                        className={`w-full h-24 p-3 border ${isDark ? 'border-indigo-500/20 bg-indigo-500/5 text-indigo-200' : 'border-indigo-200 bg-indigo-50 text-indigo-700'} rounded-2xl focus:ring-2 focus:ring-indigo-500/30 outline-none resize-none text-[11px] leading-relaxed transition-all placeholder-indigo-500/30 font-medium`}
+                                        className={`w-full h-24 p-3 border ${isDark ? 'border-[#249d9f]/20 bg-[#249d9f]/5 text-indigo-200' : 'border-indigo-200 bg-indigo-50 text-[#1a7a7c]'} rounded-2xl focus:ring-2 focus:ring-[#249d9f]/30 outline-none resize-none text-[11px] leading-relaxed transition-all placeholder-[#249d9f]/30 font-medium`}
                                         placeholder="Customize how AI refines your documentation..."
                                     />
                                     <button
                                         onClick={onAiGenerate}
                                         disabled={aiLoading}
-                                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-3 rounded-2xl text-[11px] font-black flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 transition-all disabled:opacity-50 active:scale-[0.98] uppercase tracking-[0.15em]"
+                                        className="w-full bg-gradient-to-r from-[#1a7a7c] to-[#1a7a7c] hover:from-[#249d9f] hover:to-[#249d9f] text-white px-4 py-3 rounded-2xl text-[11px] font-black flex items-center justify-center gap-2 shadow-xl shadow-[#1a7a7c]/20 transition-all disabled:opacity-50 active:scale-[0.98] uppercase tracking-[0.15em]"
                                     >
                                         {aiLoading ? 'REFINING DOCUMENTATION...' : 'REFINE WITH AI AGENT'}
                                     </button>
@@ -507,7 +534,7 @@ export const RequestTabs = memo(({
                             {canEdit && (
                                 <button
                                     onClick={handleAddParam}
-                                    className="p-1 px-3 text-[10px] bg-indigo-600/10 text-indigo-400 rounded-xl flex items-center gap-2 font-black hover:bg-indigo-600/20 border border-indigo-500/30 transition-all uppercase tracking-widest"
+                                    className="p-1 px-3 text-[10px] bg-[#1a7a7c]/10 text-[#2ec4c7] rounded-xl flex items-center gap-2 font-black hover:bg-[#1a7a7c]/20 border border-[#249d9f]/30 transition-all uppercase tracking-widest"
                                 >
                                     <Plus size={12} /> ADD PARAM
                                 </button>
@@ -523,21 +550,21 @@ export const RequestTabs = memo(({
                             </div>
                             {(currentReq.params || []).map((p: any, i: number) => (
                                 <div key={i} className="flex gap-2 items-center group">
-                                    <span className={`text-[9px] font-black px-2 py-1 rounded-lg w-20 text-center uppercase tracking-tighter ${p.type === 'path' ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20' : 'bg-blue-600/20 text-blue-500 border border-blue-500/20'}`}>
+                                    <span className={`text-[9px] font-black px-2 py-1 rounded-lg w-20 text-center uppercase tracking-tighter ${p.type === 'path' ? 'bg-[#1a7a7c]/20 text-[#2ec4c7] border border-[#249d9f]/20' : 'bg-blue-600/20 text-blue-500 border border-blue-500/20'}`}>
                                         {p.type}
                                     </span>
                                     <input
                                         value={p.key}
                                         readOnly={!canEdit || p.type === 'path'}
                                         onChange={(e) => handleParamChange(i, 'key', e.target.value)}
-                                        className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] font-mono focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all ${p.type === 'path' ? 'opacity-40' : ''}`}
+                                        className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] font-mono focus:ring-2 focus:ring-[#249d9f]/30 outline-none transition-all ${p.type === 'path' ? 'opacity-40' : ''}`}
                                         placeholder="Key"
                                     />
                                     <input
                                         value={p.value}
                                         readOnly={!canEdit}
                                         onChange={(e) => handleParamChange(i, 'value', e.target.value)}
-                                        className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] font-mono focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all`}
+                                        className={`flex-1 px-3 py-2 ${inputBg} border ${borderCol} ${textColor} rounded-xl text-[12px] font-mono focus:ring-2 focus:ring-[#249d9f]/30 outline-none transition-all`}
                                         placeholder="Value"
                                     />
                                     {canEdit && p.type !== 'path' && (
@@ -562,9 +589,11 @@ export const RequestTabs = memo(({
 
                 {/* Workspace (Notes & Tasks) Tab */}
                 {activeTab === 'notes' && (
-                    <WorkspaceTab 
+                    <WorkspaceTab
                         endpointId={currentReq.id}
                         canEdit={canEdit}
+                        endpointName={currentReq.name || currentReq.url}
+                        endpointMethod={currentReq.method}
                     />
                 )}
             </div>
