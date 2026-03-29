@@ -140,11 +140,36 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
             {/* Webhook List */}
             <div className="space-y-4">
                 {webhooks.length === 0 && (
-                    <div className="text-center py-20 rounded-3xl border-2 border-dashed border-gray-500/10 bg-black/5 flex flex-col items-center gap-4">
-                        <Webhook size={48} className="text-gray-500 opacity-20" />
-                        <div className="max-w-xs">
-                            <p className={`text-sm font-bold ${themeClasses.textColor}`}>No webhooks configured</p>
-                            <p className="text-[11px] text-gray-500 mt-1">Connect your workspace to external services like Slack, Discord, or your own API.</p>
+                    <div className="py-16 rounded-xl border border-dashed border-white/[0.08] flex flex-col items-center gap-5">
+                        <Webhook size={32} className="text-[#6E7681] opacity-50" />
+                        <div className="text-center max-w-sm">
+                            <p className="text-[#E6EDF3] text-sm font-medium mb-1">Connect to Slack, Discord or your own endpoint</p>
+                            <p className="text-[#6E7681] text-xs mb-5">Receive real-time notifications when collection events occur.</p>
+
+                            {/* Quick-connect pills */}
+                            <div className="flex justify-center gap-2 mb-5">
+                                {[
+                                    { name: 'Slack', icon: '💬', color: '#4A154B' },
+                                    { name: 'Discord', icon: '🎮', color: '#5865F2' },
+                                    { name: 'Custom', icon: '🔗', color: '#21262D' },
+                                ].map(svc => (
+                                    <button
+                                        key={svc.name}
+                                        onClick={() => setShowAddModal(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] hover:border-white/[0.16] transition-all"
+                                        style={{ background: `${svc.color}20`, color: svc.color === '#21262D' ? '#8B949E' : svc.color }}
+                                    >
+                                        <span>{svc.icon}</span> {svc.name}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                className="px-5 py-2.5 rounded-lg bg-[#249d9f] text-white text-xs font-semibold hover:bg-[#1a7a7c] transition-colors"
+                            >
+                                + Add Webhook
+                            </button>
                         </div>
                     </div>
                 )}
@@ -262,7 +287,7 @@ export function WebhooksTab({ documentationId, canAdmin }: WebhooksTabProps) {
 
             {/* Add Webhook Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
                     <div className={`w-full max-w-xl rounded-3xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-[#1a1b26]' : 'bg-white'} shadow-2xl p-6 flex flex-col gap-6 animate-in zoom-in-95 duration-200`}>
                         <div>
                             <h2 className={`text-xl font-black tracking-tight ${themeClasses.textColor}`}>New Webhook</h2>

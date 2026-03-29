@@ -8,7 +8,7 @@ import {
     Layout, FileText, Copy, X, Download, Keyboard, Search, Clock,
     Activity, Shield, Users, Trash2, ExternalLink, Plus, AlertTriangle,
     AlertCircle, Database, HelpCircle, Mail, User, Check, RotateCcw, Sparkles,
-    Settings2, Terminal, Zap, Columns2, Rows2, Save, Globe
+    Settings2, Terminal, Zap, Columns2, Rows2, Save, Globe, ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { GlassCard, PremiumButton } from '@/components/UIComponents';
@@ -59,6 +59,25 @@ const deduplicateEndpoints = (eps: any[]) => {
 
 const EMPTY_ARRAY: any[] = [];
 
+/** Toolbar icon button — 32×32, Surface 2 on hover, tooltip */
+function ToolbarBtn({ icon, tooltip, onClick, active }: { icon: React.ReactNode; tooltip: string; onClick: () => void; active?: boolean }) {
+    return (
+        <button
+            onClick={onClick}
+            title={tooltip}
+            style={{
+                width: 32, height: 32, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', border: 'none',
+                color: active ? '#249d9f' : '#8B949E', transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1C2128'; e.currentTarget.style.color = '#E6EDF3'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = active ? '#249d9f' : '#8B949E'; }}
+        >
+            {icon}
+        </button>
+    );
+}
+
 function ApiClientContent() {
     const { id } = useParams();
     const router = useRouter();
@@ -101,6 +120,7 @@ function ApiClientContent() {
     const [showSaveVarModal, setShowSaveVarModal] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
     const [isViewingHistory, setIsViewingHistory] = useState(false);
+    const latestResponseRef = useRef<any>(null);
     const [urlHistory, setUrlHistory] = useState<string[]>([]);
 
     // Queries & Mutations
@@ -260,7 +280,10 @@ function ApiClientContent() {
             const start = Date.now();
             const res = await fetch(url, { method: currentReq.method, headers, body });
             const data = await res.json().catch(() => res.text());
-            setResponse({ status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 });
+            const newResponse = { status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 };
+            setResponse(newResponse);
+            latestResponseRef.current = newResponse;
+            setIsViewingHistory(false);
         } catch (e: any) { setResponse({ error: true, message: e.message }); }
         finally { setReqLoading(false); }
     }, [currentReq, resolveUrl, resolveAll]);
@@ -520,7 +543,7 @@ function ApiClientContent() {
         if (activeTabId === lastActiveTabRef.current) return;
         const tab = openTabs.find(t => t.id === activeTabId);
         if (tab) {
-            setCurrentReq({ ...tab }); setResponse(tab.lastResponse || null); setIsDirty(false);
+            setCurrentReq({ ...tab }); setResponse(tab.lastResponse || null); setIsDirty(false); setIsViewingHistory(false); latestResponseRef.current = tab.lastResponse || null;
             lastActiveTabRef.current = activeTabId;
             const idx = endpoints.findIndex(e => e.id === activeTabId);
             if (idx !== -1 && idx !== selectedIdx) setSelectedIdx(idx);
@@ -576,7 +599,7 @@ function ApiClientContent() {
     ];
 
     return (
-        <div className={`flex h-[calc(100vh-64px)] overflow-hidden font-sans text-xs relative ${theme === 'dark' ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
+        <div className={`flex h-[calc(100vh-64px)] overflow-hidden font-sans text-xs relative ${theme === 'dark' ? 'bg-[#0D1117] text-[#E6EDF3]' : 'bg-gray-50 text-gray-700'}`}>
             <OfflineBanner isOnline={isOnline} queueLength={queueLength} isSyncing={isSyncing} />
             <Sidebar
                 doc={doc} endpoints={endpoints} folders={folders} selectedIdx={selectedIdx} isCollapsed={isSidebarCollapsed} width={sidebarWidth} isDirty={isCollectionDirty} canEdit={canEdit} canAdmin={canAdmin} openMenuIdx={openMenuIdx} draggedIdx={draggedIdx}
@@ -611,9 +634,19 @@ function ApiClientContent() {
                 />
             )}
 
-            <div className="flex-1 flex flex-col h-full min-w-0 bg-black/20">
+            <div className="flex-1 flex flex-col h-full min-w-0" style={{ background: 'var(--bg-primary)' }}>
                 <div className={`flex items-center justify-between px-4 py-2.5 border-b ${themeClasses.borderCol} ${themeClasses.secondaryBg} z-20 shadow-sm`}>
                     <div className="flex items-center gap-1.5">
+                        {/* Sidebar expand button when collapsed */}
+                        {isSidebarCollapsed && (
+                            <button
+                                onClick={() => setIsSidebarCollapsed(false)}
+                                className="p-1.5 rounded-lg text-gray-500 hover:text-[#2ec4c7] hover:bg-white/5 transition-all mr-1"
+                                title="Expand sidebar"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        )}
                         {navItems.map(item => (
                             <button
                                 key={item.id}
@@ -628,34 +661,66 @@ function ApiClientContent() {
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/5">
-                            <button onClick={() => setShowAiBuilder(true)} className="p-1.5 rounded-lg text-[#2ec4c7] hover:bg-[#2ec4c7]/10 transition-all" title="AI Request Builder"><Sparkles size={16} /></button>
-                            <div className="w-px h-4 bg-white/10 mx-1" />
-                            <button onClick={() => setShowRunner(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-[#2ec4c7] hover:bg-[#2ec4c7]/10 transition-all" title="Run Collection"><Zap size={16} /></button>
-                            <button onClick={() => setShowSnapshots(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 transition-all" title="Collection Snapshots"><Clock size={16} /></button>
-                            <button onClick={() => handleGenerateMarkdown(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all" title="Download Markdown"><Download size={16} /></button>
-                            {userRole === 'OWNER' && (
-                                <>
-                                    <div className="w-px h-4 bg-white/10 mx-1" />
-                                    <button onClick={() => setShowCollaborators(true)} className={`p-1.5 rounded-lg transition-all ${doc.isPublic ? 'bg-green-500/10 text-green-400' : 'text-gray-500 hover:text-pink-400 hover:bg-pink-400/10'}`} title={doc.isPublic ? "Public Access Enabled" : "Share & Team"}>
-                                        {doc.isPublic ? <Globe size={16} className="animate-pulse" /> : <Users size={16} />}
-                                    </button>
-                                    {doc.isPublic && doc.slug && (
-                                        <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/public/${doc.slug}`); toast.success('Link copied'); }} className="p-1.5 rounded-lg text-green-500 hover:bg-green-500/10 transition-all ml-0.5" title="Copy Public URL"><Copy size={14} /></button>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                        <div className="w-px h-6 bg-white/10" />
-                        <div className="flex items-center gap-1.5">
-                            <button onClick={() => setPaneLayout(paneLayout === 'horizontal' ? 'vertical' : 'horizontal')} className={`p-2 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} ${themeClasses.subTextColor} hover:text-[#2ec4c7] transition-all`} title={paneLayout === 'horizontal' ? 'Switch to Vertical' : 'Switch to Horizontal'}>
-                                {paneLayout === 'horizontal' ? <Rows2 size={15} /> : <Columns2 size={15} />}
-                            </button>
-                            <button onClick={() => setShowEnv(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${themeClasses.borderCol} ${themeClasses.inputBg} text-[10px] font-bold text-[#2ec4c7] hover:bg-[#1a7a7c]/10 transition-all uppercase tracking-widest`}>
-                                <Settings2 size={13} /> ENV
-                            </button>
-                        </div>
+                    {/* Toolbar: grouped icons with dividers */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {/* AI Copilot toggle — glow ring when enabled */}
+                        <button
+                            onClick={() => setAiEnabled(!aiEnabled)}
+                            title="AI Copilot"
+                            style={{
+                                width: 32, height: 32, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'transparent', border: 'none',
+                                color: aiEnabled ? '#249d9f' : '#6E7681',
+                                boxShadow: aiEnabled ? '0 0 0 2px rgba(36,157,159,0.3), 0 0 12px rgba(36,157,159,0.15)' : 'none',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            <Sparkles size={16} />
+                        </button>
+
+                        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 2px' }} />
+
+                        {/* Group 1: Builder + Runner + Snapshots */}
+                        <ToolbarBtn icon={<Sparkles size={15} />} tooltip="AI Builder" onClick={() => setShowAiBuilder(true)} />
+                        <ToolbarBtn icon={<Zap size={15} />} tooltip="Run Collection" onClick={() => setShowRunner(true)} />
+                        <ToolbarBtn icon={<Clock size={15} />} tooltip="Snapshots" onClick={() => setShowSnapshots(true)} />
+
+                        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+
+                        {/* Group 2: Export + Share */}
+                        <ToolbarBtn icon={<Download size={15} />} tooltip="Download Markdown" onClick={() => handleGenerateMarkdown(true)} />
+                        <ToolbarBtn icon={<Download size={15} />} tooltip="Export Postman" onClick={handleExportPostman} />
+                        <ToolbarBtn icon={<Download size={15} />} tooltip="Export OpenAPI" onClick={handleExportOpenApi} />
+                        {userRole === 'OWNER' && (
+                            <ToolbarBtn
+                                icon={doc.isPublic ? <Globe size={15} /> : <Users size={15} />}
+                                tooltip={doc.isPublic ? "Public Access" : "Share & Team"}
+                                onClick={() => setShowCollaborators(true)}
+                                active={doc.isPublic}
+                            />
+                        )}
+                        {userRole === 'OWNER' && doc.isPublic && doc.slug && (
+                            <ToolbarBtn icon={<Copy size={14} />} tooltip="Copy Public URL" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/public/${doc.slug}`); toast.success('Link copied'); }} />
+                        )}
+
+                        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+
+                        {/* Group 3: Layout */}
+                        <ToolbarBtn
+                            icon={paneLayout === 'horizontal' ? <Rows2 size={15} /> : <Columns2 size={15} />}
+                            tooltip={paneLayout === 'horizontal' ? 'Vertical Layout' : 'Horizontal Layout'}
+                            onClick={() => setPaneLayout(paneLayout === 'horizontal' ? 'vertical' : 'horizontal')}
+                        />
+
+                        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+
+                        {/* ENV pill — outlined style */}
+                        <button
+                            onClick={() => setShowEnv(true)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 6, border: '1px solid #249d9f', background: 'transparent', color: '#249d9f', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' as const }}
+                        >
+                            <Settings2 size={13} /> ENV
+                        </button>
                     </div>
                 </div>
 
@@ -671,7 +736,19 @@ function ApiClientContent() {
                                     </div>
                                     <div className={`bg-[#1a7a7c]/10 hover:bg-[#1a7a7c]/50 transition-colors z-10 ${paneLayout === 'vertical' ? 'h-1 w-full cursor-row-resize' : 'w-1 h-full cursor-col-resize'} ${isResizingMain || isResizingVertical ? 'bg-[#1a7a7c]' : ''}`} onMouseDown={paneLayout === 'vertical' ? startVerticalResize : startMainResize} />
                                     <div className="flex-1 h-full overflow-hidden">
-                                        <ResponsePanel response={response} currentReq={currentReq} reqLoading={reqLoading} paneLayout={paneLayout} endpoints={endpoints} selectedIdx={selectedIdx} onLayoutChange={setPaneLayout} onLoadHistory={() => { }} onBackToLatest={() => { }} isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={wsMessages} wsStatus={wsStatus} socketMode="ws" onWsConnect={() => { }} onWsDisconnect={() => { }} onWsSendMessage={() => { }} onWsClearMessages={() => { }} />
+                                        <ResponsePanel response={response} currentReq={currentReq} reqLoading={reqLoading} paneLayout={paneLayout} endpoints={endpoints} selectedIdx={selectedIdx} onLayoutChange={setPaneLayout} onLoadHistory={(item: any) => {
+                                            // Save current response as latest if not already saved
+                                            if (!isViewingHistory && response) latestResponseRef.current = response;
+                                            // Show the history item's response
+                                            setResponse(item.lastResponse || { status: item.lastResponse?.status, data: item.lastResponse?.data, time: item.lastResponse?.time, timestamp: item.timestamp });
+                                            setIsViewingHistory(true);
+                                        }}
+                                        onBackToLatest={() => {
+                                            // Restore the latest live response
+                                            if (latestResponseRef.current) setResponse(latestResponseRef.current);
+                                            setIsViewingHistory(false);
+                                        }}
+                                        isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={wsMessages} wsStatus={wsStatus} socketMode="ws" onWsConnect={() => { }} onWsDisconnect={() => { }} onWsSendMessage={() => { }} onWsClearMessages={() => { }} />
                                     </div>
                                 </div>
                             </div>

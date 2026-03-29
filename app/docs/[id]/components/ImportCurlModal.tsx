@@ -46,7 +46,7 @@ export default function ImportCurlModal({ isOpen, onClose, onImport }: ImportCur
     const closeBtn = theme === 'dark' ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
             <div className={`${modalBg} rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
                 <div className={`flex items-center justify-between p-4 border-b ${headerBg}`}>
                     <div className="flex items-center gap-3">

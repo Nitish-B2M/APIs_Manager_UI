@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Layout, FileText, ChevronRight, CornerDownRight } from 'lucide-react';
 import { Endpoint } from '@/types';
+import { getRequestLabel, getRequestBadgeClass } from '../utils/theme';
 
 interface RequestTabBarProps {
     openTabs: any[];
@@ -30,12 +31,7 @@ export function RequestTabBar({ openTabs, activeTabId, onTabSelect, onTabClose, 
                             }`}
                     >
                         <div className="flex items-center gap-2.5 w-full pr-6 overflow-hidden">
-                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 tracking-tighter ${tab.method === 'GET' ? 'bg-emerald-600/20 text-emerald-500' :
-                                    tab.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
-                                        tab.method === 'PUT' ? 'bg-amber-600/20 text-amber-500' :
-                                            tab.method === 'DELETE' ? 'bg-red-600/20 text-red-500' :
-                                                'bg-gray-600/20 text-gray-500'
-                                }`}>{tab.method}</span>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 tracking-tighter ${getRequestBadgeClass(tab.method, tab.protocol)}`}>{getRequestLabel(tab.method, tab.protocol)}</span>
                             <span className={`text-[12px] ${isActive ? 'font-bold' : 'font-medium'} truncate tracking-tight transition-all`}>
                                 {tab.name || 'Untitled'}
                             </span>

@@ -748,44 +748,90 @@ export function MonitorDashboard({ documentationId, isPublic, slug }: MonitorDas
 
             {/* Create form */}
             {showForm && (
-                <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-[#249d9f]/5 border-[#249d9f]/20' : 'bg-indigo-50 border-indigo-100'}`}>
-                    <h3 className={`text-sm font-bold mb-4 ${themeClasses.textColor}`}>Configure New Monitor</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <input className={inputClass} placeholder="Monitor name (e.g., Production API Health)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                        <input className={inputClass} placeholder="URL to monitor (https://...)" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} />
-                        <select className={inputClass} value={form.method} onChange={e => setForm(f => ({ ...f, method: e.target.value }))}>
-                            {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                        <select className={inputClass} value={form.frequency} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}>
-                            {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                        </select>
-                        <input className={`${inputClass} md:col-span-2`} placeholder="Alert email (optional)" value={form.notifyEmail} onChange={e => setForm(f => ({ ...f, notifyEmail: e.target.value }))} />
-
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {/* Section A — Endpoint */}
+                    <div style={{ padding: 20, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 12 }}>Endpoint</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <input
-                                className={`${inputClass} md:col-span-2`}
-                                placeholder="Webhook URL (Slack or Custom)"
-                                value={form.webhookUrl}
-                                onChange={e => setForm(f => ({ ...f, webhookUrl: e.target.value }))}
+                                placeholder="Monitor name (e.g., Production API Health)"
+                                value={form.name}
+                                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
                             />
-                            <select
-                                className={inputClass}
-                                value={form.webhookType}
-                                onChange={e => setForm(f => ({ ...f, webhookType: e.target.value }))}
-                            >
-                                <option value="generic">Generic Webhook</option>
-                                <option value="slack">Slack Webhook</option>
-                            </select>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <select
+                                    value={form.method}
+                                    onChange={e => setForm(f => ({ ...f, method: e.target.value }))}
+                                    style={{ width: 120, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none', flexShrink: 0 }}
+                                >
+                                    {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                                <input
+                                    placeholder="URL to monitor (https://...)"
+                                    value={form.url}
+                                    onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                                    style={{ flex: 1, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                                />
+                            </div>
                         </div>
                     </div>
-                    <div className="flex gap-2 mt-4">
-                        <button onClick={() => createMutation.mutate()} disabled={!form.name || !form.url || createMutation.isPending}
-                            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1a7a7c] hover:bg-[#249d9f] disabled:opacity-50 text-white text-sm font-bold transition-all">
-                            {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
+
+                    {/* Section B — Schedule */}
+                    <div style={{ padding: 20, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 12 }}>Schedule</span>
+                        <select
+                            value={form.frequency}
+                            onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                        >
+                            {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Section C — Alerts */}
+                    <div style={{ padding: 20, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 12 }}>Alerts</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <input
+                                placeholder="Alert email (optional)"
+                                value={form.notifyEmail}
+                                onChange={e => setForm(f => ({ ...f, notifyEmail: e.target.value }))}
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                            />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                    placeholder="Webhook URL (Slack or Custom)"
+                                    value={form.webhookUrl}
+                                    onChange={e => setForm(f => ({ ...f, webhookUrl: e.target.value }))}
+                                    style={{ flex: 1, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none' }}
+                                />
+                                <select
+                                    value={form.webhookType}
+                                    onChange={e => setForm(f => ({ ...f, webhookType: e.target.value }))}
+                                    style={{ width: 160, padding: '10px 12px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 13, outline: 'none', flexShrink: 0 }}
+                                >
+                                    <option value="generic">Generic Webhook</option>
+                                    <option value="slack">Slack Webhook</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            onClick={() => createMutation.mutate()}
+                            disabled={!form.name || !form.url || createMutation.isPending}
+                            style={{ flex: 1, height: 44, borderRadius: 8, background: '#249d9f', color: 'white', fontSize: 14, fontWeight: 600, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: (!form.name || !form.url || createMutation.isPending) ? 0.4 : 1 }}
+                        >
+                            {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />}
                             Create Monitor
                         </button>
-                        <button onClick={() => setShowForm(false)}
-                            className={`px-4 py-2 rounded-xl text-sm transition-all ${theme === 'dark' ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}>
+                        <button
+                            onClick={() => setShowForm(false)}
+                            style={{ padding: '0 20px', height: 44, borderRadius: 8, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#8B949E', fontSize: 13, fontWeight: 500 }}
+                        >
                             Cancel
                         </button>
                     </div>

@@ -75,7 +75,7 @@ export default function SaveVariableModal({
     const inputBg = theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50';
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
             <div
                 className={`${secondaryBg} border ${borderCol} rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200`}
                 onClick={(e) => e.stopPropagation()}

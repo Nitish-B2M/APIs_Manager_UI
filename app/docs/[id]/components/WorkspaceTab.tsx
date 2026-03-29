@@ -3,15 +3,16 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../utils/api';
-import { 
-    StickyNote, 
-    CheckSquare, 
-    Plus, 
-    Trash2, 
-    ChevronRight, 
+import {
+    StickyNote,
+    CheckSquare,
+    Plus,
+    Trash2,
+    ChevronRight,
     Calendar,
     Clock,
-    AlertCircle,
+    Info,
+    X,
     Loader2,
     FileText,
     CheckCircle2
@@ -20,12 +21,50 @@ import { toast } from 'react-hot-toast';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 
+const PROTIP_KEY = 'devmanus_protip_dismissed';
+
+function ProTipCallout() {
+    const [dismissed, setDismissed] = React.useState(() => {
+        if (typeof window === 'undefined') return true;
+        return localStorage.getItem(PROTIP_KEY) === 'true';
+    });
+    const [expanded, setExpanded] = React.useState(false);
+
+    if (dismissed && !expanded) {
+        return (
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                    onClick={() => setExpanded(true)}
+                    style={{ width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: '#6E7681' }}
+                    title="Show tip"
+                >
+                    <Info size={12} />
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 8, background: '#1C2128', borderLeft: '3px solid #58A6FF', position: 'relative', fontSize: 12, color: '#8B949E', lineHeight: 1.6 }}>
+            <button
+                onClick={() => { setDismissed(true); setExpanded(false); localStorage.setItem(PROTIP_KEY, 'true'); }}
+                style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: '#6E7681' }}
+            >
+                <X size={12} />
+            </button>
+            These items are linked to this endpoint. View all notes and tasks in their modules — this view keeps you focused on the current context.
+        </div>
+    );
+}
+
 interface WorkspaceTabProps {
     endpointId: string;
     canEdit: boolean;
+    endpointName?: string;
+    endpointMethod?: string;
 }
 
-export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
+export const WorkspaceTab = ({ endpointId, canEdit, endpointName, endpointMethod }: WorkspaceTabProps) => {
     const { theme } = useTheme();
     const themeClasses = getThemeClasses(theme);
     const queryClient = useQueryClient();
@@ -169,11 +208,23 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                                 <span className="text-[10px] font-black tracking-widest">FETCHING NOTES...</span>
                             </div>
                         ) : notes.length === 0 ? (
-                            <div className="py-12 flex flex-col items-center justify-center opacity-20 gap-4 border-2 border-dashed border-white/5 rounded-3xl">
-                                <FileText size={48} />
+                            <div className="py-10 flex flex-col items-center justify-center gap-4 border border-dashed border-white/[0.08] rounded-xl">
+                                <FileText size={28} className="text-[#6E7681] opacity-50" />
                                 <div className="text-center">
-                                    <p className="text-xs font-bold uppercase tracking-widest mb-1">No notes linked</p>
-                                    <p className="text-[10px]">Capture endpoint-specific implementation details here.</p>
+                                    <p className="text-[#8B949E] text-sm font-medium mb-1">No notes linked</p>
+                                    <p className="text-[#6E7681] text-xs mb-4">
+                                        {endpointMethod && endpointName
+                                            ? `Capture implementation details for ${endpointMethod} ${endpointName}`
+                                            : 'Capture endpoint-specific implementation details here.'}
+                                    </p>
+                                    {canEdit && (
+                                        <button
+                                            onClick={handleAddNote}
+                                            className="px-4 py-2 rounded-lg bg-[#249d9f] text-white text-xs font-semibold hover:bg-[#1a7a7c] transition-colors"
+                                        >
+                                            + New Note
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ) : (
@@ -278,16 +329,8 @@ export const WorkspaceTab = ({ endpointId, canEdit }: WorkspaceTabProps) => {
                 )}
             </div>
 
-            {/* Hint Footer */}
-            <div className="mt-6 p-4 rounded-2xl bg-[#249d9f]/5 border border-[#249d9f]/10 flex items-start gap-4">
-                <AlertCircle size={18} className="text-[#2ec4c7] shrink-0" />
-                <p className="text-[10px] text-gray-400 leading-relaxed italic">
-                    <span className="font-bold text-[#2ec4c7] uppercase mr-1">Pro Tip:</span> 
-                    These items are linked specifically to this endpoint. You can view 
-                    all your notes and tasks in their respective modules, but this view 
-                    keeps you focused on the current context.
-                </p>
-            </div>
+            {/* Collapsible Pro Tip — dismissed via localStorage */}
+            <ProTipCallout />
         </div>
     );
 };

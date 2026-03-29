@@ -129,6 +129,39 @@ export function ResponsePanel({
     const [wrapLines, setWrapLines] = useState(false);
     const [showTestResults, setShowTestResults] = useState(true);
     const [showDiff, setShowDiff] = useState(false);
+
+    // Diff logic:
+    // - history[0] = most recent saved, history[1] = previous
+    // - Default diff: compare current response vs history[1] (previous)
+    // - When viewing history item: compare that item vs latest response (history[0])
+    // - If only 0 or 1 history entries: diff not available
+    const history = currentReq?.history || [];
+    const hasDiffData = history.length >= 2 || (isViewingHistory && history.length >= 1);
+
+    const getDiffOriginal = (): string => {
+        if (isViewingHistory) {
+            // Viewing old history entry — original is the selected history response
+            const data = response?.data;
+            return typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+        // Default — original is the PREVIOUS response (second-to-last history)
+        if (history.length >= 2) {
+            const prev = history[1]?.lastResponse?.data;
+            return typeof prev === 'string' ? prev : JSON.stringify(prev, null, 2);
+        }
+        return '';
+    };
+
+    const getDiffModified = (): string => {
+        if (isViewingHistory) {
+            // Modified is the LATEST response (most recent history)
+            const latest = history[0]?.lastResponse?.data;
+            return typeof latest === 'string' ? latest : JSON.stringify(latest, null, 2);
+        }
+        // Default — modified is the CURRENT live response
+        const data = response?.data;
+        return typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    };
     const [showSchemaErrors, setShowSchemaErrors] = useState(false);
     const [isExplaining, setIsExplaining] = useState(false);
     const [explanation, setExplanation] = useState<string | null>(null);
@@ -274,9 +307,13 @@ export function ResponsePanel({
                             </button>
                             <button
                                 onClick={() => setShowDiff(!showDiff)}
-                                className={`p-1 rounded transition-all ${showDiff ? 'bg-[#1a7a7c] text-white' : `${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`} ${!currentReq?.lastResponse ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                title={showDiff ? 'Current View' : 'Compare with Saved'}
-                                disabled={!currentReq?.lastResponse}
+                                className={`p-1 rounded transition-all ${showDiff ? 'bg-[#1a7a7c] text-white' : `${themeClasses.subTextColor} hover:bg-gray-600 hover:text-white`} ${!hasDiffData ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                title={showDiff
+                                    ? 'Exit diff view'
+                                    : isViewingHistory
+                                        ? 'Compare with latest response'
+                                        : 'Compare with previous response'}
+                                disabled={!hasDiffData}
                             >
                                 <Split size={14} />
                             </button>
@@ -365,10 +402,14 @@ export function ResponsePanel({
                     </div>
                 )}
 
-                {/* Empty State */}
+                {/* Empty State — subtle, bottom-third */}
                 {!response && !reqLoading && (currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol) && (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-[11px] font-bold">
-                        HIT SEND TO SEE RESPONSE
+                    <div className="absolute inset-0 flex flex-col items-center justify-end pb-[25%]">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6E7681" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-3 opacity-60">
+                            <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                        <p className="text-[#8B949E] text-sm font-medium mb-1">Send a request to see the response</p>
+                        <p className="text-[#6E7681] text-xs">Press <kbd className="px-1.5 py-0.5 rounded bg-[#21262D] border border-white/[0.08] text-[10px] font-mono">Send</kbd> or use <kbd className="px-1.5 py-0.5 rounded bg-[#21262D] border border-white/[0.08] text-[10px] font-mono">Ctrl+Enter</kbd></p>
                     </div>
                 )}
 
@@ -403,27 +444,37 @@ export function ResponsePanel({
                     return (
                         <div className={`absolute inset-0 w-full h-full ${isVisible ? 'block' : 'hidden'}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
                             <div className="w-full h-full overflow-hidden">
-                                {showDiff && currentReq?.lastResponse ? (
-                                    <DiffEditor
-                                        key="diff-editor"
-                                        height="100%"
-                                        language={lang}
-                                        original={typeof currentReq.lastResponse.data === 'string'
-                                            ? currentReq.lastResponse.data
-                                            : JSON.stringify(currentReq.lastResponse.data, null, 2)}
-                                        modified={responseText}
-                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                        options={{
-                                            readOnly: true,
-                                            fontSize: 13,
-                                            renderSideBySide: true,
-                                            minimap: { enabled: false },
-                                            scrollBeyondLastLine: false,
-                                            automaticLayout: true,
-                                            wordWrap: wrapLines ? 'on' : 'off',
-                                            padding: { top: 20, bottom: 20 },
-                                        }}
-                                    />
+                                {showDiff && hasDiffData ? (
+                                    <div className="w-full h-full flex flex-col">
+                                        {/* Diff header */}
+                                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.08] flex-shrink-0" style={{ background: '#161B22' }}>
+                                            <div className="flex items-center gap-4 text-[10px]">
+                                                <span className="text-[#F85149] font-medium">● {isViewingHistory ? 'Selected history' : 'Previous response'}</span>
+                                                <span className="text-[#6E7681]">vs</span>
+                                                <span className="text-[#3FB950] font-medium">● {isViewingHistory ? 'Latest response' : 'Current response'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <DiffEditor
+                                                key={`diff-${isViewingHistory}`}
+                                                height="100%"
+                                                language={lang}
+                                                original={getDiffOriginal()}
+                                                modified={getDiffModified()}
+                                                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                                options={{
+                                                    readOnly: true,
+                                                    fontSize: 12,
+                                                    renderSideBySide: true,
+                                                    minimap: { enabled: false },
+                                                    scrollBeyondLastLine: false,
+                                                    automaticLayout: true,
+                                                    wordWrap: wrapLines ? 'on' : 'off',
+                                                    padding: { top: 12, bottom: 12 },
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
                                 ) : (
                                     <Editor
                                         key="normal-editor"

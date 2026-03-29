@@ -111,96 +111,102 @@ export function CollaboratorModal({
     };
 
     return (
-        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 ${outfit.className}`}>
-            <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${theme === 'dark' ? 'bg-[#1a1a2e] border-[#249d9f]/30' : 'bg-white border-gray-200'}`}>
-                <div className={`relative p-8 overflow-hidden ${theme === 'dark' ? 'bg-gradient-to-br from-indigo-900/40 via-[#1a1a2e] to-[#1a1a2e]' : 'bg-gradient-to-br from-indigo-50 via-white to-white'}`}>
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#249d9f]/10 blur-[80px] -mr-32 -mt-32 rounded-full" />
-                    <div className="relative flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${theme === 'dark' ? 'bg-[#249d9f]/20 text-[#2ec4c7] border border-[#249d9f]/30' : 'bg-[#1a7a7c] text-white'}`}><Users size={24} /></div>
-                            <div>
-                                <h2 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Team Management</h2>
-                                <p className={`text-xs font-medium ${themeClasses.subTextColor}`}>Secure your documentation by managing access.</p>
-                            </div>
-                        </div>
-                        <button onClick={onClose} className={`p-2 rounded-xl transition-all border ${theme === 'dark' ? 'hover:bg-white/10 text-gray-400 border-white/5' : 'hover:bg-gray-200 text-gray-500 border-gray-200'}`}><X size={20} /></button>
+        <div
+            className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${outfit.className}`}
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+            onClick={onClose}
+        >
+            <div
+                className="overflow-hidden flex flex-col"
+                style={{ background: '#161B22', borderRadius: 12, border: '1px solid rgba(255,255,255,0.16)', minWidth: 640, maxWidth: '78vw', width: '72vw', maxHeight: '85vh' }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(36,157,159,0.1)', color: '#249d9f', flexShrink: 0 }}>
+                        <Users size={18} />
                     </div>
+                    <div style={{ flex: 1 }}>
+                        <h2 style={{ fontSize: 16, fontWeight: 600, color: '#E6EDF3', margin: 0 }}>Team Management</h2>
+                        <p style={{ fontSize: 13, color: '#8B949E', margin: '2px 0 0' }}>Secure your documentation by managing access.</p>
+                    </div>
+                    <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8B949E', background: 'none', border: 'none', cursor: 'pointer' }}><X size={16} /></button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-                    <div className={`p-6 rounded-2xl border transition-all ${isPublic ? (theme === 'dark' ? 'bg-[#249d9f]/10 border-[#249d9f]/30' : 'bg-indigo-50 border-indigo-200') : (theme === 'dark' ? 'bg-gray-800/20 border-white/5' : 'bg-gray-50 border-gray-100')}`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPublic ? 'bg-green-500 text-white' : 'bg-gray-500/20 text-gray-500'}`}><Globe size={20} /></div>
-                                <div>
-                                    <h3 className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Public Documentation</h3>
-                                    <p className="text-[10px] font-medium text-gray-500">Make this collection accessible via a public link.</p>
-                                </div>
-                            </div>
-                            {userRole === 'OWNER' ? (
-                                <button onClick={onTogglePublic} className={`w-12 h-6 rounded-full transition-all relative ${isPublic ? 'bg-green-600' : 'bg-gray-600'}`}>
-                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
-                                </button>
-                            ) : (
-                                <div className={`w-12 h-6 rounded-full transition-all relative ${isPublic ? 'bg-green-600' : 'bg-gray-600'}`}>
-                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
-                                </div>
-                            )}
+                <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: 24 }}>
+                    {/* ── Public Documentation: icon | label+subtitle | toggle ── */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: 12, padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isPublic ? 'rgba(63,185,80,0.15)' : '#21262D', color: isPublic ? '#3FB950' : '#8B949E' }}>
+                            <Globe size={18} />
                         </div>
-
-                        {userRole === 'OWNER' && isPublic && (
-                            <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-black/20 border-white/10' : 'bg-white border-gray-200'}`}>
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Custom URL Slug</label>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`px-3 py-2 rounded-lg font-mono text-[11px] ${theme === 'dark' ? 'bg-gray-900/50 text-gray-500' : 'bg-gray-50 text-gray-400'}`}>/public/</div>
-                                        <input
-                                            value={slugInput}
-                                            onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-                                            className={`flex-1 px-3 py-2 rounded-lg font-mono text-[11px] outline-none border focus:ring-2 focus:ring-[#249d9f]/20 ${theme === 'dark' ? 'bg-gray-900/50 border-white/5 text-[#2ec4c7]' : 'bg-gray-50 border-gray-200 text-[#1a7a7c]'}`}
-                                            placeholder="my-awesome-api"
-                                        />
-                                        <button
-                                            onClick={handleUpdateSlug}
-                                            disabled={isUpdatingSlug || slugInput === slug}
-                                            className="px-4 py-2 bg-[#1a7a7c] hover:bg-[#249d9f] disabled:opacity-50 text-white text-[10px] font-black rounded-lg transition-all flex items-center gap-2"
-                                        >
-                                            {isUpdatingSlug ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                                            SAVE
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {slug && (
-                                    <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-black/20 border-white/10' : 'bg-white border-gray-200'}`}>
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Share Public Link</label>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`flex-1 px-3 py-2 rounded-lg font-mono text-[11px] truncate ${theme === 'dark' ? 'bg-gray-900/50 text-[#2ec4c7]' : 'bg-gray-50 text-[#1a7a7c]'}`}>{window.location.origin}/public/{slug}</div>
-                                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/public/${slug}`); toast.success('Link copied!'); }} className="p-2 hover:bg-[#249d9f]/10 rounded-lg text-[#249d9f] transition-all"><Copy size={16} /></button>
-                                            <a href={`/public/${slug}`} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-green-500/10 rounded-lg text-green-500 transition-all"><ExternalLink size={16} /></a>
-                                        </div>
-                                    </div>
-                                )}
+                        <div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: '#E6EDF3' }}>Public Documentation</div>
+                            <div style={{ fontSize: 12, color: '#8B949E' }}>Make this collection accessible via a public link.</div>
+                        </div>
+                        {userRole === 'OWNER' ? (
+                            <button onClick={onTogglePublic} style={{ width: 44, height: 24, borderRadius: 12, background: isPublic ? '#3FB950' : '#21262D', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', position: 'relative', transition: 'all 0.2s' }}>
+                                <div style={{ width: 18, height: 18, borderRadius: 9, background: 'white', position: 'absolute', top: 2, left: isPublic ? 23 : 2, transition: 'left 0.2s' }} />
+                            </button>
+                        ) : (
+                            <div style={{ width: 44, height: 24, borderRadius: 12, background: isPublic ? '#3FB950' : '#21262D', border: '1px solid rgba(255,255,255,0.08)', position: 'relative' }}>
+                                <div style={{ width: 18, height: 18, borderRadius: 9, background: 'white', position: 'absolute', top: 2, left: isPublic ? 23 : 2 }} />
                             </div>
                         )}
                     </div>
 
-                    {userRole === 'OWNER' ? (
-                        <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-[#249d9f]/5 border-[#249d9f]/20' : 'bg-gray-50 border-gray-200'}`}>
-                            <label className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 block ${theme === 'dark' ? 'text-[#2ec4c7]' : 'text-[#1a7a7c]'}`}>Send Invitation</label>
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1 relative group">
-                                    <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${theme === 'dark' ? 'text-gray-600 group-focus-within:text-[#2ec4c7]' : 'text-gray-400 group-focus-within:text-[#249d9f]'}`} size={18} />
-                                    <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colleague@company.com" className={`w-full pl-11 pr-4 py-3 rounded-xl border text-sm font-medium transition-all focus:outline-none focus:ring-4 focus:ring-[#249d9f]/10 ${theme === 'dark' ? 'bg-[#0f0f1a] border-[#249d9f]/20 text-gray-200' : 'bg-white border-gray-300 text-gray-900'}`} />
+                    {/* ── Slug + Share Link (only when public) ── */}
+                    {userRole === 'OWNER' && isPublic && (
+                        <div style={{ padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            {/* Slug row */}
+                            <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 8 }}>Custom URL Slug</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ padding: '6px 10px', borderRadius: 6, background: '#21262D', fontFamily: 'var(--font-mono)', fontSize: 12, color: '#6E7681' }}>/public/</span>
+                                <input
+                                    value={slugInput}
+                                    onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                                    placeholder="my-awesome-api"
+                                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', fontFamily: 'var(--font-mono)', fontSize: 12, color: '#E6EDF3', outline: 'none' }}
+                                />
+                                <button
+                                    onClick={handleUpdateSlug}
+                                    disabled={isUpdatingSlug || slugInput === slug}
+                                    style={{ padding: '6px 14px', borderRadius: 6, background: '#249d9f', color: 'white', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: (isUpdatingSlug || slugInput === slug) ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+                                >
+                                    {isUpdatingSlug ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                                    Save
+                                </button>
+                            </div>
+
+                            {/* Share link row */}
+                            {slug && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                                    <span style={{ padding: '6px 12px', borderRadius: 6, background: '#21262D', fontFamily: 'var(--font-mono)', fontSize: 12, color: '#249d9f', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {window.location.origin}/public/{slug}
+                                    </span>
+                                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/public/${slug}`); toast.success('Copied!'); }} style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: '#8B949E', cursor: 'pointer' }}><Copy size={15} /></button>
+                                    <a href={`/public/${slug}`} target="_blank" rel="noopener noreferrer" style={{ padding: 6, borderRadius: 6, color: '#8B949E', textDecoration: 'none' }}><ExternalLink size={15} /></a>
                                 </div>
-                                <div className="relative min-w-[120px]">
-                                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)} className={`w-full px-4 py-3 rounded-xl border text-sm font-bold appearance-none cursor-pointer focus:ring-4 focus:ring-[#249d9f]/10 ${theme === 'dark' ? 'bg-[#0f0f1a] border-[#249d9f]/20 text-[#2ec4c7]' : 'bg-white border-gray-300 text-gray-700'}`}>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Send Invitation: email + role dropdown + invite button in one row ── */}
+                    {userRole === 'OWNER' ? (
+                        <div style={{ padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 10 }}>Send Invitation</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ flex: 1, position: 'relative' }}>
+                                    <Mail size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#6E7681' }} />
+                                    <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colleague@company.com" style={{ width: '100%', padding: '8px 10px 8px 32px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', fontSize: 13, color: '#E6EDF3', outline: 'none' }} />
+                                </div>
+                                <div style={{ position: 'relative', width: 140 }}>
+                                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', fontSize: 13, color: '#E6EDF3', appearance: 'none', cursor: 'pointer', outline: 'none' }}>
                                         <option value="VIEWER">Viewer</option><option value="EDITOR">Editor</option><option value="ADMIN">Admin</option>
                                     </select>
-                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                                    <ChevronDown size={12} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6E7681' }} />
                                 </div>
-                                <button onClick={() => inviteEmail && inviteMutation.mutate({ email: inviteEmail, role: inviteRole })} disabled={!inviteEmail || inviteMutation.isPending} className="px-8 py-3 rounded-xl bg-[#1a7a7c] hover:bg-[#249d9f] disabled:opacity-50 text-white text-sm font-black transition-all flex items-center justify-center gap-2">
-                                    {inviteMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />} Invite
+                                <button onClick={() => inviteEmail && inviteMutation.mutate({ email: inviteEmail, role: inviteRole })} disabled={!inviteEmail || inviteMutation.isPending} style={{ width: 100, padding: '8px 0', borderRadius: 6, background: '#249d9f', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: (!inviteEmail || inviteMutation.isPending) ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                    {inviteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />} Invite
                                 </button>
                             </div>
                         </div>
@@ -245,13 +251,30 @@ export function CollaboratorModal({
                                             </div>
                                         </div>
                                         {collab.role !== 'OWNER' && userRole === 'OWNER' && (
-                                            <button
-                                                onClick={() => removeMutation.mutate(collab.id)}
-                                                className="p-2 rounded-xl text-red-400 hover:bg-red-500 hover:text-white transition-all transform hover:scale-105"
-                                                title="Remove member"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                {/* Role edit dropdown */}
+                                                <select
+                                                    value={collab.role}
+                                                    onChange={(e) => {
+                                                        const newRole = e.target.value;
+                                                        api.collaboration.updateCollaborator(documentationId, collab.id, newRole)
+                                                            .then(() => { queryClient.invalidateQueries({ queryKey: ['collaborators', documentationId] }); toast.success(`Role updated to ${newRole}`); })
+                                                            .catch(() => toast.error('Failed to update role'));
+                                                    }}
+                                                    style={{ padding: '4px 8px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 11, cursor: 'pointer', outline: 'none' }}
+                                                >
+                                                    <option value="VIEWER">Viewer</option>
+                                                    <option value="EDITOR">Editor</option>
+                                                    <option value="ADMIN">Admin</option>
+                                                </select>
+                                                <button
+                                                    onClick={() => removeMutation.mutate(collab.id)}
+                                                    style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: '#F85149', cursor: 'pointer' }}
+                                                    title="Remove member"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>

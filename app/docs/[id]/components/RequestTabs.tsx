@@ -132,34 +132,61 @@ export const RequestTabs = memo(({
         onRequestChange({ params: newParams });
     };
 
+    const requestTabs = tabs.filter(t => ['body', 'params', 'headers', 'auth'].includes(t));
+    const metaTabs = tabs.filter(t => !['body', 'params', 'headers', 'auth'].includes(t));
+
     return (
-        <div className={`h-full border-r ${borderCol} flex flex-col min-h-0 min-w-0 ${mainBg}`}>
-            {/* Tab Headers */}
-            <div className={`flex border-b p-1.5 ${borderCol} ${secondaryBg} overflow-x-auto scrollbar-none`}>
-                {tabs.map(tab => (
+        <div className={`h-full border-r ${borderCol} flex flex-col min-h-0 min-w-0`} style={{ background: 'var(--bg-primary)' }}>
+            {/* Group A — REQUEST tabs: pill-style, 13px, 32px height */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', background: 'var(--bg-secondary)', flexShrink: 0, overflowX: 'auto' }} className="scrollbar-none">
+                {requestTabs.map(tab => (
                     <button
                         key={tab}
                         onClick={() => onTabChange(tab)}
-                        className={`px-4 py-2 font-bold text-[10px] transition-all duration-300 capitalize flex items-center gap-1.5 rounded-lg mr-1 relative group tracking-wider ${activeTab === tab
-                            ? 'text-white bg-[#1a7a7c]/20'
-                            : `${subTextColor} hover:text-gray-200 hover:bg-white/5`
-                            }`}
+                        style={{
+                            height: 32, padding: '0 14px', borderRadius: 6, fontSize: 13, fontWeight: 500,
+                            border: 'none', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s',
+                            background: activeTab === tab ? '#21262D' : 'transparent',
+                            color: activeTab === tab ? '#E6EDF3' : '#8B949E',
+                        }}
                     >
-                        {tab === 'body' && currentReq?.protocol === 'WS' ? 'Messages' : tab}
-                        {tab === 'tests' && (currentReq?.assertions?.length || 0) > 0 && (
-                            <span className={`text-[9px] rounded-full px-1.5 py-0.5 font-black flex-shrink-0 transition-all ${activeTab === 'tests'
-                                ? 'bg-[#249d9f] text-white shadow-[0_0_10px_rgba(99,102,241,0.5)]'
-                                : 'bg-white/10 text-gray-400 group-hover:bg-white/20'
-                                }`}>
-                                {currentReq.assertions.length}
-                            </span>
-                        )}
-                        {activeTab === tab && (
-                            <div className="absolute bottom-1 left-3 right-3 h-[2px] bg-[#249d9f] rounded-full" />
-                        )}
+                        {tab === 'body' && currentReq?.protocol === 'WS' ? 'Messages' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                     </button>
                 ))}
             </div>
+
+            {/* Separator */}
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+
+            {/* Group B — META tabs: 12px, 2px bottom border indicator */}
+            {metaTabs.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', flexShrink: 0, overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.06)' }} className="scrollbar-none">
+                    {metaTabs.map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => onTabChange(tab)}
+                            style={{
+                                padding: '8px 12px', fontSize: 12, fontWeight: 400,
+                                border: 'none', whiteSpace: 'nowrap', flexShrink: 0, position: 'relative',
+                                transition: 'color 0.15s', background: 'transparent',
+                                color: activeTab === tab ? '#E6EDF3' : '#6E7681',
+                                borderBottom: activeTab === tab ? '2px solid #249d9f' : '2px solid transparent',
+                            }}
+                        >
+                            {tab === 'code' ? 'Code' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'tests' && (currentReq?.assertions?.length || 0) > 0 && (
+                                <span style={{
+                                    fontSize: 9, borderRadius: 4, padding: '1px 5px', marginLeft: 6, fontWeight: 600,
+                                    background: activeTab === 'tests' ? '#249d9f' : '#21262D',
+                                    color: activeTab === 'tests' ? 'white' : '#8B949E',
+                                }}>
+                                    {currentReq.assertions.length}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Tab Content */}
             <div className={`flex-1 overflow-y-auto ${activeTab === 'code' ? 'p-0' : 'p-3'}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
@@ -562,9 +589,11 @@ export const RequestTabs = memo(({
 
                 {/* Workspace (Notes & Tasks) Tab */}
                 {activeTab === 'notes' && (
-                    <WorkspaceTab 
+                    <WorkspaceTab
                         endpointId={currentReq.id}
                         canEdit={canEdit}
+                        endpointName={currentReq.name || currentReq.url}
+                        endpointMethod={currentReq.method}
                     />
                 )}
             </div>

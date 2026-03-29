@@ -138,159 +138,81 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
 
     return (
         <div className="h-full flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
-            {/* Header / Status Section */}
-            <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-[#249d9f]/30 bg-[#249d9f]/5">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                        <Globe size={14} className="text-[#2ec4c7]" />
-                        <span className="text-[10px] font-bold text-[#2ec4c7] uppercase tracking-wider">Public Mock URL</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <code className={`text-[11px] font-mono ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{mockUrl}</code>
-                        <button
-                            onClick={() => { navigator.clipboard.writeText(mockUrl); toast.success('URL copied'); }}
-                            className="p-1 hover:text-[#2ec4c7] transition-colors"
-                            title="Copy URL"
-                        >
-                            <Copy size={12} />
-                        </button>
-                        <a
-                            href={mockUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1 hover:text-[#2ec4c7] transition-colors"
-                            title="Open in new tab"
-                        >
-                            <ExternalLink size={12} />
-                        </a>
-                    </div>
+            {/* Mock URL + Status bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                    <Globe size={14} style={{ color: '#249d9f', flexShrink: 0 }} />
+                    <code style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: '#E6EDF3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mockUrl}</code>
+                    <button onClick={() => { navigator.clipboard.writeText(mockUrl); toast.success('URL copied'); }} title="Copy URL" style={{ padding: 4, borderRadius: 4, background: 'none', border: 'none', color: '#8B949E', flexShrink: 0 }}>
+                        <Copy size={13} />
+                    </button>
+                    <a href={mockUrl} target="_blank" rel="noopener noreferrer" title="Open" style={{ padding: 4, borderRadius: 4, color: '#8B949E', flexShrink: 0, textDecoration: 'none' }}>
+                        <ExternalLink size={13} />
+                    </a>
                 </div>
-                <div className="flex items-center gap-3">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     <button
                         onClick={() => setConfig({ ...config, isActive: !config.isActive })}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${config.isActive ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-gray-600/20 text-gray-400 border border-gray-500/30'}`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: 'none', background: config.isActive ? 'rgba(63,185,80,0.15)' : '#21262D', color: config.isActive ? '#3FB950' : '#8B949E' }}
                     >
                         <Power size={12} />
-                        {config.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        {config.isActive ? 'Active' : 'Inactive'}
                     </button>
                     {canEdit && (
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="flex items-center gap-2 bg-[#1a7a7c] hover:bg-[#249d9f] text-white px-4 py-1.5 rounded-lg text-[10px] font-bold shadow-lg shadow-indigo-900/40 transition-all disabled:opacity-50"
-                        >
+                        <button onClick={handleSave} disabled={isSaving} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: 'none', background: '#249d9f', color: 'white', opacity: isSaving ? 0.5 : 1 }}>
                             {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                            SAVE CONFIG
+                            Save
                         </button>
                     )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                {/* Status Code & Delay */}
-                <div className="space-y-4">
-                    <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-gray-500">
-                            <Settings2 size={14} />
-                            <label className="text-[10px] font-bold uppercase tracking-wider">Status Code</label>
-                        </div>
-                        <select
-                            value={config.statusCode}
-                            onChange={(e) => setConfig({ ...config, statusCode: parseInt(e.target.value) })}
-                            className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} text-[11px] outline-none focus:ring-1 focus:ring-[#249d9f]`}
-                        >
-                            <option value="200">200 OK</option>
-                            <option value="201">201 Created</option>
-                            <option value="202">202 Accepted</option>
-                            <option value="204">204 No Content</option>
-                            <option value="301">301 Moved Permanently</option>
-                            <option value="302">302 Found</option>
-                            <option value="400">400 Bad Request</option>
-                            <option value="401">401 Unauthorized</option>
-                            <option value="403">403 Forbidden</option>
-                            <option value="404">404 Not Found</option>
-                            <option value="405">405 Method Not Allowed</option>
-                            <option value="409">409 Conflict</option>
-                            <option value="422">422 Unprocessable Entity</option>
-                            <option value="429">429 Too Many Requests</option>
-                            <option value="500">500 Internal Server Error</option>
-                            <option value="502">502 Bad Gateway</option>
-                            <option value="503">503 Service Unavailable</option>
-                        </select>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-gray-500">
-                            <Clock size={14} />
-                            <label className="text-[10px] font-bold uppercase tracking-wider">Delay (ms)</label>
-                        </div>
-                        <input
-                            type="number"
-                            value={config.delay}
-                            onChange={(e) => setConfig({ ...config, delay: parseInt(e.target.value) || 0 })}
-                            className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderCol} ${themeClasses.textColor} text-[11px] outline-none focus:ring-1 focus:ring-[#249d9f]`}
-                            placeholder="e.g. 500"
-                        />
-                    </div>
+            {/* Settings row: Status Code + Delay + Headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 12 }}>
+                {/* Status Code */}
+                <div style={{ padding: 16, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 8 }}>Status Code</span>
+                    <select value={config.statusCode} onChange={(e) => setConfig({ ...config, statusCode: parseInt(e.target.value) })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 12, outline: 'none' }}>
+                        {[200,201,202,204,301,302,400,401,403,404,405,409,422,429,500,502,503].map(c => (
+                            <option key={c} value={c}>{c} {c===200?'OK':c===201?'Created':c===400?'Bad Request':c===401?'Unauthorized':c===403?'Forbidden':c===404?'Not Found':c===500?'Server Error':''}</option>
+                        ))}
+                    </select>
                 </div>
 
-                {/* Headers Section */}
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 text-gray-500">
-                            <Plus size={14} />
-                            <label className="text-[10px] font-bold uppercase tracking-wider">Response Headers</label>
-                        </div>
-                        <button
-                            onClick={addHeader}
-                            className="text-[10px] font-bold text-[#2ec4c7] hover:text-[#2ec4c7]"
-                        >
-                            + ADD
-                        </button>
+                {/* Delay */}
+                <div style={{ padding: 16, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681', display: 'block', marginBottom: 8 }}>Delay (ms)</span>
+                    <input type="number" value={config.delay} onChange={(e) => setConfig({ ...config, delay: parseInt(e.target.value) || 0 })} placeholder="0"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 12, outline: 'none' }} />
+                </div>
+
+                {/* Headers */}
+                <div style={{ padding: 16, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681' }}>Headers</span>
+                        <button onClick={addHeader} style={{ fontSize: 11, fontWeight: 600, color: '#249d9f', background: 'none', border: 'none' }}>+ Add</button>
                     </div>
-                    <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div style={{ maxHeight: 120, overflowY: 'auto' }} className="custom-scrollbar">
                         {headerList.map((h, idx) => (
-                            <div key={idx} className="flex gap-2">
-                                <input
-                                    value={h.key}
-                                    onChange={(e) => updateHeader(idx, e.target.value, h.value)}
-                                    className={`flex-1 px-2 py-1.5 ${themeClasses.inputBg} border ${themeClasses.borderCol} ${themeClasses.textColor} rounded text-[11px] outline-none`}
-                                    placeholder="Header Key"
-                                />
-                                <input
-                                    value={h.value}
-                                    onChange={(e) => updateHeader(idx, h.key, e.target.value)}
-                                    className={`flex-1 px-2 py-1.5 ${themeClasses.inputBg} border ${themeClasses.borderCol} ${themeClasses.textColor} rounded text-[11px] outline-none`}
-                                    placeholder="Value"
-                                />
-                                <button
-                                    onClick={() => removeHeader(idx)}
-                                    className="p-1.5 text-gray-500 hover:text-red-400"
-                                >
-                                    <Trash2 size={12} />
-                                </button>
+                            <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                                <input value={h.key} onChange={(e) => updateHeader(idx, e.target.value, h.value)} placeholder="Key"
+                                    style={{ flex: 1, padding: '6px 8px', borderRadius: 4, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 11, outline: 'none' }} />
+                                <input value={h.value} onChange={(e) => updateHeader(idx, h.key, e.target.value)} placeholder="Value"
+                                    style={{ flex: 1, padding: '6px 8px', borderRadius: 4, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#E6EDF3', fontSize: 11, outline: 'none' }} />
+                                <button onClick={() => removeHeader(idx)} style={{ padding: 4, background: 'none', border: 'none', color: '#F85149' }}><Trash2 size={12} /></button>
                             </div>
                         ))}
-                        {headerList.length === 0 && (
-                            <div className="text-center py-4 text-gray-600 text-[10px] italic">No custom headers defined</div>
-                        )}
+                        {headerList.length === 0 && <p style={{ fontSize: 11, color: '#6E7681', textAlign: 'center', padding: 12 }}>No headers</p>}
                     </div>
                 </div>
             </div>
 
-            {/* Conditional Rules Section */}
-            <div className={`p-4 rounded-xl border ${themeClasses.borderCol} ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50/50'}`}>
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Filter size={14} className="text-[#2ec4c7]" />
-                        <span className="text-[10px] font-bold text-[#2ec4c7] uppercase tracking-wider">Conditional Rules (Override Default)</span>
-                    </div>
-                    <button
-                        onClick={addRule}
-                        className="text-[10px] font-bold bg-[#1a7a7c]/10 text-[#2ec4c7] px-3 py-1 rounded hover:bg-[#1a7a7c]/20 transition-all"
-                    >
-                        + ADD RULE
-                    </button>
+            {/* Conditional Rules */}
+            <div style={{ padding: 16, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681' }}>Conditional Rules</span>
+                    <button onClick={addRule} style={{ fontSize: 11, fontWeight: 600, color: '#249d9f', background: 'none', border: 'none' }}>+ Add Rule</button>
                 </div>
 
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -370,26 +292,26 @@ export function MockTab({ requestId, canEdit }: MockTabProps) {
                 </div>
             </div>
 
-            {/* Body Section */}
-            <div className="flex-1 flex flex-col min-h-[300px] gap-2">
-                <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Response Body (JSON)</label>
+            {/* Response Body */}
+            <div className="flex-1 flex flex-col min-h-[300px]">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6E7681' }}>Response Body</span>
                     <button
                         onClick={() => {
                             try {
                                 const formatted = JSON.stringify(JSON.parse(config.body), null, 2);
                                 setConfig({ ...config, body: formatted });
-                                toast.success('Formatted body');
+                                toast.success('Formatted');
                             } catch (e) {
                                 toast.error('Invalid JSON');
                             }
                         }}
-                        className="text-[9px] font-bold text-[#2ec4c7] hover:text-[#2ec4c7] flex items-center gap-1 border border-[#249d9f]/20 px-2 py-0.5 rounded"
+                        style={{ fontSize: 11, fontWeight: 600, color: '#249d9f', background: 'none', border: '1px solid rgba(36,157,159,0.2)', borderRadius: 4, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                        <CheckCircle2 size={10} /> FORMAT JSON
+                        <CheckCircle2 size={10} /> Format
                     </button>
                 </div>
-                <div className={`flex-1 rounded-xl border ${themeClasses.borderCol} overflow-hidden ${theme === 'dark' ? 'bg-[#1e1e1e]' : 'bg-[#fafafa]'}`}>
+                <div style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', background: '#1C2128' }}>
                     <Editor
                         height="100%"
                         language="json"

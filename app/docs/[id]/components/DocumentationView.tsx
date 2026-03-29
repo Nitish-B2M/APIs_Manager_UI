@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { X, Users, UserPlus, Shield, Trash2, Mail, Loader2, Check, ExternalLink, Clock, ChevronDown, Globe, Copy, Save, Download, FileText, Zap, Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Endpoint, Documentation } from '@/types';
-import { getThemeClasses } from '../utils/theme';
+import { getThemeClasses, getRequestLabel, getRequestBadgeClass } from '../utils/theme';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
@@ -73,10 +73,7 @@ export function DocumentationView({
                             }}
                             className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:bg-white'} transition-colors`}
                         >
-                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500' :
-                                ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500' :
-                                    'bg-gray-600/20 text-gray-500'
-                                }`}>{ep.method}</span>
+                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${getRequestBadgeClass(ep.method, ep.protocol)}`}>{getRequestLabel(ep.method, ep.protocol)}</span>
                             <span className="truncate">{ep.name || 'Untitled'}</span>
                         </a>
                     ))}
@@ -137,10 +134,7 @@ export function DocumentationView({
                     {endpoints.map((ep, idx) => (
                         <div key={idx} id={`endpoint-${idx}`} className="mb-12 scroll-mt-6 last:mb-0">
                             <div className="flex items-center gap-3 mb-4">
-                                <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm ${ep.method === 'GET' ? 'bg-green-600/20 text-green-500 border border-green-500/20' :
-                                    ep.method === 'POST' ? 'bg-blue-600/20 text-blue-500 border border-blue-500/20' :
-                                        'bg-gray-600/20 text-gray-500 border border-gray-600/20'
-                                    }`}>{ep.method}</span>
+                                <span className={`text-[10px] font-black px-2 py-1 rounded ${getRequestBadgeClass(ep.method, ep.protocol)}`}>{getRequestLabel(ep.method, ep.protocol)}</span>
                                 <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ep.name || 'Untitled'}</h2>
                             </div>
 
