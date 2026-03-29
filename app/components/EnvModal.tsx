@@ -329,8 +329,8 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
     const hoverBg = theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className={`${modalBg} rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}>
+            <div className="overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200" style={{ background: '#161B22', borderRadius: 12, border: '1px solid rgba(255,255,255,0.16)', minWidth: 640, maxWidth: '78vw', width: '72vw', maxHeight: '85vh' }}>
                 {/* Header */}
                 <div className={`flex items-center justify-between p-4 border-b ${headerBg}`}>
                     <div className="flex items-center gap-6">
@@ -703,14 +703,16 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                         {selectedEnv && (
                             <button
                                 onClick={handleSaveEnvironment}
-                                className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-lg shadow-green-900/20 transition-all text-sm"
+                                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+                                style={{ background: '#249d9f', color: 'white' }}
                             >
                                 Save Changes
                             </button>
                         )}
                         <button
                             onClick={onClose}
-                            className="px-8 py-2.5 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all text-sm"
+                            className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+                            style={{ background: '#21262D', color: '#E6EDF3', border: '1px solid rgba(255,255,255,0.08)' }}
                         >
                             Done
                         </button>
