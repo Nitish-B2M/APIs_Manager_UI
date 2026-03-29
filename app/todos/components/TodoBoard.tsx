@@ -224,7 +224,7 @@ export default function TodoBoard() {
 
             {/* Input Section - Matches design */}
             <div className="relative">
-                <form onSubmit={handleAddTodo} className="flex bg-white/5 rounded-2xl overflow-hidden border border-white/5 focus-within:border-violet-500/50 shadow-lg transition-all duration-300">
+                <form onSubmit={handleAddTodo} className="flex bg-white/5 rounded-2xl overflow-hidden border border-white/5 focus-within:border-[#249d9f]/50 shadow-lg transition-all duration-300">
                     <input
                         type="text"
                         value={newTaskTitle}
@@ -234,7 +234,7 @@ export default function TodoBoard() {
                     />
                     <button
                         type="submit"
-                        className="bg-[#FFE5B4] hover:bg-[#7C3AED] text-[#2D3436] font-black px-12 py-5 transition-all duration-300 active:scale-95 uppercase tracking-widest text-xs"
+                        className="bg-[#FFE5B4] hover:bg-[#1a7a7c] text-[#2D3436] font-black px-12 py-5 transition-all duration-300 active:scale-95 uppercase tracking-widest text-xs"
                     >
                         Create
                     </button>

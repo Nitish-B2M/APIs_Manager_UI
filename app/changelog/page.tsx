@@ -60,7 +60,7 @@ export default function ChangelogPage() {
         return (
             <div className={`min-h-screen ${mainBg} flex items-center justify-center`}>
                 <div className="flex flex-col items-center gap-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-500 border-t-transparent shadow-[0_0_15px_rgba(139,92,246,0.5)]" />
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#249d9f] border-t-transparent shadow-[0_0_15px_rgba(36,157,159,0.5)]" />
                     <p className={`${subTextColor} font-medium tracking-wide`}>Fetching API Lifecycle Data...</p>
                 </div>
             </div>
@@ -106,8 +106,8 @@ export default function ChangelogPage() {
             <div className={`${theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-white border-gray-200'} border-b py-12 px-6 mb-8`}>
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.15)] border border-violet-500/20' : 'bg-violet-50'}`}>
-                            <Clock className="text-violet-500" size={24} />
+                        <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-[#249d9f]/10 shadow-[0_0_15px_rgba(36,157,159,0.15)] border border-[#249d9f]/20' : 'bg-violet-50'}`}>
+                            <Clock className="text-[#249d9f]" size={24} />
                         </div>
                         <h1 className={`text-3xl font-extrabold ${textColor} tracking-tight`}>API Changelog</h1>
                     </div>
@@ -134,7 +134,7 @@ export default function ChangelogPage() {
                             {changelog.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-20 text-center text-slate-500">
-                                        <Package size={48} className="mx-auto mb-4 opacity-20 text-violet-500" />
+                                        <Package size={48} className="mx-auto mb-4 opacity-20 text-[#249d9f]" />
                                         <p className="text-sm font-medium tracking-wide">No API endpoints detected yet.</p>
                                     </td>
                                 </tr>
@@ -143,7 +143,7 @@ export default function ChangelogPage() {
                                     <tr key={idx} className={`${theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-indigo-50/30'} transition-colors group`}>
                                         <td className="px-6 py-2">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(129,140,248,0.5)]"></div>
+                                                <div className="w-2 h-2 rounded-full bg-[#249d9f] shadow-[0_0_8px_rgba(129,140,248,0.5)]"></div>
                                                 <span className={`font-semibold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} text-sm truncate max-w-[180px]`} title={item.collectionName}>
                                                     {item.collectionName}
                                                 </span>
@@ -158,7 +158,7 @@ export default function ChangelogPage() {
                                                         }`}>
                                                         {item.method}
                                                     </span>
-                                                    <span className={`font-bold ${textColor} text-[14px] group-hover:text-violet-400 transition-colors duration-300`}>
+                                                    <span className={`font-bold ${textColor} text-[14px] group-hover:text-[#2ec4c7] transition-colors duration-300`}>
                                                         {item.apiName}
                                                     </span>
                                                 </div>
@@ -180,7 +180,7 @@ export default function ChangelogPage() {
                                         <td className="px-6 py-5 text-center">
                                             <Link
                                                 href={`/docs/${item.id}`}
-                                                className={`inline-flex p-2 ${theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent hover:border-white/10' : 'text-gray-400 hover:text-violet-600 hover:bg-white border-transparent hover:border-gray-200'} rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50`}
+                                                className={`inline-flex p-2 ${theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent hover:border-white/10' : 'text-gray-400 hover:text-[#1a7a7c] hover:bg-white border-transparent hover:border-gray-200'} rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50`}
                                             >
                                                 <ExternalLink size={16} />
                                             </Link>

@@ -148,7 +148,7 @@ export function PageLoadingSkeleton() {
     return (
         <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
             <div className="flex flex-col items-center gap-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a7a7c]" />
                 <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                     Loading...
                 </p>

@@ -15,7 +15,7 @@ export default function AddAccountButton({ onClick, loading }: AddAccountButtonP
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:text-heading hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
             {loading ? (
-                <Loader2 size={16} className="animate-spin text-indigo-400" />
+                <Loader2 size={16} className="animate-spin text-[#2ec4c7]" />
             ) : (
                 <Plus size={16} />
             )}

@@ -80,9 +80,9 @@ export function SchemaEditor({ value, onChange, theme }: SchemaEditorProps) {
                 </div>
             )}
 
-            <div className="px-4 py-3 bg-indigo-600/5 mt-auto border-t border-indigo-500/10">
+            <div className="px-4 py-3 bg-[#1a7a7c]/5 mt-auto border-t border-[#249d9f]/10">
                 <p className="text-[10px] text-gray-500 leading-relaxed">
-                    <span className="font-bold text-indigo-400 uppercase tracking-tighter">Tip:</span> Use JSON Schema (draft 7+) to validate property types, required fields, and nested structures. Successful validation results will appear in the response pane after sending a request.
+                    <span className="font-bold text-[#2ec4c7] uppercase tracking-tighter">Tip:</span> Use JSON Schema (draft 7+) to validate property types, required fields, and nested structures. Successful validation results will appear in the response pane after sending a request.
                 </p>
             </div>
         </div>

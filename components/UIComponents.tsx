@@ -1,8 +1,6 @@
 import React from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import xl from 'react-syntax-highlighter/dist/esm/languages/hljs/xl';
-import { duration } from 'moment';
 
 /**
  * Utility to merge tailwind classes safely
@@ -10,6 +8,17 @@ import { duration } from 'moment';
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
+
+/**
+ * Brand color constants — single source of truth
+ */
+export const BRAND = {
+    primary: '#249d9f',
+    light: '#2ec4c7',
+    dark: '#1a7a7c',
+    glow: 'rgba(36, 157, 159, 0.15)',
+    subtle: 'rgba(36, 157, 159, 0.08)',
+};
 
 /**
  * A container with a glassmorphism effect
@@ -26,16 +35,16 @@ export const GlassCard = ({
     variant?: 'default' | 'blue' | 'green' | 'amber' | 'purple'
 }) => {
     const variants = {
-        default: "hover:border-violet-500/30",
-        blue: "hover:border-blue-500/50 hover:shadow-[0_0_50px_rgba(59,130,246,0.15)]",
-        green: "hover:border-emerald-500/50 hover:shadow-[0_0_50px_rgba(16,185,129,0.15)]",
-        amber: "hover:border-amber-500/50 hover:shadow-[0_0_50px_rgba(245,158,11,0.15)]",
-        purple: "hover:border-fuchsia-500/50 hover:shadow-[0_0_50px_rgba(217,70,239,0.15)]"
+        default: "hover:border-[#249d9f]/30 hover:shadow-[0_0_30px_rgba(36,157,159,0.06)]",
+        blue: "hover:border-[#249d9f]/40 hover:shadow-[0_0_40px_rgba(36,157,159,0.1)]",
+        green: "hover:border-emerald-500/40 hover:shadow-[0_0_40px_rgba(16,185,129,0.1)]",
+        amber: "hover:border-amber-500/40 hover:shadow-[0_0_40px_rgba(245,158,11,0.1)]",
+        purple: "hover:border-[#249d9f]/40 hover:shadow-[0_0_40px_rgba(36,157,159,0.1)]"
     };
 
     return (
         <div className={cn(
-            "glass-effect rounded-[2.5rem] p-10 transition-all duration-700 bg-black/40 backdrop-blur-3xl border border-white/5",
+            "glass-effect rounded-2xl p-8 transition-all duration-300 bg-white/[0.02] backdrop-blur-xl border border-white/[0.06]",
             hoverEffect && variants[variant],
             className
         )}>
@@ -45,13 +54,13 @@ export const GlassCard = ({
 };
 
 /**
- * Text component with a vibrant gradient
+ * Text component with a brand gradient
  */
 export const TextGradient = ({
     children,
     className,
-    from = "from-indigo-400",
-    to = "to-purple-500"
+    from = "from-[#249d9f]",
+    to = "to-[#2ec4c7]"
 }: {
     children: React.ReactNode;
     className?: string;
@@ -70,7 +79,7 @@ export const TextGradient = ({
 };
 
 /**
- * Premium styled button with gradient background
+ * Premium styled button
  */
 export const PremiumButton = ({
     children,
@@ -81,11 +90,11 @@ export const PremiumButton = ({
     variant?: 'primary' | 'outline' | 'ghost' | 'solid-purple' | 'neon-blue'
 }) => {
     const variants = {
-        primary: "bg-[#8B5CF6] text-white hover:bg-[#7C3AED] shadow-lg shadow-violet-500/20",
-        'solid-purple': "bg-gradient-to-r from-[#A855F7] to-[#D946EF] text-white hover:scale-[1.02] transition-all shadow-[0_0_40px_rgba(168,85,247,0.3)] border-none",
-        'neon-blue': "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white hover:scale-[1.02] transition-all shadow-[0_0_40px_rgba(59,130,246,0.3)] border-none",
-        outline: "border border-violet-500/50 text-violet-400 hover:bg-violet-500/10",
-        ghost: "text-slate-400 hover:text-white hover:bg-white/5"
+        primary: "bg-[#249d9f] text-white hover:bg-[#1a7a7c] shadow-lg shadow-[rgba(36,157,159,0.2)]",
+        'solid-purple': "bg-[#249d9f] text-white hover:bg-[#1a7a7c] hover:scale-[1.02] transition-all shadow-[0_0_30px_rgba(36,157,159,0.2)] border-none",
+        'neon-blue': "bg-[#249d9f] text-white hover:bg-[#2ec4c7] hover:scale-[1.02] transition-all shadow-[0_0_30px_rgba(36,157,159,0.25)] border-none",
+        outline: "border border-[#249d9f]/40 text-[#249d9f] hover:bg-[#249d9f]/10",
+        ghost: "text-[#71717a] hover:text-white hover:bg-white/5"
     };
 
     return (
@@ -116,7 +125,7 @@ export const Badge = ({
 }) => {
     const variants = {
         default: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-        indigo: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+        indigo: "bg-[#249d9f]/10 text-[#249d9f] border-[#249d9f]/20",
         success: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
         error: "bg-red-500/10 text-red-500 border-red-500/20",
         warning: "bg-amber-500/10 text-amber-500 border-amber-500/20",
@@ -142,7 +151,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
         <input
             ref={ref}
             className={cn(
-                "w-full px-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-gray-500",
+                "w-full px-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/[0.06] text-sm outline-none focus:ring-2 focus:ring-[#249d9f]/20 focus:border-[#249d9f] transition-all placeholder:text-gray-500",
                 className
             )}
             {...props}

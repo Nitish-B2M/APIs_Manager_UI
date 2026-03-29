@@ -92,7 +92,7 @@ export default function SystemResourceWidget() {
 
                     {/* Heap Memory */}
                     <div className="flex items-center gap-1.5">
-                        <span className="text-purple-400">●</span>
+                        <span className="text-[#2ec4c7]">●</span>
                         <span className="text-gray-500">MEM</span>
                         <span className="text-white font-semibold min-w-[72px] text-right">
                             {metrics

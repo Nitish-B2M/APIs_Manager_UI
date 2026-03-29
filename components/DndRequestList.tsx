@@ -38,7 +38,7 @@ const getMethodColor = (method: HttpMethod): string => {
         case 'POST': return 'bg-blue-600/20 text-blue-500';
         case 'PUT': return 'bg-yellow-600/20 text-yellow-600';
         case 'DELETE': return 'bg-red-600/20 text-red-500';
-        case 'PATCH': return 'bg-purple-600/20 text-purple-500';
+        case 'PATCH': return 'bg-[#1a7a7c]/20 text-[#249d9f]';
         default: return 'bg-gray-700 text-gray-400';
     }
 };
@@ -78,10 +78,10 @@ export function SortableRequestItem({
             onClick={onSelect}
             className={`group flex items-center justify-between p-2.5 cursor-pointer border-l-2 transition-all relative ${isSelected
                 ? theme === 'dark'
-                    ? 'bg-indigo-600/20 border-indigo-500 shadow-inner'
-                    : 'bg-indigo-50 border-indigo-500'
+                    ? 'bg-[#1a7a7c]/20 border-[#249d9f] shadow-inner'
+                    : 'bg-indigo-50 border-[#249d9f]'
                 : `border-transparent ${hoverBg}`
-                } ${isDragging ? 'ring-2 ring-indigo-500 shadow-lg z-50' : ''}`}
+                } ${isDragging ? 'ring-2 ring-[#249d9f] shadow-lg z-50' : ''}`}
         >
             <div className="flex items-center gap-2 overflow-hidden flex-1">
                 {canEdit && (

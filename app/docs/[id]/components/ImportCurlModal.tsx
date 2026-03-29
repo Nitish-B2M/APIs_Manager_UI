@@ -50,8 +50,8 @@ export default function ImportCurlModal({ isOpen, onClose, onImport }: ImportCur
             <div className={`${modalBg} rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
                 <div className={`flex items-center justify-between p-4 border-b ${headerBg}`}>
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}`}>
-                            <Terminal size={18} className="text-indigo-500" />
+                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-[#249d9f]/20' : 'bg-indigo-50'}`}>
+                            <Terminal size={18} className="text-[#249d9f]" />
                         </div>
                         <h2 className={`text-lg font-bold ${textColor}`}>Import cURL</h2>
                     </div>
@@ -69,7 +69,7 @@ export default function ImportCurlModal({ isOpen, onClose, onImport }: ImportCur
                         value={curlCommand}
                         onChange={(e) => { setCurlCommand(e.target.value); setError(null); }}
                         placeholder="curl -X POST https://api.example.com/data -H 'Content-Type: application/json' -d '{...}'"
-                        className={`w-full h-48 p-4 rounded-lg border font-mono text-xs resize-none focus:ring-2 focus:ring-indigo-500 outline-none ${inputBg}`}
+                        className={`w-full h-48 p-4 rounded-lg border font-mono text-xs resize-none focus:ring-2 focus:ring-[#249d9f] outline-none ${inputBg}`}
                         spellCheck={false}
                     />
 
@@ -90,7 +90,7 @@ export default function ImportCurlModal({ isOpen, onClose, onImport }: ImportCur
                     <button
                         onClick={handleImport}
                         disabled={!curlCommand.trim()}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                        className="px-4 py-2 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-lg text-sm font-bold shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
                     >
                         Import Request <ArrowRight size={14} />
                     </button>

@@ -95,7 +95,7 @@ export const SocketPanel: React.FC<SocketPanelProps> = ({
                 {messages.map((msg) => (
                     <div key={msg.id} className={`flex flex-col ${msg.type === 'sent' ? 'items-end' : 'items-start'}`}>
                         <div className={`max-w-[85%] p-3 rounded-xl border ${msg.type === 'sent'
-                            ? (theme === 'dark' ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200')
+                            ? (theme === 'dark' ? 'bg-indigo-900/20 border-[#249d9f]/30' : 'bg-indigo-50 border-indigo-200')
                             : (theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-100 border-gray-200')
                             }`}>
                             <div className="text-[12px] whitespace-pre-wrap break-all leading-relaxed">
@@ -131,7 +131,7 @@ export const SocketPanel: React.FC<SocketPanelProps> = ({
                         <button
                             onClick={handleSend}
                             disabled={!input.trim()}
-                            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all disabled:opacity-50 shadow-lg active:scale-95 flex-shrink-0"
+                            className="p-2 bg-[#1a7a7c] text-white rounded-lg hover:bg-[#249d9f] transition-all disabled:opacity-50 shadow-lg active:scale-95 flex-shrink-0"
                         >
                             <Send size={16} />
                         </button>

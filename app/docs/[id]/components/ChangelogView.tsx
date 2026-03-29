@@ -26,7 +26,7 @@ export function ChangelogView({ docId, theme }: ChangelogViewProps) {
             case 'CREATE': return <Plus size={14} className="text-green-500" />;
             case 'UPDATE': return <Edit3 size={14} className="text-blue-500" />;
             case 'DELETE': return <Trash2 size={14} className="text-red-500" />;
-            case 'INVITE': return <UserPlus size={14} className="text-purple-500" />;
+            case 'INVITE': return <UserPlus size={14} className="text-[#249d9f]" />;
             default: return <Clock size={14} className="text-gray-500" />;
         }
     };
@@ -34,7 +34,7 @@ export function ChangelogView({ docId, theme }: ChangelogViewProps) {
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#249d9f]"></div>
             </div>
         );
     }
@@ -43,8 +43,8 @@ export function ChangelogView({ docId, theme }: ChangelogViewProps) {
         <div className="flex-1 overflow-y-auto p-8 scrollbar-thin">
             <div className="max-w-4xl mx-auto">
                 <div className="flex items-center gap-3 mb-10">
-                    <div className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-indigo-500/10 border border-indigo-500/20' : 'bg-indigo-50'}`}>
-                        <Activity className="text-indigo-500" size={24} />
+                    <div className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-[#249d9f]/10 border border-[#249d9f]/20' : 'bg-indigo-50'}`}>
+                        <Activity className="text-[#249d9f]" size={24} />
                     </div>
                     <div>
                         <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Activity Feed</h2>
@@ -77,7 +77,7 @@ export function ChangelogView({ docId, theme }: ChangelogViewProps) {
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="space-y-1">
                                             <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
-                                                <span className="font-black text-indigo-500">{log.userName || log.userEmail.split('@')[0]}</span>
+                                                <span className="font-black text-[#249d9f]">{log.userName || log.userEmail.split('@')[0]}</span>
                                                 <span className="mx-1.5 opacity-60">performed</span>
                                                 <span className={`font-black uppercase text-[10px] px-1.5 py-0.5 rounded ${
                                                     log.action === 'CREATE' ? 'bg-green-500/10 text-green-500' :
@@ -93,7 +93,7 @@ export function ChangelogView({ docId, theme }: ChangelogViewProps) {
                                             {log.changes && (
                                                 <div className="mt-3 overflow-hidden">
                                                     <details className="group">
-                                                        <summary className="cursor-pointer list-none text-[9px] font-black text-indigo-400 uppercase tracking-widest hover:underline">View Change Details</summary>
+                                                        <summary className="cursor-pointer list-none text-[9px] font-black text-[#2ec4c7] uppercase tracking-widest hover:underline">View Change Details</summary>
                                                         <pre className={`mt-2 p-3 rounded-xl font-mono text-[10px] overflow-x-auto ${theme === 'dark' ? 'bg-black/40 text-gray-400 border border-white/5' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
                                                             {JSON.stringify(log.changes, null, 2)}
                                                         </pre>

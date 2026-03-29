@@ -80,7 +80,7 @@ export default function Onboarding() {
                     {STEPS.map((_, i) => (
                         <div
                             key={i}
-                            className={`h-1 flex-1 rounded-full transition-all ${i <= step ? 'bg-indigo-500' : 'bg-white/10'}`}
+                            className={`h-1 flex-1 rounded-full transition-all ${i <= step ? 'bg-[#249d9f]' : 'bg-white/10'}`}
                         />
                     ))}
                 </div>
@@ -92,7 +92,7 @@ export default function Onboarding() {
 
                 {/* Content */}
                 <div className="px-8 pb-8 pt-4 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#249d9f] to-[#1a7a7c] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#249d9f]/30">
                         {current.icon}
                     </div>
 
@@ -113,7 +113,7 @@ export default function Onboarding() {
                         </button>
                         <button
                             onClick={nextStep}
-                            className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                            className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#249d9f]/20"
                         >
                             {step < STEPS.length - 1 ? 'Next' : 'Get Started'} <ArrowRight size={14} />
                         </button>

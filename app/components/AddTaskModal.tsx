@@ -92,7 +92,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
             <div className={`w-full max-w-md rounded-3xl border ${themeClasses.borderCol} ${themeClasses.secondaryBg} shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200`}>
                 <div className={`flex items-center justify-between px-6 py-4 border-b ${themeClasses.borderCol} bg-gray-800/10`}>
                     <h2 className="text-lg font-bold flex items-center gap-2">
-                        <Plus size={18} className="text-indigo-500" /> New Smart Task
+                        <Plus size={18} className="text-[#249d9f]" /> New Smart Task
                     </h2>
                     <button onClick={onClose} className={`p-1 rounded-lg ${themeClasses.hoverBg} transition-colors`}>
                         <X size={20} />
@@ -107,7 +107,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
                             value={form.title}
                             onChange={(e) => setForm({ ...form, title: e.target.value })}
                             placeholder="e.g., Design API Schema"
-                            className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm ${themeClasses.textColor}`}
+                            className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 transition-all text-sm ${themeClasses.textColor}`}
                             autoFocus
                         />
                     </div>
@@ -118,7 +118,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
                             <select
                                 value={form.priority}
                                 onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value) })}
-                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm appearance-none ${themeClasses.textColor}`}
+                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 transition-all text-sm appearance-none ${themeClasses.textColor}`}
                             >
                                 <option value={1} className="bg-gray-900 text-white">P1 - Critical</option>
                                 <option value={2} className="bg-gray-900 text-white">P2 - High</option>
@@ -132,7 +132,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
                                 type="number"
                                 value={form.duration_minutes}
                                 onChange={(e) => setForm({ ...form, duration_minutes: parseInt(e.target.value) })}
-                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm ${themeClasses.textColor}`}
+                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 transition-all text-sm ${themeClasses.textColor}`}
                             />
                         </div>
                     </div>
@@ -144,7 +144,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
                                 type="datetime-local"
                                 value={form.scheduled_start}
                                 onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })}
-                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm ${themeClasses.textColor}`}
+                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 transition-all text-sm ${themeClasses.textColor}`}
                             />
                         </div>
                         <div className="space-y-1.5">
@@ -153,7 +153,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
                                 type="datetime-local"
                                 value={form.scheduled_end}
                                 onChange={(e) => setForm({ ...form, scheduled_end: e.target.value })}
-                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm ${themeClasses.textColor}`}
+                                className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 transition-all text-sm ${themeClasses.textColor}`}
                             />
                         </div>
                     </div>
@@ -164,7 +164,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
                             type="datetime-local"
                             value={form.deadline}
                             onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                            className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm ${themeClasses.textColor}`}
+                            className={`w-full px-4 py-2.5 rounded-xl border ${themeClasses.borderCol} bg-transparent focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 transition-all text-sm ${themeClasses.textColor}`}
                         />
                     </div>
 
@@ -172,7 +172,7 @@ export function AddTaskModal({ isOpen, onClose, onSuccess, initialData }: AddTas
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-[#1a7a7c] hover:bg-[#1a7a7c] disabled:opacity-50 text-white rounded-xl font-bold transition-all shadow-lg shadow-[#1a7a7c]/20 flex items-center justify-center gap-2"
                         >
                             {submitting ? 'Creating...' : 'Create Smart Task'}
                         </button>

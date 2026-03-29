@@ -101,14 +101,14 @@ export default function EndpointCard({ endpoint, variables }: EndpointCardProps)
                             type="text"
                             value={url}
                             onChange={(e) => setUrl(e.target.value)}
-                            className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+                            className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-[#249d9f] outline-none"
                         />
                     )}
                 </div>
 
                 <button
                     onClick={() => setMode(mode === 'view' ? 'run' : 'view')}
-                    className="text-sm text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium transition-colors"
+                    className="text-sm text-[#1a7a7c] hover:bg-indigo-50 px-3 py-1 rounded font-medium transition-colors"
                 >
                     {mode === 'view' ? 'Try it' : 'Back to Docs'}
                 </button>
@@ -117,7 +117,7 @@ export default function EndpointCard({ endpoint, variables }: EndpointCardProps)
                     <button
                         onClick={handleSend}
                         disabled={loading}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-1.5 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-all font-medium text-sm"
+                        className="flex items-center gap-2 bg-[#1a7a7c] text-white px-4 py-1.5 rounded-md hover:bg-[#1a7a7c] disabled:opacity-50 transition-all font-medium text-sm"
                     >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
                         Send
@@ -142,7 +142,7 @@ export default function EndpointCard({ endpoint, variables }: EndpointCardProps)
                             <textarea
                                 value={body}
                                 onChange={(e) => setBody(e.target.value)}
-                                className="w-full h-40 font-mono text-sm p-3 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                                className="w-full h-40 font-mono text-sm p-3 border border-gray-300 rounded focus:ring-2 focus:ring-[#249d9f] outline-none bg-white"
                             />
                         </div>
                     )}

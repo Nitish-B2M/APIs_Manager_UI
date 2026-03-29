@@ -26,7 +26,7 @@ export function RequestTabBar({ openTabs, activeTabId, onTabSelect, onTabClose, 
                         className={`group relative flex items-center min-w-[140px] max-w-[220px] h-11 px-4 cursor-pointer border-r transition-all duration-300 animate-in fade-in slide-in-from-left-2 ${index === 0 ? 'border-l' : ''
                             } ${theme === 'dark'
                                 ? `border-white/5 ${isActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`
-                                : `border-gray-200 ${isActive ? 'bg-white text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`
+                                : `border-gray-200 ${isActive ? 'bg-white text-[#1a7a7c]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`
                             }`}
                     >
                         <div className="flex items-center gap-2.5 w-full pr-6 overflow-hidden">
@@ -50,7 +50,7 @@ export function RequestTabBar({ openTabs, activeTabId, onTabSelect, onTabClose, 
                         </button>
 
                         {isActive && (
-                            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 shadow-[0_-2px_15px_rgba(99,102,241,0.5)]" />
+                            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#249d9f] via-[#249d9f] to-[#249d9f] shadow-[0_-2px_15px_rgba(99,102,241,0.5)]" />
                         )}
                     </div>
                 );

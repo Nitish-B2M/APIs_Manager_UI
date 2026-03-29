@@ -64,12 +64,12 @@ export function TestsTab({
         }
     };
 
-    const inputCls = `w-full px-3 py-1.5 rounded-lg text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500/40 ${theme === 'dark'
+    const inputCls = `w-full px-3 py-1.5 rounded-lg text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-[#249d9f]/40 ${theme === 'dark'
         ? 'bg-[#1e1e36] border-gray-700 text-gray-200 placeholder-gray-600'
         : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400'
         }`;
 
-    const selectCls = `px-2 py-1.5 rounded-lg text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500/40 ${theme === 'dark'
+    const selectCls = `px-2 py-1.5 rounded-lg text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-[#249d9f]/40 ${theme === 'dark'
         ? 'bg-[#1e1e36] border-gray-700 text-gray-200'
         : 'bg-white border-gray-300 text-gray-800'
         }`;
@@ -87,7 +87,7 @@ export function TestsTab({
                             <button
                                 onClick={handleAiGenerate}
                                 disabled={isGenerating}
-                                className={`flex items-center gap-1.5 text-[10px] font-bold transition-all ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'text-purple-400 hover:text-purple-300'
+                                className={`flex items-center gap-1.5 text-[10px] font-bold transition-all ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'text-[#2ec4c7] hover:text-purple-300'
                                     }`}
                             >
                                 {isGenerating ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
@@ -96,7 +96,7 @@ export function TestsTab({
                         )}
                         <button
                             onClick={handleAdd}
-                            className="flex items-center gap-1 text-[10px] text-indigo-400 font-bold hover:text-indigo-300 transition-colors"
+                            className="flex items-center gap-1 text-[10px] text-[#2ec4c7] font-bold hover:text-[#2ec4c7] transition-colors"
                         >
                             <Plus size={11} /> ADD ASSERTION
                         </button>
@@ -116,7 +116,7 @@ export function TestsTab({
                     {canEdit && (
                         <button
                             onClick={handleAdd}
-                            className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+                            className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-[#1a7a7c] hover:bg-[#249d9f] text-white transition-colors"
                         >
                             Add First Assertion
                         </button>

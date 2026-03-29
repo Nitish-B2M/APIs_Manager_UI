@@ -34,7 +34,7 @@ const CollaboratorAvatars = ({ collaborators }: { collaborators?: any[] }) => {
             {displayCollaborators.map((c, i) => (
                 <div
                     key={c.id || i}
-                    className="w-7 h-7 rounded-full border-2 border-[#121212] flex items-center justify-center overflow-hidden bg-gradient-to-tr from-indigo-500 to-violet-500 text-[10px] text-white font-bold transition-transform group-hover:scale-110"
+                    className="w-7 h-7 rounded-full border-2 border-[#121212] flex items-center justify-center overflow-hidden bg-gradient-to-tr from-[#249d9f] to-[#249d9f] text-[10px] text-white font-bold transition-transform group-hover:scale-110"
                     style={{ zIndex: collaborators.length - i }}
                 >
                     {c.avatarUrl ? (
@@ -256,18 +256,18 @@ function DashboardContent() {
                 {invites.length > 0 && (
                     <div className="mb-12">
                         <div className="flex items-center gap-2 mb-6">
-                            <div className="w-1.5 h-6 bg-violet-600 rounded-full" />
+                            <div className="w-1.5 h-6 bg-[#1a7a7c] rounded-full" />
                             <h2 className="text-lg font-bold text-white uppercase tracking-wider">Pending Invitations</h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {invites.map((invite: any) => (
-                                <GlassCard key={invite.id} className="border-indigo-500/30 bg-indigo-500/5">
+                                <GlassCard key={invite.id} className="border-[#249d9f]/30 bg-[#249d9f]/5">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
                                             <h3 className="font-bold text-heading mb-1">{invite.documentationTitle}</h3>
                                             <p className="text-[10px] text-secondary lowercase">Invited by {invite.invitedByName}</p>
                                         </div>
-                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 uppercase tracking-tighter">
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-[#249d9f]/20 text-[#2ec4c7] uppercase tracking-tighter">
                                             {invite.role}
                                         </span>
                                     </div>
@@ -338,10 +338,10 @@ function DashboardContent() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {sharedDocs.map((doc) => (
-                                <GlassCard key={doc.id} className="border-white/5 hover:border-violet-500/20">
+                                <GlassCard key={doc.id} className="border-white/5 hover:border-[#249d9f]/20">
                                     <div className="mb-6">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 uppercase tracking-tighter flex items-center gap-1">
+                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#249d9f]/20 text-[#2ec4c7] uppercase tracking-tighter flex items-center gap-1">
                                                 <Shield size={10} /> {doc.role}
                                             </span>
                                         </div>
@@ -369,7 +369,7 @@ function DashboardContent() {
                 {/* Recent Activity Section */}
                 <div className="mt-16">
                     <div className="flex items-center gap-2 mb-8">
-                        <div className="w-1.5 h-6 bg-violet-500 rounded-full shadow-[0_0_10px_rgba(139,92,246,0.3)]" />
+                        <div className="w-1.5 h-6 bg-[#249d9f] rounded-full shadow-[0_0_10px_rgba(36,157,159,0.3)]" />
                         <h2 className="text-lg font-bold text-heading uppercase tracking-wider">Recent Activity</h2>
                     </div>
                     <GlassCard className="border-glass-border bg-background/50 p-0 overflow-hidden">
@@ -377,12 +377,12 @@ function DashboardContent() {
                             {[1, 2, 3].map((_, i) => (
                                 <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 transition-colors group text-foreground">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center text-violet-400 border border-violet-500/20 group-hover:scale-110 transition-transform">
+                                        <div className="w-10 h-10 rounded-full bg-[#249d9f]/10 flex items-center justify-center text-[#2ec4c7] border border-[#249d9f]/20 group-hover:scale-110 transition-transform">
                                             <Clock size={18} />
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold text-heading">Payment API Documentation Updated</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">Updated 2 hours ago by <span className="text-violet-400 font-medium">You</span></p>
+                                            <p className="text-xs text-slate-500 mt-0.5">Updated 2 hours ago by <span className="text-[#2ec4c7] font-medium">You</span></p>
                                         </div>
                                     </div>
                                     <button className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100">
@@ -392,7 +392,7 @@ function DashboardContent() {
                             ))}
                         </div>
                         <div className="px-6 py-3 bg-white/[0.01] border-t border-white/5 text-center">
-                            <button className="text-[10px] font-bold text-slate-500 hover:text-violet-400 uppercase tracking-widest transition-colors">
+                            <button className="text-[10px] font-bold text-slate-500 hover:text-[#2ec4c7] uppercase tracking-widest transition-colors">
                                 View all activity
                             </button>
                         </div>
@@ -416,7 +416,7 @@ function DashboardContent() {
                             value={newCollectionTitle}
                             onChange={(e) => setNewCollectionTitle(e.target.value)}
                             placeholder="e.g. Payments Gateway API"
-                            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${formErrors.title ? 'border-red-500 ring-red-500/20' : 'border-white/10'}`}
+                            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#249d9f] transition-all ${formErrors.title ? 'border-red-500 ring-red-500/20' : 'border-white/10'}`}
                             autoFocus
                         />
                         {formErrors.title && (

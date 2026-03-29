@@ -10,16 +10,71 @@ export function getHeaders() {
     };
 }
 
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+/**
+ * Try to refresh the access token using the httpOnly refresh cookie.
+ * Returns the new access token or null if refresh failed.
+ */
+async function tryRefreshToken(): Promise<string | null> {
+    // Prevent multiple simultaneous refresh calls
+    if (isRefreshing && refreshPromise) return refreshPromise;
+
+    isRefreshing = true;
+    refreshPromise = (async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include', // Send httpOnly cookie
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const json = await res.json();
+            if (json.status && json.data?.token) {
+                localStorage.setItem('token', json.data.token);
+                return json.data.token as string;
+            }
+            return null;
+        } catch {
+            return null;
+        } finally {
+            isRefreshing = false;
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
     const headers = {
         ...getHeaders(),
         ...options.headers,
     };
 
-    const response = await fetch(`${API_URL}/api${path}`, {
+    let response = await fetch(`${API_URL}/api${path}`, {
         ...options,
         headers,
+        credentials: 'include', // Always send cookies for refresh token
     });
+
+    // If 401, try refreshing the token once
+    if (response.status === 401 && !path.includes('/auth/refresh') && !path.includes('/auth/login')) {
+        const newToken = await tryRefreshToken();
+        if (newToken) {
+            // Retry the original request with the new token
+            const retryHeaders = {
+                ...options.headers,
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${newToken}`,
+            };
+            response = await fetch(`${API_URL}/api${path}`, {
+                ...options,
+                headers: retryHeaders,
+                credentials: 'include',
+            });
+        }
+    }
 
     const json = await response.json();
     if (!json.status) {
@@ -40,7 +95,10 @@ export const api = {
         verifyEmail: (token: string) => apiFetch('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
         resendVerification: () => apiFetch('/auth/resend-verification', { method: 'POST' }),
         refreshToken: () => apiFetch('/auth/refresh', { method: 'POST' }),
-        logout: () => apiFetch('/auth/logout', { method: 'POST' }),
+        logout: async () => {
+            try { await apiFetch('/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
+            localStorage.removeItem('token');
+        },
         getPresence: (docId: string) => apiFetch(`/collaboration/presence/${docId}`),
     },
     documentation: {
@@ -89,8 +147,6 @@ export const api = {
             apiFetch(`/documentation/environments/${environmentId}`, { method: 'DELETE' }),
         setActive: (documentationId: string, environmentId: string | null) =>
             apiFetch(`/documentation/${documentationId}/environments/set-active`, { method: 'PATCH', body: JSON.stringify({ environmentId }) }),
-
-        // Global Environments
         listGlobal: () => apiFetch('/documentation/global/list'),
         createGlobal: (data: { name: string; variables?: Record<string, string>; isActive?: boolean; secrets?: string[] }) =>
             apiFetch('/documentation/global', { method: 'POST', body: JSON.stringify(data) }),

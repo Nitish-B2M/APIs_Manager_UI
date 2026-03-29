@@ -82,7 +82,7 @@ export default function SaveVariableModal({
             >
                 <div className={`px-6 py-4 border-b ${borderCol} flex justify-between items-center bg-opacity-50`}>
                     <h3 className={`font-bold text-lg ${textColor} flex items-center gap-2`}>
-                        <Save size={20} className="text-indigo-500" />
+                        <Save size={20} className="text-[#249d9f]" />
                         Save as Variable
                     </h3>
                     <button onClick={onClose} className={`p-2 ${subTextColor} hover:bg-gray-800 rounded-lg transition-colors`}>
@@ -110,7 +110,7 @@ export default function SaveVariableModal({
                             onChange={(e) => setVarName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                             placeholder="e.g. auth_token"
                             autoFocus
-                            className={`w-full px-4 py-2 rounded-lg border ${borderCol} ${inputBg} ${textColor} outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm`}
+                            className={`w-full px-4 py-2 rounded-lg border ${borderCol} ${inputBg} ${textColor} outline-none focus:ring-2 focus:ring-[#249d9f] transition-all text-sm`}
                         />
                         <p className={`mt-1.5 text-[10px] ${subTextColor}`}>
                             Only use letters, numbers, and underscores.
@@ -130,7 +130,7 @@ export default function SaveVariableModal({
                                     key={env.id}
                                     onClick={() => setSelectedEnvId(env.id)}
                                     className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedEnvId === env.id
-                                            ? 'bg-indigo-600/10 border-indigo-500 shadow-sm'
+                                            ? 'bg-[#1a7a7c]/10 border-[#249d9f] shadow-sm'
                                             : `border-transparent ${hoverBg}`
                                         }`}
                                 >
@@ -144,7 +144,7 @@ export default function SaveVariableModal({
                                         </div>
                                     </div>
                                     {selectedEnvId === env.id && (
-                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                                        <div className="w-2 h-2 rounded-full bg-[#249d9f] animate-pulse" />
                                     )}
                                 </div>
                             ))}
@@ -162,7 +162,7 @@ export default function SaveVariableModal({
                     <button
                         onClick={handleSave}
                         disabled={isUpdating || !varName.trim() || !selectedEnvId}
-                        className="flex-1 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                        className="flex-1 px-4 py-2 rounded-xl text-sm font-bold bg-[#1a7a7c] text-white hover:bg-[#1a7a7c] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                     >
                         {isUpdating ? 'Saving...' : 'Save Variable'}
                     </button>

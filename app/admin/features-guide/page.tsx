@@ -637,7 +637,7 @@ export default function FeaturesGuidePage() {
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#249d9f] to-[#1a7a7c] text-white shadow-lg">
                         <BookOpen size={22} />
                     </div>
                     <div>
@@ -657,7 +657,7 @@ export default function FeaturesGuidePage() {
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         placeholder="Search features, steps, endpoints..."
-                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200'}`}
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#249d9f] ${dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200'}`}
                     />
                 </div>
             </div>
@@ -665,7 +665,7 @@ export default function FeaturesGuidePage() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
                 {[
-                    { label: 'Total Features', value: totalFeatures, color: '#6366f1' },
+                    { label: 'Total Features', value: totalFeatures, color: '#249d9f' },
                     { label: 'New Features', value: newCount, color: '#22c55e' },
                     { label: 'API Endpoints', value: '80+', color: '#3b82f6' },
                     { label: 'Test Coverage', value: '105 tests', color: '#f59e0b' },
@@ -729,11 +729,11 @@ export default function FeaturesGuidePage() {
 
                                                     {/* Steps */}
                                                     <div>
-                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mb-2">How to use</p>
+                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#2ec4c7] mb-2">How to use</p>
                                                         <ol className="space-y-1.5">
                                                             {feature.steps.map((step, si) => (
                                                                 <li key={si} className="flex items-start gap-2 text-xs">
-                                                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold mt-0.5">
+                                                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#249d9f]/20 text-[#2ec4c7] flex items-center justify-center text-[10px] font-bold mt-0.5">
                                                                         {si + 1}
                                                                     </span>
                                                                     <span className={sub}>{step}</span>

@@ -75,7 +75,7 @@ const FlipUnit = ({ value, label, shuffle }: FlipUnitProps) => {
                 {/* Middle line separator */}
                 <div className="absolute top-1/2 inset-x-0 h-px bg-black/30 z-20" />
             </div>
-            {/* <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-500/80">{label}</span> */}
+            {/* <span className="text-[10px] uppercase font-bold tracking-widest text-[#249d9f]/80">{label}</span> */}
         </div>
     );
 };
@@ -112,21 +112,21 @@ export const FlipClock = () => {
             <div className="flex gap-1.5 border-l border-white/10 pl-3">
                 <FlipUnit value={displayHours < 10 ? `0${displayHours}` : displayHours} label="Hours" shuffle={false} />
                 <div className="flex flex-col justify-center gap-1.5 mb-2.5">
-                    <div className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />
-                    <div className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />
+                    <div className="w-1 h-1 rounded-full bg-[#249d9f] animate-pulse" />
+                    <div className="w-1 h-1 rounded-full bg-[#249d9f] animate-pulse" />
                 </div>
                 <FlipUnit value={minutes < 10 ? `0${minutes}` : minutes} label="Min" shuffle={false} />
                 {/* <div className="flex flex-col justify-center gap-1.5 mb-2.5">
-                    <div className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />
-                    <div className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />
+                    <div className="w-1 h-1 rounded-full bg-[#249d9f] animate-pulse" />
+                    <div className="w-1 h-1 rounded-full bg-[#249d9f] animate-pulse" />
                 </div>
                 <FlipUnit value={seconds < 10 ? `0${seconds}` : seconds} label="Sec" shuffle={false} /> */}
             </div>
 
             {/* AM/PM Indicator */}
             <div className="flex flex-col items-center justify-center gap-1">
-                <div className={`px-1 py-0.5 rounded text-[11px] font-black ${ampm === 'AM' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400'}`}>AM</div>
-                <div className={`px-1 py-0.5 rounded text-[11px] font-black ${ampm === 'PM' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400'}`}>PM</div>
+                <div className={`px-1 py-0.5 rounded text-[11px] font-black ${ampm === 'AM' ? 'bg-[#1a7a7c] text-white' : 'bg-gray-700 text-gray-400'}`}>AM</div>
+                <div className={`px-1 py-0.5 rounded text-[11px] font-black ${ampm === 'PM' ? 'bg-[#1a7a7c] text-white' : 'bg-gray-700 text-gray-400'}`}>PM</div>
             </div>
         </div>
     );

@@ -217,8 +217,8 @@ export function SchedulerCalendar({ events, theme, onEventChange, onSelectRange,
                         box-shadow: none !important;
                     }
                     .fc-button-primary:not(:disabled).fc-button-active {
-                        background: #4f46e5 !important;
-                        border-color: #4f46e5 !important;
+                        background: #1a7a7c !important;
+                        border-color: #1a7a7c !important;
                         color: white !important;
                     }
                     .fc-timegrid-slot {
@@ -247,7 +247,7 @@ export function SchedulerCalendar({ events, theme, onEventChange, onSelectRange,
                     >
                         <button
                             onClick={handleCreateTask}
-                            className="floating-create-btn flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl shadow-indigo-600/40 border border-white/20 whitespace-nowrap font-bold text-sm transform -translate-x-1/2 -translate-y-full mb-4"
+                            className="floating-create-btn flex items-center gap-2 px-4 py-2 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-full shadow-2xl shadow-[#1a7a7c]/40 border border-white/20 whitespace-nowrap font-bold text-sm transform -translate-x-1/2 -translate-y-full mb-4"
                         >
                             <Plus size={16} />
                             Create Task

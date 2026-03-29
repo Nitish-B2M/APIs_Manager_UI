@@ -93,9 +93,9 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                 {/* Header */}
                 <div className={`px-6 py-4 flex items-center justify-between border-b ${themeClasses.borderCol}`}>
                     <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-purple-600/20' : 'bg-purple-100'
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-[#1a7a7c]/20' : 'bg-purple-100'
                             }`}>
-                            <Zap size={18} className="text-purple-500" />
+                            <Zap size={18} className="text-[#249d9f]" />
                         </div>
                         <div>
                             <h2 className={`text-base font-bold ${themeClasses.textColor}`}>Collection Runner</h2>
@@ -148,13 +148,13 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                     </div>
 
                     {isBeta && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 ml-2">
-                            <label className={`text-[10px] font-black uppercase tracking-widest text-indigo-400 cursor-pointer flex items-center gap-2`}>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#249d9f]/10 border border-[#249d9f]/20 ml-2">
+                            <label className={`text-[10px] font-black uppercase tracking-widest text-[#2ec4c7] cursor-pointer flex items-center gap-2`}>
                                 <input
                                     type="checkbox"
                                     checked={isChainingEnabled}
                                     onChange={e => setIsChainingEnabled(e.target.checked)}
-                                    className="accent-indigo-500"
+                                    className="accent-[#249d9f]"
                                 />
                                 Smart Chaining
                             </label>
@@ -202,7 +202,7 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                             type="checkbox"
                                             checked={isSelected}
                                             onChange={() => toggleEndpoint(ep.id!)}
-                                            className="accent-purple-500"
+                                            className="accent-[#249d9f]"
                                         />
                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getMethodColor(ep.method, theme)}`}>
                                             {ep.method}
@@ -304,7 +304,7 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                 <div className="mt-4">
                                     <button
                                         onClick={() => setShowExtracted(!showExtracted)}
-                                        className={`flex items-center gap-2 text-xs font-bold ${themeClasses.subTextColor} hover:text-purple-400 transition-colors`}
+                                        className={`flex items-center gap-2 text-xs font-bold ${themeClasses.subTextColor} hover:text-[#2ec4c7] transition-colors`}
                                     >
                                         {showExtracted ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                                         <ArrowRight size={12} />
@@ -317,7 +317,7 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                                 .filter(([key]) => runVariables[key] !== variables[key])
                                                 .map(([key, val]) => (
                                                     <div key={key} className="flex items-center gap-2 text-xs">
-                                                        <code className="text-purple-400">{`{{${key}}}`}</code>
+                                                        <code className="text-[#2ec4c7]">{`{{${key}}}`}</code>
                                                         <ArrowRight size={10} className={themeClasses.subTextColor} />
                                                         <code className="text-green-400 truncate max-w-[400px]">{val}</code>
                                                     </div>

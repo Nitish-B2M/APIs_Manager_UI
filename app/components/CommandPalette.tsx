@@ -228,15 +228,15 @@ export default function CommandPalette() {
                                 key={`${item.type}-${item.id || item.name}-${index}`}
                                 onClick={item.action}
                                 className={`px-4 py-3 flex items-center gap-4 cursor-pointer transition-all ${index === selectedIndex
-                                    ? (theme === 'dark' ? 'bg-indigo-500/20 text-white' : 'bg-indigo-50 text-indigo-700')
+                                    ? (theme === 'dark' ? 'bg-[#249d9f]/20 text-white' : 'bg-indigo-50 text-[#1a7a7c]')
                                     : (theme === 'dark' ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-50')
                                     }`}
                             >
                                 <div className={`p-2 rounded-lg ${index === selectedIndex
-                                    ? (theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100')
+                                    ? (theme === 'dark' ? 'bg-[#249d9f]/20' : 'bg-indigo-100')
                                     : (theme === 'dark' ? 'bg-white/5' : 'bg-gray-100')
                                     }`}>
-                                    <item.icon size={18} className={index === selectedIndex ? 'text-indigo-500' : ''} />
+                                    <item.icon size={18} className={index === selectedIndex ? 'text-[#249d9f]' : ''} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
@@ -255,7 +255,7 @@ export default function CommandPalette() {
                                             {item.section}
                                         </p>
                                         {item.matchType && (
-                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#249d9f]/10 text-[#2ec4c7] border border-[#249d9f]/20">
                                                 Matched {item.matchType}
                                             </span>
                                         )}

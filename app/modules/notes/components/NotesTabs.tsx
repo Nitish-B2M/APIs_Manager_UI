@@ -24,9 +24,9 @@ export default function NotesTabs({ openNotes, activeNoteId, onSelect, onClose }
                     title={note.title || 'Untitled Note'}
                 >
                     {note.id === 'settings' ? (
-                        <Settings size={14} className={`notes-tab-icon ${activeNoteId === note.id ? 'text-violet-400' : ''}`} />
+                        <Settings size={14} className={`notes-tab-icon ${activeNoteId === note.id ? 'text-[#2ec4c7]' : ''}`} />
                     ) : (
-                        <StickyNote size={14} className={`notes-tab-icon ${activeNoteId === note.id ? 'text-violet-400' : ''}`} />
+                        <StickyNote size={14} className={`notes-tab-icon ${activeNoteId === note.id ? 'text-[#2ec4c7]' : ''}`} />
                     )}
                     <span className="notes-tab-title">{note.title || 'Untitled Note'}</span>
                     <button

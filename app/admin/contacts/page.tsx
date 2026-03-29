@@ -67,7 +67,7 @@ export default function ContactsAdminPage() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'NEW': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-            case 'IN_PROGRESS': return 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20';
+            case 'IN_PROGRESS': return 'text-[#2ec4c7] bg-[#2ec4c7]/10 border-[#2ec4c7]/20';
             case 'RESOLVED': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
             default: return 'text-slate-400 bg-slate-400/10 border-slate-400/20';
         }
@@ -100,7 +100,7 @@ export default function ContactsAdminPage() {
                             placeholder="Search messages..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full md:w-64 bg-black/5 dark:bg-white/5 border border-glass-border rounded-xl pl-9 pr-4 py-2 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-muted"
+                            className="w-full md:w-64 bg-black/5 dark:bg-white/5 border border-glass-border rounded-xl pl-9 pr-4 py-2 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 transition-all placeholder:text-muted"
                         />
                     </div>
                 </div>
@@ -113,7 +113,7 @@ export default function ContactsAdminPage() {
                         key={status}
                         onClick={() => setFilter(status)}
                         className={`px-4 py-2 rounded-xl text-sm font-bold tracking-wide uppercase whitespace-nowrap transition-all border ${filter === status
-                                ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
+                                ? 'bg-[#249d9f]/20 border-[#249d9f]/30 text-[#2ec4c7] shadow-[0_0_15px_rgba(99,102,241,0.2)]'
                                 : 'bg-black/5 dark:bg-white/5 border-glass-border text-muted hover:text-heading hover:bg-white/10'
                             }`}
                     >
@@ -131,7 +131,7 @@ export default function ContactsAdminPage() {
                 </div>
             ) : filteredMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-[#249d9f]/10 border border-[#249d9f]/20 flex items-center justify-center text-[#2ec4c7] mb-6">
                         <Mail size={32} />
                     </div>
                     <h3 className="text-xl font-bold text-heading mb-2">No Inquiries Found</h3>
@@ -140,9 +140,9 @@ export default function ContactsAdminPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredMessages.map(msg => (
-                        <GlassCard key={msg.id} className="p-6 flex flex-col hover:border-indigo-500/30 transition-all duration-300 relative group overflow-hidden">
+                        <GlassCard key={msg.id} className="p-6 flex flex-col hover:border-[#249d9f]/30 transition-all duration-300 relative group overflow-hidden">
                             {/* Hover Glow */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#249d9f]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
                             <div className="flex items-start justify-between mb-4 relative z-10">
                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border ${getStatusColor(msg.status)}`}>
@@ -155,7 +155,7 @@ export default function ContactsAdminPage() {
 
                             <div className="mb-4 relative z-10">
                                 <h3 className="text-lg font-bold text-heading truncate">{msg.name}</h3>
-                                <a href={`mailto:${msg.email}`} className="text-sm text-indigo-400 hover:underline">{msg.email}</a>
+                                <a href={`mailto:${msg.email}`} className="text-sm text-[#2ec4c7] hover:underline">{msg.email}</a>
                             </div>
 
                             <div className="flex-1 mb-6 relative z-10">
@@ -167,7 +167,7 @@ export default function ContactsAdminPage() {
                                     <select
                                         value={msg.status}
                                         onChange={(e) => updateStatus(msg.id, e.target.value)}
-                                        className="bg-black/10 dark:bg-white/10 border border-glass-border rounded-lg text-xs font-bold uppercase tracking-wider text-heading px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none cursor-pointer"
+                                        className="bg-black/10 dark:bg-white/10 border border-glass-border rounded-lg text-xs font-bold uppercase tracking-wider text-heading px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#249d9f]/50 appearance-none cursor-pointer"
                                     >
                                         <option value="NEW">New</option>
                                         <option value="IN_PROGRESS">In Progress</option>

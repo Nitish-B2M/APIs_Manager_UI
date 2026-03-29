@@ -80,7 +80,7 @@ export default function PublicDocsPage() {
         return (
             <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-12 h-12 border-4 border-[#249d9f] border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-sm font-medium animate-pulse">Fetching public documentation...</p>
                 </div>
             </div>
@@ -93,7 +93,7 @@ export default function PublicDocsPage() {
                 <div className="max-w-md text-center px-6">
                     <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">404 - Not Found</h1>
                     <p className="text-gray-500 mb-8 font-medium">This documentation might be private or doesn't exist.</p>
-                    <button onClick={() => router.push('/')} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition-all active:scale-95">
+                    <button onClick={() => router.push('/')} className="px-6 py-3 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white rounded-xl font-bold shadow-lg transition-all active:scale-95">
                         Back to Home
                     </button>
                 </div>
@@ -120,7 +120,7 @@ export default function PublicDocsPage() {
                                         <div className="w-16 h-16 bg-gray-700/50 rounded-2xl"></div>
                                         <div className="h-8 w-64 bg-gray-700/50 rounded-lg"></div>
                                     </div>
-                                    <div className="h-20 w-full bg-indigo-500/20 rounded-2xl"></div>
+                                    <div className="h-20 w-full bg-[#249d9f]/20 rounded-2xl"></div>
                                     <div className="h-32 w-full bg-gray-700/30 rounded-2xl"></div>
                                 </div>
                             ))}
@@ -130,13 +130,13 @@ export default function PublicDocsPage() {
 
                 {/* Main Modal */}
                 <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
-                    <div className="max-w-xl p-10 rounded-[2.5rem] border border-indigo-500/20 bg-indigo-500/5 backdrop-blur-[32px] text-center shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] animate-in zoom-in duration-500">
-                        <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-indigo-600/20 transform hover:scale-110 transition-transform">
+                    <div className="max-w-xl p-10 rounded-[2.5rem] border border-[#249d9f]/20 bg-[#249d9f]/5 backdrop-blur-[32px] text-center shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] animate-in zoom-in duration-500">
+                        <div className="w-20 h-20 bg-[#1a7a7c] rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-[#1a7a7c]/20 transform hover:scale-110 transition-transform">
                             <Beaker size={40} />
                         </div>
                         <h2 className="text-3xl font-black mb-6 tracking-tight">Beta Feature Required</h2>
                         <p className="text-gray-400 mb-10 leading-relaxed text-lg px-4 font-medium">
-                            The rendered Documentation Viewer is currently in <span className="text-indigo-400 font-bold">Phase 1 Beta</span>.
+                            The rendered Documentation Viewer is currently in <span className="text-[#2ec4c7] font-bold">Phase 1 Beta</span>.
                             Enable it now to unlock this interactive preview.
                         </p>
                         <div className="flex flex-col gap-4 px-8">
@@ -145,7 +145,7 @@ export default function PublicDocsPage() {
                                     toggleBeta();
                                     toast.success('Beta Mode Enabled! Enjoy the view.');
                                 }}
-                                className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-lg shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
+                                className="px-10 py-5 bg-[#1a7a7c] hover:bg-[#249d9f] text-white rounded-2xl font-black text-lg shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
                             >
                                 <Globe size={24} /> Enable Beta Mode
                             </button>
@@ -162,14 +162,14 @@ export default function PublicDocsPage() {
             {/* Simple Public Header */}
             <header className={`h-14 border-b flex items-center justify-between px-6 flex-shrink-0 backdrop-blur-md ${theme === 'dark' ? 'bg-[#0a0a0f]/80 border-white/5' : 'bg-white/80 border-gray-100'}`}>
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-[10px]">P</div>
+                    <div className="w-7 h-7 bg-[#1a7a7c] rounded-lg flex items-center justify-center text-white font-black text-[10px]">P</div>
                     <div>
                         <h1 className="text-xs font-black truncate max-w-[200px] leading-tight">{doc.title}</h1>
-                        <p className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest leading-none mt-0.5">Public Documentation</p>
+                        <p className="text-[9px] text-[#249d9f] font-bold uppercase tracking-widest leading-none mt-0.5">Public Documentation</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[8px] font-black uppercase tracking-widest text-indigo-500">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#249d9f]/10 border border-[#249d9f]/20 text-[8px] font-black uppercase tracking-widest text-[#249d9f]">
                         <Beaker size={8} /> Beta Viewer
                     </span>
                 </div>
@@ -183,13 +183,13 @@ export default function PublicDocsPage() {
 
                         {/* Search Input */}
                         <div className="relative group">
-                            <Search size={12} className={`absolute left-0 top-1/2 -translate-y-1/2 transition-colors ${theme === 'dark' ? 'text-gray-600 group-focus-within:text-indigo-500' : 'text-gray-400 group-focus-within:text-indigo-500'}`} />
+                            <Search size={12} className={`absolute left-0 top-1/2 -translate-y-1/2 transition-colors ${theme === 'dark' ? 'text-gray-600 group-focus-within:text-[#249d9f]' : 'text-gray-400 group-focus-within:text-[#249d9f]'}`} />
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search endpoints..."
-                                className={`w-full bg-transparent border-b pl-5 py-1.5 text-[10px] outline-none transition-all ${theme === 'dark' ? 'border-white/10 focus:border-indigo-500 text-white placeholder:text-gray-700' : 'border-gray-200 focus:border-indigo-500 text-gray-900'}`}
+                                className={`w-full bg-transparent border-b pl-5 py-1.5 text-[10px] outline-none transition-all ${theme === 'dark' ? 'border-white/10 focus:border-[#249d9f] text-white placeholder:text-gray-700' : 'border-gray-200 focus:border-[#249d9f] text-gray-900'}`}
                             />
                         </div>
 
@@ -202,7 +202,7 @@ export default function PublicDocsPage() {
                                     className={`text-[7px] font-black px-1.5 py-0.5 rounded transition-all border ${methodFilter === method
                                         ? (method === 'GET' ? 'bg-emerald-500 border-emerald-500 text-white' :
                                             method === 'POST' ? 'bg-blue-500 border-blue-500 text-white' :
-                                                'bg-indigo-600 border-indigo-600 text-white')
+                                                'bg-[#1a7a7c] border-[#1a7a7c] text-white')
                                         : (theme === 'dark' ? 'border-white/10 text-gray-500 hover:border-white/20' : 'border-gray-200 text-gray-400 hover:border-gray-300')
                                         }`}
                                 >
@@ -226,8 +226,8 @@ export default function PublicDocsPage() {
                                     key={ep.id || idxArr}
                                     href={`#request-${ep.id || idxArr}`}
                                     className={`group flex items-center gap-2.5 p-2 rounded-lg transition-all border ${activeId === `request-${ep.id || idxArr}`
-                                        ? (theme === 'dark' ? 'border-indigo-500/50 bg-indigo-500/10 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-700')
-                                        : `border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5 ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-indigo-600'}`
+                                        ? (theme === 'dark' ? 'border-[#249d9f]/50 bg-[#249d9f]/10 text-white' : 'border-indigo-200 bg-indigo-50 text-[#1a7a7c]')
+                                        : `border-transparent hover:border-[#249d9f]/20 hover:bg-[#249d9f]/5 ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-[#1a7a7c]'}`
                                         }`}
                                 >
                                     <span className={`text-[8px] font-black w-8 text-center py-0.5 rounded shadow-sm ${ep.method === 'GET' ? 'bg-emerald-500/10 text-emerald-500' :
@@ -271,7 +271,7 @@ export default function PublicDocsPage() {
                                                 <h2 className="text-xl font-black">{ep.name || 'Untitled Request'}</h2>
                                             </div>
 
-                                            <div className={`group relative p-3 rounded-xl border font-mono text-xs transition-all hover:shadow-lg hover:shadow-indigo-500/5 ${theme === 'dark' ? 'bg-indigo-500/5 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-700'}`}>
+                                            <div className={`group relative p-3 rounded-xl border font-mono text-xs transition-all hover:shadow-lg hover:shadow-[#249d9f]/5 ${theme === 'dark' ? 'bg-[#249d9f]/5 border-[#249d9f]/20 text-[#2ec4c7]' : 'bg-indigo-50 border-indigo-200 text-[#1a7a7c]'}`}>
                                                 <div className="flex items-center justify-between">
                                                     <span className="truncate pr-4 font-bold">{resolveUrl(ep)}</span>
                                                     <button
@@ -308,7 +308,7 @@ export default function PublicDocsPage() {
                                                             <tbody className="divide-y divide-white/5">
                                                                 {ep.headers.map((h: any, hi: number) => (
                                                                     <tr key={hi} className="hover:bg-white/[0.02] transition-colors">
-                                                                        <td className="px-4 py-2.5 font-mono text-indigo-400 font-bold">{h.key}</td>
+                                                                        <td className="px-4 py-2.5 font-mono text-[#2ec4c7] font-bold">{h.key}</td>
                                                                         <td className="px-4 py-2.5 text-gray-400 truncate max-w-[200px]">{h.value}</td>
                                                                     </tr>
                                                                 ))}
