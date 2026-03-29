@@ -224,6 +224,35 @@ function DashboardContent() {
                     </div>
                 </div>
 
+                {/* Email Verification Banner */}
+                {me && me.emailVerified === false && (
+                    <div className="mb-8 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex items-start gap-4">
+                        <div className="p-2 bg-amber-500/20 rounded-xl text-amber-400 flex-shrink-0">
+                            <Mail size={20} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-amber-300 mb-1">Verify your email</h3>
+                            <p className="text-sm text-amber-200/70">
+                                We sent a verification link to <strong>{me.email}</strong>. Check your inbox and click the link to unlock all features.
+                            </p>
+                        </div>
+                        <PremiumButton
+                            variant="outline"
+                            onClick={async () => {
+                                try {
+                                    await api.auth.resendVerification();
+                                    toast.success('Verification email sent!');
+                                } catch (err: any) {
+                                    toast.error(err.message || 'Failed to resend');
+                                }
+                            }}
+                            className="flex-shrink-0 text-xs"
+                        >
+                            Resend Email
+                        </PremiumButton>
+                    </div>
+                )}
+
                 {invites.length > 0 && (
                     <div className="mb-12">
                         <div className="flex items-center gap-2 mb-6">

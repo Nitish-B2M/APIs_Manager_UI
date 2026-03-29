@@ -12,11 +12,16 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'DevManus',
   description: 'The Ultimate Workspace for Developers. Write API docs, manage tasks, take rich notes, and schedule your time securely from one unified platform.',
+  manifest: '/manifest.json',
+  themeColor: '#6366f1',
+  viewport: { width: 'device-width', initialScale: 1, maximumScale: 1 },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'DevManus' },
 };
 
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { BetaModeProvider } from '../context/BetaModeContext';
+import { GithubAccountProvider } from '../context/GithubAccountContext';
 
 export default function RootLayout({
   children,
@@ -29,13 +34,15 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider>
             <BetaModeProvider>
-              <Provider>
-                <Toaster position="bottom-right" />
-                <Header />
-                {children}
-                <CommandPalette />
-                <SystemResourceWidget />
-              </Provider>
+              <GithubAccountProvider>
+                <Provider>
+                  <Toaster position="bottom-right" />
+                  <Header />
+                  {children}
+                  <CommandPalette />
+                  <SystemResourceWidget />
+                </Provider>
+              </GithubAccountProvider>
             </BetaModeProvider>
           </ThemeProvider>
         </AuthProvider>
