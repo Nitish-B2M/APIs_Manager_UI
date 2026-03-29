@@ -10,6 +10,7 @@ import { registerSchema } from '../../types';
 import { ZodError } from 'zod';
 import { PublicOnlyRoute } from '../../components/AuthGuard';
 import { useAuth } from '../../context/AuthContext';
+import PasswordStrength from '../../components/PasswordStrength';
 
 interface FormErrors {
     email?: string;
@@ -123,9 +124,10 @@ export default function RegisterPage() {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="min. 6 characters"
+                                placeholder="Min 8 chars, upper, lower, number, symbol"
                                 className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${errors.password ? inputErrorBg : inputBg}`}
                             />
+                            <PasswordStrength password={password} />
                             {errors.password && (
                                 <div className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
                                     <AlertCircle size={12} />

@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { KeyRound } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { PublicOnlyRoute } from '../../components/AuthGuard';
+import PasswordStrength, { getPasswordStrength } from '../../components/PasswordStrength';
 
 function ResetPasswordContent() {
     const [password, setPassword] = useState('');
@@ -35,8 +36,9 @@ function ResetPasswordContent() {
             return;
         }
 
-        if (password.length < 6) {
-            toast.error('Password must be at least 6 characters');
+        const strength = getPasswordStrength(password);
+        if (strength.passed < strength.total) {
+            toast.error('Password does not meet all requirements');
             return;
         }
 
@@ -96,6 +98,7 @@ function ResetPasswordContent() {
                             className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all font-medium ${inputBg}`}
                             required
                         />
+                        <PasswordStrength password={password} />
                     </div>
                     <div className="space-y-1.5">
                         <label className={`block text-xs font-black uppercase tracking-widest ${subTextColor}`}>

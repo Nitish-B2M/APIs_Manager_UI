@@ -2,9 +2,11 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001
 
 export function getHeaders() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const githubAccountId = typeof window !== 'undefined' ? localStorage.getItem('github_active_account_id') : null;
     return {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(githubAccountId ? { 'x-github-account-id': githubAccountId } : {}),
     };
 }
 
@@ -35,6 +37,10 @@ export const api = {
         updateProfile: (data: { name?: string; avatarUrl?: string | null; settings?: Record<string, any> }) => apiFetch('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
         resetPassword: (token: string, password: string) => apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
         forgotPassword: (email: string) => apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+        verifyEmail: (token: string) => apiFetch('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
+        resendVerification: () => apiFetch('/auth/resend-verification', { method: 'POST' }),
+        refreshToken: () => apiFetch('/auth/refresh', { method: 'POST' }),
+        logout: () => apiFetch('/auth/logout', { method: 'POST' }),
         getPresence: (docId: string) => apiFetch(`/collaboration/presence/${docId}`),
     },
     documentation: {
@@ -57,6 +63,8 @@ export const api = {
         exportPostman: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/postman`, { headers: getHeaders() }).then(r => r.blob()),
         exportOpenApi: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/openapi`, { headers: getHeaders() }).then(r => r.blob()),
         getAuditLogs: (id: string) => apiFetch(`/documentation/${id}/audit-logs`),
+        getRequestHistory: (requestId: string, page = 1, limit = 30) => apiFetch(`/documentation/request/${requestId}/history?page=${page}&limit=${limit}`),
+        clearRequestHistory: (requestId: string) => apiFetch(`/documentation/request/${requestId}/history`, { method: 'DELETE' }),
     },
     folders: {
         list: (documentationId: string) => apiFetch(`/documentation/${documentationId}/folders`),
@@ -139,16 +147,28 @@ export const api = {
         getOne: (id: string) => apiFetch(`/documentation/snapshots/${id}`),
     },
     todos: {
-        list: () => apiFetch('/todos'),
+        list: (referenceId?: string, referenceType?: string) => {
+            const params = new URLSearchParams();
+            if (referenceId) params.append('referenceId', referenceId);
+            if (referenceType) params.append('referenceType', referenceType);
+            const query = params.toString();
+            return apiFetch(`/todos${query ? `?${query}` : ''}`);
+        },
         create: (data: any) => apiFetch('/todos', { method: 'POST', body: JSON.stringify(data) }),
-        update: (id: string, data: any) => apiFetch(`/todos/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        update: (id: string, data: any) => apiFetch(`/todos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
         delete: (id: string) => apiFetch(`/todos/${id}`, { method: 'DELETE' }),
         toggle: (id: string) => apiFetch(`/todos/${id}/toggle`, { method: 'PATCH' }),
     },
     notes: {
-        list: () => apiFetch('/notes'),
+        list: (referenceId?: string, referenceType?: string) => {
+            const params = new URLSearchParams();
+            if (referenceId) params.append('referenceId', referenceId);
+            if (referenceType) params.append('referenceType', referenceType);
+            const query = params.toString();
+            return apiFetch(`/notes${query ? `?${query}` : ''}`);
+        },
         create: (data: any) => apiFetch('/notes', { method: 'POST', body: JSON.stringify(data) }),
-        update: (id: string, data: any) => apiFetch(`/notes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        update: (id: string, data: any) => apiFetch(`/notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
         delete: (id: string) => apiFetch(`/notes/${id}`, { method: 'DELETE' }),
     },
     scheduler: {
@@ -178,5 +198,91 @@ export const api = {
     mock: {
         getConfig: (requestId: string) => apiFetch(`/mock/config/${requestId}`),
         updateConfig: (data: any) => apiFetch('/mock/config', { method: 'POST', body: JSON.stringify(data) }),
-    }
+    },
+    workspaces: {
+        list: (page = 1, limit = 20) => apiFetch(`/workspaces?page=${page}&limit=${limit}`),
+        create: (data: { name: string; description?: string }) => apiFetch('/workspaces', { method: 'POST', body: JSON.stringify(data) }),
+        getById: (id: string) => apiFetch(`/workspaces/${id}`),
+        update: (id: string, data: any) => apiFetch(`/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id: string) => apiFetch(`/workspaces/${id}`, { method: 'DELETE' }),
+        addMember: (id: string, email: string, role = 'MEMBER') => apiFetch(`/workspaces/${id}/members`, { method: 'POST', body: JSON.stringify({ email, role }) }),
+        removeMember: (id: string, userId: string) => apiFetch(`/workspaces/${id}/members/${userId}`, { method: 'DELETE' }),
+        moveCollection: (wsId: string, docId: string) => apiFetch(`/workspaces/${wsId}/collections/${docId}`, { method: 'PATCH' }),
+    },
+    tags: {
+        list: () => apiFetch('/tags'),
+        create: (name: string, color?: string) => apiFetch('/tags', { method: 'POST', body: JSON.stringify({ name, color }) }),
+        update: (id: string, data: { name?: string; color?: string }) => apiFetch(`/tags/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id: string) => apiFetch(`/tags/${id}`, { method: 'DELETE' }),
+        assign: (tagId: string, entityId: string, entityType: string) => apiFetch('/tags/assign', { method: 'POST', body: JSON.stringify({ tagId, entityId, entityType }) }),
+        unassign: (tagId: string, entityId: string, entityType: string) => apiFetch('/tags/unassign', { method: 'POST', body: JSON.stringify({ tagId, entityId, entityType }) }),
+        getForEntity: (entityType: string, entityId: string) => apiFetch(`/tags/entity/${entityType}/${entityId}`),
+        search: (tagId: string) => apiFetch(`/tags/search/${tagId}`),
+    },
+    notifications: {
+        list: (page = 1) => apiFetch(`/notifications?page=${page}`),
+        markRead: (id: string) => apiFetch(`/notifications/${id}/read`, { method: 'PATCH' }),
+        markAllRead: () => apiFetch('/notifications/read-all', { method: 'PATCH' }),
+        delete: (id: string) => apiFetch(`/notifications/${id}`, { method: 'DELETE' }),
+    },
+    comments: {
+        list: (requestId: string) => apiFetch(`/comments/${requestId}`),
+        create: (requestId: string, content: string, parentId?: string) => apiFetch(`/comments/${requestId}`, { method: 'POST', body: JSON.stringify({ content, parentId }) }),
+        update: (commentId: string, content: string) => apiFetch(`/comments/${commentId}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
+        resolve: (commentId: string) => apiFetch(`/comments/${commentId}/resolve`, { method: 'PATCH' }),
+        delete: (commentId: string) => apiFetch(`/comments/${commentId}`, { method: 'DELETE' }),
+    },
+    requestTemplates: {
+        list: (category?: string) => apiFetch(`/templates${category ? `?category=${category}` : ''}`),
+        create: (data: any) => apiFetch('/templates', { method: 'POST', body: JSON.stringify(data) }),
+        createFromRequest: (requestId: string) => apiFetch(`/templates/from-request/${requestId}`, { method: 'POST' }),
+        delete: (id: string) => apiFetch(`/templates/${id}`, { method: 'DELETE' }),
+    },
+    search: {
+        query: (q: string, type = 'all', method?: string) => {
+            const params = new URLSearchParams({ q, type });
+            if (method) params.set('method', method);
+            return apiFetch(`/search?${params.toString()}`);
+        },
+    },
+    execute: {
+        run: (data: any) => apiFetch('/execute', { method: 'POST', body: JSON.stringify(data) }),
+        graphqlIntrospect: (url: string, headers?: Record<string, string>) => apiFetch('/execute/graphql/introspect', { method: 'POST', body: JSON.stringify({ url, headers }) }),
+        collection: (data: any) => apiFetch('/execute/collection', { method: 'POST', body: JSON.stringify(data) }),
+    },
+    git: {
+        listRepos: () => apiFetch('/git/repos'),
+        addRepo: (path: string) => apiFetch('/git/repos', { method: 'POST', body: JSON.stringify({ path }) }),
+        removeRepo: (id: string) => apiFetch(`/git/repos/${id}`, { method: 'DELETE' }),
+        status: (path: string) => apiFetch('/git/status', { method: 'POST', body: JSON.stringify({ path }) }),
+        diff: (path: string, file: string, staged = false) => apiFetch('/git/diff', { method: 'POST', body: JSON.stringify({ path, file, staged }) }),
+        stage: (path: string, files?: string[], all = false) => apiFetch('/git/stage', { method: 'POST', body: JSON.stringify({ path, files, all }) }),
+        unstage: (path: string, files?: string[], all = false) => apiFetch('/git/unstage', { method: 'POST', body: JSON.stringify({ path, files, all }) }),
+        discard: (path: string, files: string[]) => apiFetch('/git/discard', { method: 'POST', body: JSON.stringify({ path, files }) }),
+        commit: (path: string, message: string) => apiFetch('/git/commit', { method: 'POST', body: JSON.stringify({ path, message }) }),
+        push: (path: string, remote?: string, branch?: string) => apiFetch('/git/push', { method: 'POST', body: JSON.stringify({ path, remote, branch }) }),
+        pull: (path: string, remote?: string, branch?: string) => apiFetch('/git/pull', { method: 'POST', body: JSON.stringify({ path, remote, branch }) }),
+        fetch: (path: string, remote?: string) => apiFetch('/git/fetch', { method: 'POST', body: JSON.stringify({ path, remote }) }),
+        branches: (path: string) => apiFetch('/git/branches', { method: 'POST', body: JSON.stringify({ path }) }),
+        switchBranch: (path: string, branch: string) => apiFetch('/git/branches/switch', { method: 'POST', body: JSON.stringify({ path, branch }) }),
+        createBranch: (path: string, branch: string) => apiFetch('/git/branches/create', { method: 'POST', body: JSON.stringify({ path, branch }) }),
+        deleteBranch: (path: string, branch: string, force = false) => apiFetch('/git/branches/delete', { method: 'POST', body: JSON.stringify({ path, branch, force }) }),
+        mergeBranch: (path: string, branch: string) => apiFetch('/git/branches/merge', { method: 'POST', body: JSON.stringify({ path, branch }) }),
+        log: (path: string, limit = 50, skip = 0) => apiFetch('/git/log', { method: 'POST', body: JSON.stringify({ path, limit, skip }) }),
+        stash: (path: string, message?: string) => apiFetch('/git/stash', { method: 'POST', body: JSON.stringify({ path, message }) }),
+        stashPop: (path: string) => apiFetch('/git/stash/pop', { method: 'POST', body: JSON.stringify({ path }) }),
+        stashList: (path: string) => apiFetch('/git/stash/list', { method: 'POST', body: JSON.stringify({ path }) }),
+        clone: (url: string, targetDir: string) => apiFetch('/git/clone', { method: 'POST', body: JSON.stringify({ url, targetDir }) }),
+        remotes: (path: string) => apiFetch('/git/remotes', { method: 'POST', body: JSON.stringify({ path }) }),
+        addRemote: (path: string, name: string, url: string) => apiFetch('/git/remotes/add', { method: 'POST', body: JSON.stringify({ path, name, url }) }),
+        removeRemote: (path: string, name: string) => apiFetch('/git/remotes/remove', { method: 'POST', body: JSON.stringify({ path, name }) }),
+    },
+    github: {
+        getAuthUrl: () => apiFetch('/auth/github/authorize'),
+        listAccounts: () => apiFetch('/auth/github/accounts'),
+        activateAccount: (id: string) => apiFetch(`/auth/github/accounts/${id}/activate`, { method: 'PATCH' }),
+        removeAccount: (id: string) => apiFetch(`/auth/github/accounts/${id}`, { method: 'DELETE' }),
+        validateAccount: (id: string) => apiFetch(`/auth/github/accounts/${id}/validate`),
+        getGitStatus: () => apiFetch('/auth/github/git-status'),
+    },
 };
