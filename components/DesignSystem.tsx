@@ -10,8 +10,8 @@ import React from 'react';
 
 export const tokens = {
     colors: {
-        primary: '#6366f1',
-        primaryHover: '#4f46e5',
+        primary: '#249d9f',
+        primaryHover: '#1a7a7c',
         success: '#22c55e',
         warning: '#f59e0b',
         danger: '#ef4444',
@@ -46,7 +46,7 @@ export function FormInput({ label, error, hint, className, ...props }: InputProp
                 </label>
             )}
             <input
-                className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#249d9f] transition-all
                     ${error
                         ? 'border-red-500 bg-red-500/5'
                         : 'border-[var(--border-primary)] bg-[var(--bg-secondary)]'
@@ -73,7 +73,7 @@ export function FormSelect({ label, error, options, className, ...props }: Selec
         <div className="space-y-1.5">
             {label && <label className="block text-xs font-bold uppercase tracking-wider text-muted">{label}</label>}
             <select
-                className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border-[var(--border-primary)] bg-[var(--bg-secondary)] ${className || ''}`}
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#249d9f] transition-all border-[var(--border-primary)] bg-[var(--bg-secondary)] ${className || ''}`}
                 {...props}
             >
                 {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -95,7 +95,7 @@ export function FormTextarea({ label, error, className, ...props }: TextareaProp
         <div className="space-y-1.5">
             {label && <label className="block text-xs font-bold uppercase tracking-wider text-muted">{label}</label>}
             <textarea
-                className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none border-[var(--border-primary)] bg-[var(--bg-secondary)] ${className || ''}`}
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#249d9f] transition-all resize-none border-[var(--border-primary)] bg-[var(--bg-secondary)] ${className || ''}`}
                 {...props}
             />
             {error && <p className="text-[11px] text-red-400">{error}</p>}
@@ -116,7 +116,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-    primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20',
+    primary: 'bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white shadow-lg shadow-[#249d9f]/20',
     secondary: 'bg-white/5 hover:bg-white/10 text-heading border border-white/10',
     danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20',
     ghost: 'hover:bg-white/5 text-muted hover:text-heading',

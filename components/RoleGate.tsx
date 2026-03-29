@@ -73,7 +73,7 @@ export function RoleBadge({ role }: { role: UserRole | undefined }) {
     if (!role) return null;
 
     const colors: Record<UserRole, string> = {
-        OWNER: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        OWNER: 'bg-[#249d9f]/20 text-[#2ec4c7] border-[#249d9f]/30',
         ADMIN: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
         EDITOR: 'bg-green-500/20 text-green-400 border-green-500/30',
         VIEWER: 'bg-gray-500/20 text-gray-400 border-gray-500/30',

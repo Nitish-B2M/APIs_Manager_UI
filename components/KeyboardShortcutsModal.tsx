@@ -42,8 +42,8 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                 {/* Header */}
                 <div className={`flex items-center justify-between p-4 border-b ${borderCol}`}>
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-600/20' : 'bg-indigo-50'}`}>
-                            <Keyboard size={20} className="text-indigo-500" />
+                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-[#1a7a7c]/20' : 'bg-indigo-50'}`}>
+                            <Keyboard size={20} className="text-[#249d9f]" />
                         </div>
                         <div>
                             <h2 className={`font-bold ${textColor}`}>Keyboard Shortcuts</h2>

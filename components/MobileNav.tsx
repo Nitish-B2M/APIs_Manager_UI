@@ -49,7 +49,7 @@ export default function MobileNav() {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-6">
-                            <span className="text-lg font-bold bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">DevManus</span>
+                            <span className="text-lg font-bold bg-gradient-to-r from-[#249d9f] to-[#249d9f] bg-clip-text text-transparent">DevManus</span>
                             <button onClick={() => setOpen(false)} className="p-1 rounded-lg text-muted hover:text-heading">
                                 <X size={20} />
                             </button>
@@ -66,7 +66,7 @@ export default function MobileNav() {
                                         onClick={() => setOpen(false)}
                                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                                             active
-                                                ? 'bg-indigo-500/10 text-indigo-400 border-l-2 border-indigo-500'
+                                                ? 'bg-[#249d9f]/10 text-[#2ec4c7] border-l-2 border-[#249d9f]'
                                                 : 'text-muted hover:text-heading hover:bg-white/5'
                                         }`}
                                     >
