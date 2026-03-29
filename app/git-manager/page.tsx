@@ -377,7 +377,7 @@ export default function GitManagerPage() {
                             {/* Repos Header */}
                             <div className="p-3 border-b border-inherit flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <FolderGit2 size={16} className="text-indigo-400" />
+                                    <FolderGit2 size={16} className="text-[#2ec4c7]" />
                                     <span className="text-sm font-bold">Repositories</span>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -400,7 +400,7 @@ export default function GitManagerPage() {
                                         onKeyDown={e => e.key === 'Enter' && addRepo()}
                                     />
                                     <div className="flex gap-2">
-                                        <button onClick={addRepo} disabled={loading === 'addRepo'} className="flex-1 text-xs py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-50">
+                                        <button onClick={addRepo} disabled={loading === 'addRepo'} className="flex-1 text-xs py-1.5 rounded-lg bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white font-medium disabled:opacity-50">
                                             {loading === 'addRepo' ? 'Adding...' : 'Add'}
                                         </button>
                                         <button onClick={() => setShowAddRepo(false)} className="text-xs py-1.5 px-3 rounded-lg text-muted hover:text-heading">Cancel</button>
@@ -424,7 +424,7 @@ export default function GitManagerPage() {
                                         onKeyDown={e => { if (e.key === 'Enter') { setActiveRepo(repo); setSelectedFile(null); setDiff(''); setTab('changes'); }}}
                                         className={`w-full text-left px-3 py-2.5 border-b border-inherit transition-all group cursor-pointer ${
                                             activeRepo?.id === repo.id
-                                                ? (dark ? 'bg-indigo-500/10 border-l-2 border-l-indigo-500' : 'bg-indigo-50 border-l-2 border-l-indigo-500')
+                                                ? (dark ? 'bg-[#249d9f]/10 border-l-2 border-l-[#249d9f]' : 'bg-indigo-50 border-l-2 border-l-[#249d9f]')
                                                 : 'hover:bg-white/5'
                                         }`}
                                     >
@@ -436,7 +436,7 @@ export default function GitManagerPage() {
                                         </div>
                                         {repo.branch && (
                                             <div className="flex items-center gap-1 mt-0.5">
-                                                <GitBranch size={10} className="text-indigo-400" />
+                                                <GitBranch size={10} className="text-[#2ec4c7]" />
                                                 <span className={`text-[10px] ${sub}`}>{repo.branch}</span>
                                             </div>
                                         )}
@@ -471,7 +471,7 @@ export default function GitManagerPage() {
                                     <p className={`font-medium mb-1`}>Select a repository</p>
                                     <p className={`text-sm ${sub}`}>{sidebarOpen ? 'Add a repo from the sidebar or select an existing one' : 'Open the sidebar to select a repo'}</p>
                                     {!sidebarOpen && (
-                                        <button onClick={() => setSidebarOpen(true)} className="mt-3 text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Open Sidebar</button>
+                                        <button onClick={() => setSidebarOpen(true)} className="mt-3 text-xs px-3 py-1.5 rounded-lg bg-[#1a7a7c] text-white hover:bg-[#1a7a7c]">Open Sidebar</button>
                                     )}
                                 </div>
                             </div>
@@ -480,9 +480,9 @@ export default function GitManagerPage() {
                                 {/* Top Bar: Branch + Push/Pull */}
                                 <div className={`px-4 py-2.5 border-b flex items-center justify-between ${dark ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'}`}>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-                                            <GitBranch size={14} className="text-indigo-400" />
-                                            <span className="text-sm font-bold text-indigo-400">{branch || 'detached'}</span>
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#249d9f]/10 border border-[#249d9f]/20">
+                                            <GitBranch size={14} className="text-[#2ec4c7]" />
+                                            <span className="text-sm font-bold text-[#2ec4c7]">{branch || 'detached'}</span>
                                         </div>
                                         {ahead > 0 && <span className="text-xs text-green-400 flex items-center gap-1"><ArrowUp size={12} />{ahead}</span>}
                                         {behind > 0 && <span className="text-xs text-amber-400 flex items-center gap-1"><ArrowDown size={12} />{behind}</span>}
@@ -492,7 +492,7 @@ export default function GitManagerPage() {
                                         <button onClick={doPull} disabled={!!loading} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all disabled:opacity-50">
                                             {loading === 'pull' ? <Loader2 size={12} className="animate-spin" /> : <ArrowDown size={12} />} Pull
                                         </button>
-                                        <button onClick={doPush} disabled={!!loading} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-all disabled:opacity-50">
+                                        <button onClick={doPush} disabled={!!loading} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white transition-all disabled:opacity-50">
                                             {loading === 'push' ? <Loader2 size={12} className="animate-spin" /> : <ArrowUp size={12} />} Push
                                         </button>
                                         <button onClick={refreshAll} className="p-1.5 rounded-lg text-muted hover:text-heading hover:bg-white/5 transition-all">
@@ -508,12 +508,12 @@ export default function GitManagerPage() {
                                             key={id}
                                             onClick={() => setTab(id as Tab)}
                                             className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${
-                                                tab === id ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-muted hover:text-heading'
+                                                tab === id ? 'border-[#249d9f] text-[#2ec4c7]' : 'border-transparent text-muted hover:text-heading'
                                             }`}
                                         >
                                             <Icon size={13} />{label}
                                             {id === 'changes' && files.length > 0 && (
-                                                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-400">{files.length}</span>
+                                                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#249d9f]/20 text-[#2ec4c7]">{files.length}</span>
                                             )}
                                         </button>
                                     ))}
@@ -539,7 +539,7 @@ export default function GitManagerPage() {
                                                                     key={`s-${f.path}`}
                                                                     onClick={() => { setSelectedFile(f); fetchDiff(activeRepo.path, f); }}
                                                                     className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all text-xs group ${
-                                                                        selectedFile?.path === f.path && selectedFile?.staged === f.staged ? (dark ? 'bg-indigo-500/10' : 'bg-indigo-50') : 'hover:bg-white/5'
+                                                                        selectedFile?.path === f.path && selectedFile?.staged === f.staged ? (dark ? 'bg-[#249d9f]/10' : 'bg-indigo-50') : 'hover:bg-white/5'
                                                                     }`}
                                                                 >
                                                                     {statusIcon(f.status)}
@@ -569,7 +569,7 @@ export default function GitManagerPage() {
                                                                 key={`u-${f.path}`}
                                                                 onClick={() => { setSelectedFile(f); fetchDiff(activeRepo.path, f); }}
                                                                 className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all text-xs group ${
-                                                                    selectedFile?.path === f.path && selectedFile?.staged === f.staged ? (dark ? 'bg-indigo-500/10' : 'bg-indigo-50') : 'hover:bg-white/5'
+                                                                    selectedFile?.path === f.path && selectedFile?.staged === f.staged ? (dark ? 'bg-[#249d9f]/10' : 'bg-indigo-50') : 'hover:bg-white/5'
                                                                 }`}
                                                             >
                                                                 {statusIcon(f.status)}
@@ -597,7 +597,7 @@ export default function GitManagerPage() {
                                                     <button
                                                         onClick={doCommit}
                                                         disabled={!commitMsg.trim() || stagedFiles.length === 0 || !!loading}
-                                                        className="w-full mt-2 py-2 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                                        className="w-full mt-2 py-2 text-xs font-bold rounded-lg bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                     >
                                                         {loading === 'commit' ? <Loader2 size={12} className="animate-spin" /> : <GitCommit size={13} />}
                                                         Commit ({stagedFiles.length} file{stagedFiles.length !== 1 ? 's' : ''})
@@ -700,7 +700,7 @@ export default function GitManagerPage() {
                                                 <div key={c.hash} className={`px-4 py-3 border-b transition-all hover:bg-white/5 ${dark ? 'border-gray-700/50' : 'border-gray-100'}`}>
                                                     <div className="flex items-start gap-3">
                                                         <div className="mt-1">
-                                                            <GitCommit size={14} className="text-indigo-400" />
+                                                            <GitCommit size={14} className="text-[#2ec4c7]" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-medium truncate">{c.message}</p>
@@ -722,7 +722,7 @@ export default function GitManagerPage() {
                                         <div className="flex-1 overflow-y-auto">
                                             <div className={`px-4 py-2.5 border-b flex items-center justify-between ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
                                                 <span className={`text-xs font-bold ${sub}`}>LOCAL & REMOTE BRANCHES</span>
-                                                <button onClick={() => setShowBranchCreate(!showBranchCreate)} className="text-xs px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-1">
+                                                <button onClick={() => setShowBranchCreate(!showBranchCreate)} className="text-xs px-2.5 py-1 rounded-lg bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white font-medium flex items-center gap-1">
                                                     <Plus size={12} /> New Branch
                                                 </button>
                                             </div>
@@ -735,7 +735,7 @@ export default function GitManagerPage() {
                                                         className={`flex-1 text-xs rounded-lg px-3 py-2 border ${inputBg}`}
                                                         onKeyDown={e => e.key === 'Enter' && doCreateBranch()}
                                                     />
-                                                    <button onClick={doCreateBranch} className="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white font-medium">Create</button>
+                                                    <button onClick={doCreateBranch} className="text-xs px-3 py-2 rounded-lg bg-[#1a7a7c] text-white font-medium">Create</button>
                                                     <button onClick={() => setShowBranchCreate(false)} className="text-xs px-2 text-muted">Cancel</button>
                                                 </div>
                                             )}
@@ -751,7 +751,7 @@ export default function GitManagerPage() {
                                                     </div>
                                                     {!b.current && (
                                                         <div className="flex gap-1">
-                                                            <button onClick={() => doSwitchBranch(b.name)} className="text-[10px] px-2 py-1 rounded bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 font-medium">Switch</button>
+                                                            <button onClick={() => doSwitchBranch(b.name)} className="text-[10px] px-2 py-1 rounded bg-[#249d9f]/20 text-[#2ec4c7] hover:bg-[#249d9f]/30 font-medium">Switch</button>
                                                             <button onClick={() => doDeleteBranch(b.name)} className="text-[10px] px-2 py-1 rounded text-red-400 hover:bg-red-500/10">Delete</button>
                                                         </div>
                                                     )}
@@ -778,7 +778,7 @@ export default function GitManagerPage() {
                                             <div className={`px-4 py-2.5 border-b flex items-center justify-between ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
                                                 <span className={`text-xs font-bold ${sub}`}>STASH</span>
                                                 <div className="flex gap-2">
-                                                    <button onClick={doStash} disabled={files.length === 0} className="text-xs px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-1 disabled:opacity-40">
+                                                    <button onClick={doStash} disabled={files.length === 0} className="text-xs px-2.5 py-1 rounded-lg bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white font-medium flex items-center gap-1 disabled:opacity-40">
                                                         <Archive size={12} /> Stash Changes
                                                     </button>
                                                     {stashes.length > 0 && (
@@ -795,7 +795,7 @@ export default function GitManagerPage() {
                                                 </div>
                                             ) : stashes.map((s, i) => (
                                                 <div key={i} className={`px-4 py-2.5 border-b flex items-center gap-3 ${dark ? 'border-gray-700/50' : 'border-gray-100'}`}>
-                                                    <Archive size={14} className="text-indigo-400" />
+                                                    <Archive size={14} className="text-[#2ec4c7]" />
                                                     <span className="text-xs flex-1">{s}</span>
                                                 </div>
                                             ))}

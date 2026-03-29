@@ -68,7 +68,7 @@ export default function AccountSwitcher() {
             {/* Trigger Button */}
             <button
                 onClick={() => setOpen(!open)}
-                className="flex items-center gap-2 p-1 pr-2.5 rounded-full bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-all"
+                className="flex items-center gap-2 p-1 pr-2.5 rounded-full bg-white/5 border border-white/5 hover:border-[#249d9f]/30 transition-all"
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label="GitHub account switcher"

@@ -16,7 +16,7 @@ export default function AccountCard({ account, isActive, isInvalid, onSwitch, on
         <div
             className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                 isActive
-                    ? 'bg-indigo-500/10 border border-indigo-500/20'
+                    ? 'bg-[#249d9f]/10 border border-[#249d9f]/20'
                     : 'hover:bg-white/5 border border-transparent cursor-pointer'
             }`}
             onClick={!isActive ? onSwitch : undefined}

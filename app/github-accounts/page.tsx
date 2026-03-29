@@ -99,7 +99,7 @@ export default function GitHubAccountsPage() {
                     {gitStatus && (gitStatus.name || gitStatus.email) && (
                         <div className={`${cardBg} border rounded-xl p-5 mb-6`}>
                             <div className="flex items-center gap-3 mb-3">
-                                <div className={`p-1.5 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                <div className={`p-1.5 rounded-lg ${theme === 'dark' ? 'bg-[#249d9f]/10 text-[#2ec4c7]' : 'bg-indigo-50 text-[#1a7a7c]'}`}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
                                 </div>
                                 <div>
@@ -113,12 +113,12 @@ export default function GitHubAccountsPage() {
                                     <p className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${subTextColor}`}>~/.gitconfig</p>
                                     <div className="flex items-center gap-2">
                                         <span className={`${subTextColor}`}>user.name</span>
-                                        <span className="text-indigo-400">=</span>
+                                        <span className="text-[#2ec4c7]">=</span>
                                         <span className="font-semibold">{gitStatus.name || '(not set)'}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className={`${subTextColor}`}>user.email</span>
-                                        <span className="text-indigo-400">=</span>
+                                        <span className="text-[#2ec4c7]">=</span>
                                         <span className="font-semibold">{gitStatus.email || '(not set)'}</span>
                                     </div>
                                 </div>
@@ -129,7 +129,7 @@ export default function GitHubAccountsPage() {
                                         <p className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${subTextColor}`}>Push Authentication (Credential Manager)</p>
                                         <div className="flex items-center gap-2">
                                             <span className={`${subTextColor}`}>git push / git CLI</span>
-                                            <span className="text-indigo-400">&rarr;</span>
+                                            <span className="text-[#2ec4c7]">&rarr;</span>
                                             <span className="font-semibold">
                                                 {gitStatus.credentials.gitCli ? (
                                                     <span className="text-green-400">@{gitStatus.credentials.gitCli}</span>
@@ -160,7 +160,7 @@ export default function GitHubAccountsPage() {
                             <button
                                 onClick={addAccount}
                                 disabled={loading}
-                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-2 px-4 py-2 bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                                 {loading ? 'Redirecting...' : 'Add Account'}
@@ -202,15 +202,15 @@ export default function GitHubAccountsPage() {
                         </div>
                         <div className={`space-y-3 text-sm ${subTextColor}`}>
                             <div className="flex items-start gap-3">
-                                <Key size={14} className="flex-shrink-0 mt-0.5 text-indigo-400" />
+                                <Key size={14} className="flex-shrink-0 mt-0.5 text-[#2ec4c7]" />
                                 <p><strong className="text-foreground">Encrypted at rest</strong> — Tokens are encrypted using AES-256-GCM before being stored in the database</p>
                             </div>
                             <div className="flex items-start gap-3">
-                                <Shield size={14} className="flex-shrink-0 mt-0.5 text-indigo-400" />
+                                <Shield size={14} className="flex-shrink-0 mt-0.5 text-[#2ec4c7]" />
                                 <p><strong className="text-foreground">Server-side only</strong> — Tokens never reach your browser. The server handles all GitHub API communication</p>
                             </div>
                             <div className="flex items-start gap-3">
-                                <Github size={14} className="flex-shrink-0 mt-0.5 text-indigo-400" />
+                                <Github size={14} className="flex-shrink-0 mt-0.5 text-[#2ec4c7]" />
                                 <p><strong className="text-foreground">Standard OAuth 2.0</strong> — Uses GitHub's official OAuth flow. You can revoke access anytime from GitHub Settings &gt; Applications</p>
                             </div>
                         </div>
@@ -280,7 +280,7 @@ function AccountRow({
                     {!isActive && (
                         <button
                             onClick={onSwitch}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#1a7a7c] hover:bg-[#1a7a7c] text-white transition-colors"
                         >
                             Switch
                         </button>
