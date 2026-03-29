@@ -74,7 +74,7 @@ function ApiClientContent() {
     const [currentReq, setCurrentReq] = useState<any>(null);
     const [response, setResponse] = useState<any>(null);
     const [reqLoading, setReqLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking'>('params');
+    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking' | 'notes'>('params');
     const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog' | 'monitoring' | 'webhooks'>('client');
     const [aiCommand, setAiCommand] = useState('Generate a professional name and a simple, clear description explaining what the request does and what the response means.');
     const [aiEnabled, setAiEnabled] = useState<boolean>(true);
