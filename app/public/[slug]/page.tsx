@@ -9,6 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import Editor from '@monaco-editor/react';
+import { getRequestLabel, getRequestBadgeClass } from '../../../utils/requestDisplay';
 
 export default function PublicDocsPage() {
     const { slug } = useParams();
@@ -193,54 +194,55 @@ export default function PublicDocsPage() {
                             />
                         </div>
 
-                        {/* Method Filters */}
-                        <div className="flex flex-wrap gap-1">
-                            {['GET', 'POST', 'PUT', 'DELETE'].map(method => (
-                                <button
-                                    key={method}
-                                    onClick={() => setMethodFilter(methodFilter === method ? null : method)}
-                                    className={`text-[7px] font-black px-1.5 py-0.5 rounded transition-all border ${methodFilter === method
-                                        ? (method === 'GET' ? 'bg-emerald-500 border-emerald-500 text-white' :
-                                            method === 'POST' ? 'bg-blue-500 border-blue-500 text-white' :
-                                                'bg-[#1a7a7c] border-[#1a7a7c] text-white')
-                                        : (theme === 'dark' ? 'border-white/10 text-gray-500 hover:border-white/20' : 'border-gray-200 text-gray-400 hover:border-gray-300')
-                                        }`}
-                                >
-                                    {method}
-                                </button>
-                            ))}
+                        {/* Method Filters with count badges */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {['GET', 'POST', 'PUT', 'DELETE'].map(method => {
+                                const count = endpoints.filter((e: any) => e.method === method).length;
+                                if (count === 0) return null;
+                                const colors: Record<string, { bg: string; text: string }> = {
+                                    GET: { bg: '#1A3A2A', text: '#3FB950' }, POST: { bg: '#1E2D3D', text: '#58A6FF' },
+                                    PUT: { bg: '#1E2D3D', text: '#58A6FF' }, DELETE: { bg: '#3D1A1A', text: '#F85149' },
+                                };
+                                const c = colors[method] || { bg: '#21262D', text: '#8B949E' };
+                                const isActive = methodFilter === method;
+                                return (
+                                    <button key={method} onClick={() => setMethodFilter(isActive ? null : method)}
+                                        style={{ padding: '3px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700, border: 'none', background: isActive ? c.text : c.bg, color: isActive ? 'white' : c.text, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        {method} <span style={{ fontSize: 9, opacity: 0.7 }}>{count}</span>
+                                    </button>
+                                );
+                            })}
                             {methodFilter && (
-                                <button
-                                    onClick={() => setMethodFilter(null)}
-                                    className="text-[7px] font-black px-1.5 py-0.5 rounded transition-all border border-red-500/20 text-red-500 hover:bg-red-500/10"
-                                >
-                                    CLEAR
+                                <button onClick={() => setMethodFilter(null)} style={{ padding: '3px 8px', borderRadius: 5, fontSize: 10, fontWeight: 600, border: 'none', background: 'rgba(248,81,73,0.1)', color: '#F85149' }}>
+                                    Clear
                                 </button>
                             )}
                         </div>
                     </div>
-                    <nav className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                    {/* TOC items: 32px height, 16px left padding, active = 2px left border */}
+                    <nav className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '8px 0' }}>
                         {filteredEndpoints.length > 0 ? (
-                            filteredEndpoints.map((ep: any, idxArr: number) => (
-                                <a
-                                    key={ep.id || idxArr}
-                                    href={`#request-${ep.id || idxArr}`}
-                                    className={`group flex items-center gap-2.5 p-2 rounded-lg transition-all border ${activeId === `request-${ep.id || idxArr}`
-                                        ? (theme === 'dark' ? 'border-[#249d9f]/50 bg-[#249d9f]/10 text-white' : 'border-indigo-200 bg-indigo-50 text-[#1a7a7c]')
-                                        : `border-transparent hover:border-[#249d9f]/20 hover:bg-[#249d9f]/5 ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-[#1a7a7c]'}`
-                                        }`}
-                                >
-                                    <span className={`text-[8px] font-black w-8 text-center py-0.5 rounded shadow-sm ${ep.method === 'GET' ? 'bg-emerald-500/10 text-emerald-500' :
-                                        ep.method === 'POST' ? 'bg-blue-500/10 text-blue-500' :
-                                            'bg-gray-500/10 text-gray-500'
-                                        }`}>{ep.method}</span>
-                                    <span className="text-[11px] font-bold truncate">{ep.name || 'Untitled'}</span>
-                                </a>
-                            ))
+                            filteredEndpoints.map((ep: any, idxArr: number) => {
+                                const isActive = activeId === `request-${ep.id || idxArr}`;
+                                return (
+                                    <a
+                                        key={ep.id || idxArr}
+                                        href={`#request-${ep.id || idxArr}`}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 10, height: 32, paddingLeft: 16, paddingRight: 12,
+                                            textDecoration: 'none', transition: 'all 0.1s',
+                                            background: isActive ? '#1C2128' : 'transparent',
+                                            borderLeft: isActive ? '2px solid #249d9f' : '2px solid transparent',
+                                            color: isActive ? '#E6EDF3' : '#8B949E',
+                                        }}
+                                    >
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${getRequestBadgeClass(ep.method, ep.protocol)}`} style={{ flexShrink: 0 }}>{getRequestLabel(ep.method, ep.protocol)}</span>
+                                        <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ep.name || 'Untitled'}</span>
+                                    </a>
+                                );
+                            })
                         ) : (
-                            <div className="p-4 text-center">
-                                <p className="text-[10px] text-gray-500 font-bold italic">No results found</p>
-                            </div>
+                            <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: '#6E7681' }}>No results found</div>
                         )}
                     </nav>
                 </aside>
@@ -261,14 +263,10 @@ export default function PublicDocsPage() {
                                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
                                         {/* Left Column: Info */}
                                         <div className="space-y-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`px-2.5 py-1 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-100'} border ${theme === 'dark' ? 'border-white/5' : 'border-gray-200'}`}>
-                                                    <div className={`text-[10px] font-black uppercase tracking-widest ${ep.method === 'GET' ? 'text-emerald-500' :
-                                                        ep.method === 'POST' ? 'text-blue-500' :
-                                                            'text-gray-500'
-                                                        }`}>{ep.method}</div>
-                                                </div>
-                                                <h2 className="text-xl font-black">{ep.name || 'Untitled Request'}</h2>
+                                            {/* Endpoint heading: 24px bold, inline method pill */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                <span className={getRequestBadgeClass(ep.method, ep.protocol)} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{getRequestLabel(ep.method, ep.protocol)}</span>
+                                                <h2 style={{ fontSize: 24, fontWeight: 700, color: '#E6EDF3', margin: 0 }}>{ep.name || 'Untitled Request'}</h2>
                                             </div>
 
                                             <div className={`group relative p-3 rounded-xl border font-mono text-xs transition-all hover:shadow-lg hover:shadow-[#249d9f]/5 ${theme === 'dark' ? 'bg-[#249d9f]/5 border-[#249d9f]/20 text-[#2ec4c7]' : 'bg-indigo-50 border-indigo-200 text-[#1a7a7c]'}`}>
@@ -326,17 +324,17 @@ export default function PublicDocsPage() {
                                                     <div className="flex items-center justify-between px-1">
                                                         <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Request Body</h3>
                                                     </div>
-                                                    <div className="rounded-xl overflow-hidden border border-white/5 shadow-2xl bg-[#1e1e2e] relative group">
+                                                    <div className="relative group" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128', minHeight: 200 }}>
                                                         <div className="absolute right-4 top-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={() => { navigator.clipboard.writeText(processCopyText(ep.body.raw)); toast.success('Body copied'); }}
-                                                                className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 border border-white/5 transition-all"
+                                                                style={{ padding: 6, borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#8B949E' }}
                                                             >
                                                                 <Copy size={12} />
                                                             </button>
                                                         </div>
                                                         <Editor
-                                                            height={ep.body.raw.split('\n').length > 15 ? "300px" : `${Math.max(ep.body.raw.split('\n').length * 20 + 32, 100)}px`}
+                                                            height={Math.max(ep.body.raw.split('\n').length * 20 + 32, 200) + "px"}
                                                             language="json"
                                                             value={ep.body.raw}
                                                             theme={theme === 'dark' ? 'vs-dark' : 'light'}
@@ -366,17 +364,17 @@ export default function PublicDocsPage() {
                                                         <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Example Response</h3>
                                                         <span className="text-[9px] font-bold text-gray-500 uppercase px-2 py-0.5 bg-emerald-500/10 rounded-md border border-emerald-500/20">{ep.lastResponse.status}</span>
                                                     </div>
-                                                    <div className="rounded-xl overflow-hidden border border-emerald-500/10 shadow-2xl bg-[#1e1e2e] relative group">
+                                                    <div className="relative group" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#1C2128', minHeight: 400 }}>
                                                         <div className="absolute right-4 top-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={() => { navigator.clipboard.writeText(processCopyText(JSON.stringify(ep.lastResponse.data, null, 2))); toast.success('Response copied'); }}
-                                                                className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 border border-white/5 transition-all"
+                                                                style={{ padding: 6, borderRadius: 6, background: '#21262D', border: '1px solid rgba(255,255,255,0.08)', color: '#8B949E' }}
                                                             >
                                                                 <Copy size={12} />
                                                             </button>
                                                         </div>
                                                         <Editor
-                                                            height={JSON.stringify(ep.lastResponse.data, null, 2).split('\n').length > 20 ? "400px" : `${Math.max(JSON.stringify(ep.lastResponse.data, null, 2).split('\n').length * 20 + 32, 150)}px`}
+                                                            height={Math.max(JSON.stringify(ep.lastResponse.data, null, 2).split('\n').length * 20 + 32, 400) + "px"}
                                                             language="json"
                                                             value={JSON.stringify(ep.lastResponse.data, null, 2)}
                                                             theme={theme === 'dark' ? 'vs-dark' : 'light'}
