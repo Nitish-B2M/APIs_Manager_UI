@@ -9,6 +9,7 @@ import { useBetaMode } from '../../context/BetaModeContext';
 import toast from 'react-hot-toast';
 import { FlipClock } from './FlipClock';
 import { GlassCard, TextGradient, PremiumButton } from '../../components/UIComponents';
+import NotificationBell from '../../components/NotificationBell';
 
 export default function Header() {
     const pathname = usePathname();
@@ -63,6 +64,8 @@ export default function Header() {
                     {isBeta && user?.settings?.showFlipClock && (
                         <FlipClock />
                     )}
+
+                    <NotificationBell />
 
                     <button
                         onClick={toggleTheme}
