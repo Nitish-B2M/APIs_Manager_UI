@@ -284,9 +284,18 @@ function ApiClientContent() {
             setResponse(newResponse);
             latestResponseRef.current = newResponse;
             setIsViewingHistory(false);
+
+            // Auto-persist response to DB (fire-and-forget)
+            if (currentReq.id) {
+                const prevHistory = Array.isArray(currentReq.history) ? currentReq.history : [];
+                const updatedHistory = [{ lastResponse: newResponse, timestamp: newResponse.timestamp }, ...prevHistory].slice(0, 50);
+                const updated = { ...currentReq, lastResponse: newResponse, history: updatedHistory };
+                setCurrentReq(updated);
+                updateRequestMutation.mutateAsync({ requestId: currentReq.id, content: updated }).catch(() => {});
+            }
         } catch (e: any) { setResponse({ error: true, message: e.message }); }
         finally { setReqLoading(false); }
-    }, [currentReq, resolveUrl, resolveAll]);
+    }, [currentReq, resolveUrl, resolveAll, updateRequestMutation]);
 
     const handleSaveSingleRequest = useCallback(async () => {
         if (!currentReq?.id) return;
