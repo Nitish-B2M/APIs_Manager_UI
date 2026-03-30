@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Users, UserPlus, Shield, Trash2, Mail, Loader2, Check, ExternalLink, Clock, ChevronDown, Globe, Copy, Save, Download, FileText, Zap, Sparkles } from 'lucide-react';
+import { Loader2, Globe, Copy, Download, FileText, Zap, Sparkles, FileQuestion } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Endpoint, Documentation } from '@/types';
 import { getThemeClasses, getRequestLabel, getRequestBadgeClass } from '../utils/theme';
@@ -48,6 +48,7 @@ export function DocumentationView({
 }: DocumentationViewProps) {
     const themeClasses = getThemeClasses(theme);
     const [isGenerating, setIsGenerating] = useState(false);
+    const isEmpty = endpoints.length === 0;
 
     const handleGenerateAiReadme = async () => {
         setIsGenerating(true);
@@ -58,10 +59,15 @@ export function DocumentationView({
         }
     };
 
+    const disabledBtn = 'opacity-40 cursor-not-allowed pointer-events-none';
+
     return (
         <div className="flex-1 flex overflow-hidden h-full">
             <div className={`w-56 flex-shrink-0 border-r ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} overflow-y-auto p-4 scrollbar-thin`}>
                 <h4 className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Contents</h4>
+                {isEmpty ? (
+                    <p className={`text-[11px] italic ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>No endpoints yet</p>
+                ) : (
                 <nav className="space-y-1">
                     {endpoints.map((ep, idx) => (
                         <a
@@ -78,6 +84,7 @@ export function DocumentationView({
                         </a>
                     ))}
                 </nav>
+                )}
             </div>
 
             <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'} scrollbar-thin`}>
@@ -101,35 +108,48 @@ export function DocumentationView({
                             )}
                             <button
                                 onClick={handleGenerateAiReadme}
-                                disabled={isGenerating}
-                                className={`flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c]/20 text-[#2ec4c7] border border-[#249d9f]/30 rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c]/30 transition-all shadow-sm disabled:opacity-50`}
+                                disabled={isGenerating || isEmpty}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c]/20 text-[#2ec4c7] border border-[#249d9f]/30 rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c]/30 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none`}
+                                title={isEmpty ? 'Add requests to generate documentation' : undefined}
                             >
                                 {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                 AI README
                             </button>
-                            <button onClick={onCopyMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
+                            <button onClick={onCopyMarkdown} disabled={isEmpty} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm ${isEmpty ? disabledBtn : ''}`}>
                                 <Copy size={12} /> COPY MD
                             </button>
-                            <button onClick={onDownloadMarkdown} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
+                            <button onClick={onDownloadMarkdown} disabled={isEmpty} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm ${isEmpty ? disabledBtn : ''}`}>
                                 <Download size={12} /> MD
                             </button>
 
                             {onExportPostman && (
-                                <button onClick={onExportPostman} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-amber-600 hover:text-white hover:border-amber-600 transition-all shadow-sm`}>
+                                <button onClick={onExportPostman} disabled={isEmpty} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-amber-600 hover:text-white hover:border-amber-600 transition-all shadow-sm ${isEmpty ? disabledBtn : ''}`}>
                                     <Download size={12} /> POSTMAN
                                 </button>
                             )}
 
                             {onExportOpenApi && (
-                                <button onClick={onExportOpenApi} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm`}>
+                                <button onClick={onExportOpenApi} disabled={isEmpty} className={`flex items-center gap-2 px-3 py-1.5 ${theme === 'dark' ? 'bg-gray-800 text-gray-200 border-gray-700' : 'bg-gray-100 text-gray-700 border-gray-200'} border rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] hover:text-white hover:border-[#1a7a7c] transition-all shadow-sm ${isEmpty ? disabledBtn : ''}`}>
                                     <Zap size={12} /> OPENAPI 3.1
                                 </button>
                             )}
-                            <button onClick={onDownloadPdf} className="flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c] text-white rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] transition-all shadow-md">
+                            <button onClick={onDownloadPdf} disabled={isEmpty} className={`flex items-center gap-2 px-3 py-1.5 bg-[#1a7a7c] text-white rounded-lg text-[10px] font-bold hover:bg-[#1a7a7c] transition-all shadow-md ${isEmpty ? disabledBtn : ''}`}>
                                 <FileText size={12} /> PDF
                             </button>
                         </div>
                     </div>
+
+                    {isEmpty && (
+                        <div className="flex flex-col items-center justify-center py-24 text-center">
+                            <div style={{ width: 64, height: 64, borderRadius: 16, background: theme === 'dark' ? '#1C2128' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                                <FileQuestion size={28} style={{ color: theme === 'dark' ? '#484F58' : '#9CA3AF' }} />
+                            </div>
+                            <h3 className={`text-lg font-bold mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Documentation is empty</h3>
+                            <p className={`text-sm max-w-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                Add requests to this collection from the sidebar, then switch back here to generate documentation, export, or share.
+                            </p>
+                        </div>
+                    )}
 
                     {endpoints.map((ep, idx) => (
                         <div key={idx} id={`endpoint-${idx}`} className="mb-12 scroll-mt-6 last:mb-0">

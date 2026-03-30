@@ -186,14 +186,29 @@ export const api = {
         check: (monitorId: string) => apiFetch(`/monitor/${monitorId}/check`, { method: 'POST' }),
     },
     admin: {
-        getStats: () => apiFetch('/admin/stats'),
-        getUsers: () => apiFetch('/admin/users'),
-        getLogs: () => apiFetch('/admin/logs'),
+        // Templates
         listTemplates: () => apiFetch('/admin/templates'),
         listLogs: () => apiFetch('/admin/logs'),
         deleteTemplate: (id: string) => apiFetch(`/admin/templates/${id}`, { method: 'DELETE' }),
         updateTemplate: (id: string, data: any) => apiFetch(`/admin/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
         createTemplate: (data: any) => apiFetch('/admin/templates', { method: 'POST', body: JSON.stringify(data) }),
+        // Overview
+        overviewStats: () => apiFetch('/admin/overview/stats'),
+        overviewCharts: () => apiFetch('/admin/overview/charts'),
+        // User Management
+        getUsers: (params?: { page?: number; limit?: number; search?: string; role?: string; verified?: string }) => {
+            const qs = new URLSearchParams();
+            if (params) Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.set(k, String(v)); });
+            return apiFetch(`/admin/users?${qs.toString()}`);
+        },
+        updateUser: (id: string, data: any) => apiFetch(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        deleteUser: (id: string) => apiFetch(`/admin/users/${id}`, { method: 'DELETE' }),
+        resetUserPassword: (id: string) => apiFetch(`/admin/users/${id}/reset-password`, { method: 'POST' }),
+        // Settings
+        getFeatureFlags: () => apiFetch('/admin/settings/feature-flags'),
+        getSmtpStatus: () => apiFetch('/admin/settings/smtp-status'),
+        getMigrationStatus: () => apiFetch('/admin/settings/migrations'),
+        clearSessions: () => apiFetch('/admin/settings/clear-sessions', { method: 'POST' }),
     },
     snapshot: {
         list: (id: string) => apiFetch(`/snapshot/list/${id}`),
@@ -238,10 +253,30 @@ export const api = {
         createHabit: (data: any) => apiFetch('/scheduler/habits', { method: 'POST', body: JSON.stringify(data) }),
     },
     contact: {
-        submit: (data: any) => apiFetch('/contact/submit', { method: 'POST', body: JSON.stringify(data) }),
-        list: (status?: string) => apiFetch(`/contact/list${status ? `?status=${status}` : ''}`),
-        updateStatus: (id: string, status: string) => apiFetch(`/contact/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+        submit: (data: any) => apiFetch('/contact', { method: 'POST', body: JSON.stringify(data) }),
+        list: (status?: string) => apiFetch(`/contact${status ? `?status=${status}` : ''}`),
+        updateStatus: (id: string, status: string) => apiFetch(`/contact/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
         delete: (id: string) => apiFetch(`/contact/${id}`, { method: 'DELETE' }),
+        reply: (id: string, replyBody: string) => apiFetch(`/contact/${id}/reply`, { method: 'POST', body: JSON.stringify({ replyBody }) }),
+    },
+    emailTemplates: {
+        list: () => apiFetch('/email-templates'),
+        get: (id: string) => apiFetch(`/email-templates/${id}`),
+        create: (data: any) => apiFetch('/email-templates', { method: 'POST', body: JSON.stringify(data) }),
+        update: (id: string, data: any) => apiFetch(`/email-templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id: string) => apiFetch(`/email-templates/${id}`, { method: 'DELETE' }),
+        sendTest: (id: string, to: string, variables: Record<string, string>) => apiFetch(`/email-templates/${id}/test`, { method: 'POST', body: JSON.stringify({ to, variables }) }),
+        logs: () => apiFetch('/email-templates/logs/all'),
+    },
+    errorLogs: {
+        list: (params?: { page?: number; limit?: number; level?: string; service?: string; errorCode?: string; search?: string; dateFrom?: string; dateTo?: string }) => {
+            const qs = new URLSearchParams();
+            if (params) Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.set(k, String(v)); });
+            return apiFetch(`/error-logs?${qs.toString()}`);
+        },
+        get: (id: string) => apiFetch(`/error-logs/${id}`),
+        stats: () => apiFetch('/error-logs/stats/summary'),
+        cleanup: (days?: number) => apiFetch(`/error-logs/cleanup${days ? `?days=${days}` : ''}`, { method: 'DELETE' }),
     },
     webhooks: {
         list: (documentationId: string) => apiFetch(`/webhooks?documentationId=${documentationId}`),
@@ -280,6 +315,12 @@ export const api = {
         markRead: (id: string) => apiFetch(`/notifications/${id}/read`, { method: 'PATCH' }),
         markAllRead: () => apiFetch('/notifications/read-all', { method: 'PATCH' }),
         delete: (id: string) => apiFetch(`/notifications/${id}`, { method: 'DELETE' }),
+        getPreferences: () => apiFetch('/notifications/preferences'),
+        updatePreference: (code: string, in_app: boolean, email: boolean) => apiFetch('/notifications/preferences', { method: 'PUT', body: JSON.stringify({ code, in_app, email }) }),
+        listCodes: () => apiFetch('/notifications/codes'),
+        createCode: (data: any) => apiFetch('/notifications/codes', { method: 'POST', body: JSON.stringify(data) }),
+        updateCode: (code: string, data: any) => apiFetch(`/notifications/codes/${code}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        deleteCode: (code: string) => apiFetch(`/notifications/codes/${code}`, { method: 'DELETE' }),
     },
     comments: {
         list: (requestId: string) => apiFetch(`/comments/${requestId}`),
