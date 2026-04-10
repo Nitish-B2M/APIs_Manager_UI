@@ -275,10 +275,18 @@ function ApiClientContent() {
         setReqLoading(true); setResponse(null);
         try {
             const url = resolveUrl(currentReq);
+            const method = (currentReq.method || 'GET').toUpperCase();
             const headers = (currentReq.headers || []).reduce((acc: any, h: any) => { if (h.key) acc[h.key] = resolveAll(h.value, currentReq); return acc; }, {});
-            const body = currentReq.body?.raw ? resolveAll(currentReq.body.raw, currentReq) : undefined;
+            const canHaveBody = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+            const rawBody = canHaveBody && currentReq.body?.raw ? resolveAll(currentReq.body.raw, currentReq) : undefined;
+
+            // Auto-set Content-Type if body exists and user didn't specify one
+            if (rawBody && !Object.keys(headers).some(k => k.toLowerCase() === 'content-type')) {
+                headers['Content-Type'] = 'application/json';
+            }
+
             const start = Date.now();
-            const res = await fetch(url, { method: currentReq.method, headers, body });
+            const res = await fetch(url, { method, headers, body: rawBody });
             const data = await res.json().catch(() => res.text());
             const newResponse = { status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 };
             setResponse(newResponse);
