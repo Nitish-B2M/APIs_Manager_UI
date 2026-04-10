@@ -13,6 +13,7 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 import toast from 'react-hot-toast';
 import { WorkspaceTab } from './WorkspaceTab';
+import { ScriptsTab } from './ScriptsTab';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
@@ -23,7 +24,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
     )
 });
 
-type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'code' | 'mocking' | 'notes';
+type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'code' | 'mocking' | 'notes' | 'scripts';
 
 interface RequestTabsProps {
     currentReq: any;
@@ -44,6 +45,8 @@ interface RequestTabsProps {
     onContextMenu: (e: React.MouseEvent) => void;
     aiEnabled?: boolean;
     onAiGenerateTests?: () => void;
+    lastPreScriptResult?: any;
+    lastPostScriptResult?: any;
 }
 
 export const RequestTabs = memo(({
@@ -65,6 +68,8 @@ export const RequestTabs = memo(({
     onContextMenu,
     aiEnabled,
     onAiGenerateTests,
+    lastPreScriptResult,
+    lastPostScriptResult,
 }: RequestTabsProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -78,7 +83,7 @@ export const RequestTabs = memo(({
 
     const [wrapLines, setWrapLines] = React.useState(false);
 
-    const allTabs: TabType[] = ['body', 'headers', 'params', 'auth', 'tests', 'code', 'docs', 'schema', 'notes', 'mocking'];
+    const allTabs: TabType[] = ['body', 'headers', 'params', 'auth', 'scripts', 'tests', 'code', 'docs', 'schema', 'notes', 'mocking'];
     const tabs = React.useMemo(() => {
         const protocol = currentReq?.protocol || 'REST';
         switch (protocol) {
@@ -421,6 +426,19 @@ export const RequestTabs = memo(({
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'scripts' && (
+                    <div className="flex-1 overflow-hidden" style={{ background: '#0D1117', borderRadius: 12, border: '1px solid #21262D' }}>
+                        <ScriptsTab
+                            preScript={currentReq?.pre_script || ''}
+                            postScript={currentReq?.post_script || ''}
+                            canEdit={canEdit}
+                            onChange={(updates) => onRequestChange(updates)}
+                            lastPreResult={lastPreScriptResult}
+                            lastPostResult={lastPostScriptResult}
+                        />
                     </div>
                 )}
 

@@ -93,7 +93,9 @@ function ApiClientContent() {
     const [currentReq, setCurrentReq] = useState<any>(null);
     const [response, setResponse] = useState<any>(null);
     const [reqLoading, setReqLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking' | 'notes'>('params');
+    const [lastPreScriptResult, setLastPreScriptResult] = useState<any>(null);
+    const [lastPostScriptResult, setLastPostScriptResult] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking' | 'notes' | 'scripts'>('params');
     const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog' | 'monitoring' | 'webhooks'>('client');
     const [aiCommand, setAiCommand] = useState('Generate a professional name and a simple, clear description explaining what the request does and what the response means.');
     const [aiEnabled, setAiEnabled] = useState<boolean>(true);
@@ -273,6 +275,7 @@ function ApiClientContent() {
     const handleSendRequest = useCallback(async () => {
         if (!currentReq) return;
         setReqLoading(true); setResponse(null);
+        setLastPreScriptResult(null); setLastPostScriptResult(null);
         try {
             const url = resolveUrl(currentReq);
             const method = (currentReq.method || 'GET').toUpperCase();
@@ -285,10 +288,36 @@ function ApiClientContent() {
                 headers['Content-Type'] = 'application/json';
             }
 
-            const start = Date.now();
-            const res = await fetch(url, { method, headers, body: rawBody });
-            const data = await res.json().catch(() => res.text());
-            const newResponse = { status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 };
+            const hasScripts = !!(currentReq.pre_script?.trim() || currentReq.post_script?.trim());
+            let newResponse: any;
+
+            if (hasScripts) {
+                // Route through server execute API for script execution
+                const execRes = await api.execute.run({
+                    url, method, headers,
+                    body: rawBody,
+                    protocol: currentReq.protocol || 'REST',
+                    preScript: currentReq.pre_script || undefined,
+                    postScript: currentReq.post_script || undefined,
+                    variables: resolvedVariables,
+                    assertions: currentReq.assertions,
+                });
+                const execData = execRes.data;
+                newResponse = {
+                    status: execData.status, statusText: execData.statusText || '',
+                    time: execData.time, data: execData.body, headers: execData.headers,
+                    timestamp: new Date().toISOString(), size: execData.size || 0,
+                };
+                if (execData.preScriptResult) setLastPreScriptResult(execData.preScriptResult);
+                if (execData.postScriptResult) setLastPostScriptResult(execData.postScriptResult);
+            } else {
+                // Direct fetch (no scripts needed)
+                const start = Date.now();
+                const res = await fetch(url, { method, headers, body: rawBody });
+                const data = await res.json().catch(() => res.text());
+                newResponse = { status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 };
+            }
+
             setResponse(newResponse);
             latestResponseRef.current = newResponse;
             setIsViewingHistory(false);
@@ -303,7 +332,7 @@ function ApiClientContent() {
             }
         } catch (e: any) { setResponse({ error: true, message: e.message }); }
         finally { setReqLoading(false); }
-    }, [currentReq, resolveUrl, resolveAll, updateRequestMutation]);
+    }, [currentReq, resolveUrl, resolveAll, updateRequestMutation, resolvedVariables]);
 
     const handleSaveSingleRequest = useCallback(async () => {
         if (!currentReq?.id) return;
@@ -749,7 +778,7 @@ function ApiClientContent() {
                                 <RequestUrlBar currentReq={currentReq} canEdit={canEdit} isDirty={isDirty} reqLoading={reqLoading} variables={resolvedVariables} urlHistory={urlHistory} onMethodChange={(m) => handleRequestChange({ method: m })} onProtocolChange={(p) => handleRequestChange({ protocol: p })} onUrlChange={(u) => handleRequestChange({ url: u })} onSend={handleSendRequest} onSave={handleSaveSingleRequest} onCopyUrl={() => { }} onCopyMarkdown={() => { }} onDownloadMarkdown={() => { }} onFocus={(field) => handlePresenceUpdate({ field, requestId: currentReq.id })} />
                                 <div className={`flex-1 overflow-hidden flex ${paneLayout === 'vertical' ? 'flex-col' : 'flex-row'}`}>
                                     <div className="overflow-hidden" style={paneLayout === 'vertical' ? { height: `${verticalSplitRatio}%` } : { width: `${mainSplitRatio}%` }}>
-                                        <RequestTabs currentReq={currentReq} variables={resolvedVariables} activeTab={activeTab} canEdit={canEdit} aiCommand={aiCommand} aiLoading={aiMutation.isPending} aiEnabled={aiEnabled} onTabChange={setActiveTab} onRequestChange={handleRequestChange} onAiCommandChange={setAiCommand} onAiGenerate={handleAiGenerate} onAiGenerateTests={handleAiGenerateTests} onFormatJson={() => { }} onCopyBody={() => { }} onCopyTitle={() => { }} onCopyMarkdown={() => { }} onSelection={handleSelection} onContextMenu={handleContextMenu} />
+                                        <RequestTabs currentReq={currentReq} variables={resolvedVariables} activeTab={activeTab} canEdit={canEdit} aiCommand={aiCommand} aiLoading={aiMutation.isPending} aiEnabled={aiEnabled} onTabChange={setActiveTab} onRequestChange={handleRequestChange} onAiCommandChange={setAiCommand} onAiGenerate={handleAiGenerate} onAiGenerateTests={handleAiGenerateTests} onFormatJson={() => { }} onCopyBody={() => { }} onCopyTitle={() => { }} onCopyMarkdown={() => { }} onSelection={handleSelection} onContextMenu={handleContextMenu} lastPreScriptResult={lastPreScriptResult} lastPostScriptResult={lastPostScriptResult} />
                                     </div>
                                     <div className={`bg-[#1a7a7c]/10 hover:bg-[#1a7a7c]/50 transition-colors z-10 ${paneLayout === 'vertical' ? 'h-1 w-full cursor-row-resize' : 'w-1 h-full cursor-col-resize'} ${isResizingMain || isResizingVertical ? 'bg-[#1a7a7c]' : ''}`} onMouseDown={paneLayout === 'vertical' ? startVerticalResize : startMainResize} />
                                     <div className="flex-1 h-full overflow-hidden">
