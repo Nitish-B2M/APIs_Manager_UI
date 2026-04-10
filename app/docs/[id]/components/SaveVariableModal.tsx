@@ -11,6 +11,7 @@ interface SaveVariableModalProps {
     onClose: () => void;
     selectedValue: string;
     documentationId: string;
+    suggestedName?: string;
 }
 
 export default function SaveVariableModal({
@@ -18,6 +19,7 @@ export default function SaveVariableModal({
     onClose,
     selectedValue,
     documentationId,
+    suggestedName,
 }: SaveVariableModalProps) {
     const { theme } = useTheme();
     const { environments, activeEnvironment, updateEnvironment, isUpdating } = useEnvironments({ documentationId });
@@ -34,10 +36,19 @@ export default function SaveVariableModal({
 
     useEffect(() => {
         if (isOpen) {
-            // Suggest a generic name or keep empty
-            setVarName('');
+            // Auto-suggest variable name from prop or try to detect from value
+            if (suggestedName) {
+                setVarName(suggestedName.replace(/[^a-zA-Z0-9_]/g, '_'));
+            } else {
+                // Try common patterns: looks like a JWT, UUID, email, etc.
+                const v = selectedValue.trim();
+                if (/^eyJ/.test(v)) setVarName('token');
+                else if (/^[0-9a-f]{8}-/.test(v)) setVarName('id');
+                else if (/@/.test(v)) setVarName('email');
+                else setVarName('');
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, suggestedName, selectedValue]);
 
     const handleSave = async () => {
         if (!varName.trim()) {

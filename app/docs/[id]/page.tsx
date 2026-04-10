@@ -612,6 +612,14 @@ function ApiClientContent() {
         else setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
     }, []);
 
+    // Close context menu on click anywhere
+    useEffect(() => {
+        if (!contextMenu.visible) return;
+        const handler = () => setContextMenu(p => ({ ...p, visible: false }));
+        window.addEventListener('click', handler);
+        return () => window.removeEventListener('click', handler);
+    }, [contextMenu.visible]);
+
     const previewContent = useMemo(() => {
         if (!doc) return '';
         let md = `# ${doc.title}\n\n`;
@@ -819,6 +827,34 @@ function ApiClientContent() {
                     </div>
                 </div>
             )}
+            {/* Right-click context menu */}
+            {contextMenu.visible && selectedText && (
+                <div
+                    style={{
+                        position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 200,
+                        background: '#161B22', border: '1px solid #30363D', borderRadius: 10,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: 200, overflow: 'hidden',
+                    }}
+                    onClick={() => setContextMenu(p => ({ ...p, visible: false }))}
+                >
+                    <button
+                        onClick={() => { navigator.clipboard.writeText(selectedText); toast.success('Copied'); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#E6EDF3', fontSize: 12, cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #21262D' }}
+                        className="hover:bg-white/5"
+                    >
+                        Copy
+                    </button>
+                    <button
+                        onClick={() => { setShowSaveVarModal(true); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#249d9f', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                        className="hover:bg-white/5"
+                    >
+                        Save as Variable
+                        <span style={{ fontSize: 10, color: '#6E7681', marginLeft: 'auto', fontWeight: 400 }}>→ {`{{${selectedText.length > 20 ? '...' : selectedText}}}`}</span>
+                    </button>
+                </div>
+            )}
+
             <CreateFolderModal isOpen={showFolderModal} onClose={() => setShowFolderModal(false)} onSubmit={async (data) => { if (editingFolder) await updateFolder(editingFolder.id, data); else await createFolder(data); }} parentFolder={parentFolderForNew} editingFolder={editingFolder} />
             <CollaboratorModal isOpen={showCollaborators} onClose={() => setShowCollaborators(false)} documentationId={id as string} isPublic={doc.isPublic} slug={doc.slug} onTogglePublic={handleShare} onSlugUpdate={handleUpdateSlug} userRole={userRole as any} />
             <SnapshotModal isOpen={showSnapshots} onClose={() => setShowSnapshots(false)} documentationId={id as string} />
