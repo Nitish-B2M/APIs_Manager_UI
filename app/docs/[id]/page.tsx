@@ -297,6 +297,30 @@ function ApiClientContent() {
 
     const handleSendRequest = useCallback(async () => {
         if (!currentReq) return;
+
+        // Pre-send: check all {{var}} references resolve. If any are missing, fail fast.
+        const VAR_RE = /\{\{\s*(\w+)\s*\}\}/g;
+        const referenced = new Set<string>();
+        const scan = (s: string | undefined) => {
+            if (!s) return;
+            let m; while ((m = VAR_RE.exec(s)) !== null) referenced.add(m[1]);
+        };
+        scan(currentReq.url);
+        (currentReq.headers || []).forEach((h: any) => { scan(h?.key); scan(h?.value); });
+        (currentReq.params || []).forEach((p: any) => { scan(p?.key); scan(p?.value); });
+        scan(currentReq.body?.raw);
+        scan(currentReq.body?.graphql?.query);
+        scan(currentReq.body?.graphql?.variables);
+        if (currentReq.auth) scan(JSON.stringify(currentReq.auth));
+
+        const known = new Set(Object.keys(resolvedVariables || {}));
+        const missing = Array.from(referenced).filter(v => !known.has(v));
+        if (missing.length > 0) {
+            toast.error(`Missing variable${missing.length > 1 ? 's' : ''}: ${missing.map(v => `{{${v}}}`).join(', ')}`, { duration: 6000 });
+            setResponse({ error: true, message: `Missing variable${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Define ${missing.length > 1 ? 'them' : 'it'} in the active environment or remove the reference.` });
+            return;
+        }
+
         setReqLoading(true); setResponse(null);
         setLastPreScriptResult(null); setLastPostScriptResult(null);
         try {
