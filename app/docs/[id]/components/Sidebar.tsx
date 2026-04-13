@@ -154,6 +154,9 @@ const SidebarComponent = ({
     const [showBulkMoveMenu, setShowBulkMoveMenu] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    // Local drag state for request-to-folder moves
+    const [localDraggedIdx, setLocalDraggedIdx] = useState<number | null>(null);
+    const [dragOverFolderId, setDragOverFolderId] = useState<string | null | 'ROOT'>(null);
 
     // Theme Constants
     const isDark = theme === 'dark';
@@ -239,9 +242,9 @@ const SidebarComponent = ({
             <div
                 key={ep.id}
                 draggable={canEdit && !isSelectionMode}
-                onDragStart={() => onDragStart(index)}
+                onDragStart={(e) => { setLocalDraggedIdx(index); e.dataTransfer.effectAllowed = 'move'; onDragStart(index); }}
                 onDragOver={onDragOver}
-                onDragEnd={onDragEnd}
+                onDragEnd={() => { setLocalDraggedIdx(null); setDragOverFolderId(null); onDragEnd(); }}
                 onClick={(e) => isSelectionMode ? toggleRequestSelection(ep.id || '', e) : onSelectEndpoint(endpoints.indexOf(ep))}
                 className="group"
                 style={{
@@ -409,7 +412,18 @@ const SidebarComponent = ({
                     <div style={{ padding: '8px 8px' }}>
                         {/* Folders as collapsible groups */}
                         {rootFolders.map(folder => (
-                            <div key={folder.id}>
+                            <div key={folder.id}
+                                onDragOver={(e) => { if (localDraggedIdx !== null) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverFolderId(folder.id); } }}
+                                onDragLeave={() => setDragOverFolderId(prev => prev === folder.id ? null : prev)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (localDraggedIdx !== null) {
+                                        onMoveRequestToFolder(localDraggedIdx, folder.id);
+                                    }
+                                    setLocalDraggedIdx(null); setDragOverFolderId(null);
+                                }}
+                                style={{ borderRadius: 6, background: dragOverFolderId === folder.id ? 'rgba(36,157,159,0.1)' : undefined, outline: dragOverFolderId === folder.id ? '1px dashed #249d9f' : undefined }}
+                            >
                                 {/* Folder header: 34px, hover Surface 3 */}
                                 <div
                                     onClick={(e) => toggleFolder(folder.id, e)}
@@ -443,7 +457,23 @@ const SidebarComponent = ({
                         {endpoints.filter(r => !r.folderId).length > 0 && rootFolders.length > 0 && (
                             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '6px 0' }} />
                         )}
-                        {endpoints.filter(r => !r.folderId).map((ep) => renderEndpoint(ep, endpoints.indexOf(ep)))}
+                        <div
+                            onDragOver={(e) => { if (localDraggedIdx !== null) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverFolderId('ROOT'); } }}
+                            onDragLeave={() => setDragOverFolderId(prev => prev === 'ROOT' ? null : prev)}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                if (localDraggedIdx !== null) {
+                                    onMoveRequestToFolder(localDraggedIdx, null);
+                                }
+                                setLocalDraggedIdx(null); setDragOverFolderId(null);
+                            }}
+                            style={{ borderRadius: 6, background: dragOverFolderId === 'ROOT' ? 'rgba(36,157,159,0.1)' : undefined, outline: dragOverFolderId === 'ROOT' ? '1px dashed #249d9f' : undefined, minHeight: 24, padding: 2 }}
+                        >
+                            {endpoints.filter(r => !r.folderId).map((ep) => renderEndpoint(ep, endpoints.indexOf(ep)))}
+                            {endpoints.filter(r => !r.folderId).length === 0 && dragOverFolderId === 'ROOT' && (
+                                <p style={{ fontSize: 10, color: '#249d9f', padding: '8px 12px', fontStyle: 'italic' }}>Drop here to unfile</p>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
