@@ -171,8 +171,22 @@ export function ResponsePanel({
     const [explanation, setExplanation] = useState<string | null>(null);
     const [editorInstance, setEditorInstance] = useState<any>(null);
 
-    const handleEditorDidMount = (editor: any, monaco: any) => {
+    const handleEditorDidMount = (editor: any, _monaco: any) => {
         setEditorInstance(editor);
+        editor.addAction({
+            id: 'save-as-variable',
+            label: 'Save as Variable',
+            contextMenuGroupId: 'devmanus',
+            contextMenuOrder: 0.1,
+            run: (ed: any) => {
+                const sel = ed.getSelection();
+                const model = ed.getModel();
+                if (!sel || !model) return;
+                const text = model.getValueInRange(sel);
+                if (!text) return;
+                window.dispatchEvent(new CustomEvent('devmanus:save-as-variable', { detail: { text, source: 'response-body' } }));
+            },
+        });
     };
 
     const handleCopyResponse = () => {

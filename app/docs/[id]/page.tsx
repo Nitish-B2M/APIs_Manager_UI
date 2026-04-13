@@ -659,6 +659,39 @@ function ApiClientContent() {
         return () => window.removeEventListener('click', handler);
     }, [contextMenu.visible]);
 
+    // Monaco editor actions dispatch window events; we catch them here to open the modal
+    useEffect(() => {
+        const handleSave = (e: any) => {
+            const { text, source } = e.detail || {};
+            if (!text) return;
+            setSelectedText(text);
+            const sourceText = source === 'request-body'
+                ? (currentReq?.body?.raw || '')
+                : source === 'response-body'
+                    ? (typeof response?.data === 'string' ? response.data : JSON.stringify(response?.data || ''))
+                    : '';
+            const path = detectJsonPath(sourceText, text);
+            setSaveVarSuggestedName(path ? toVariableName(path) : '');
+            setSaveVarExtractMode(false);
+            setShowSaveVarModal(true);
+        };
+        const handleExtract = (e: any) => {
+            const { text } = e.detail || {};
+            if (!text) return;
+            setSelectedText(text);
+            const path = detectJsonPath(currentReq?.body?.raw || '', text);
+            setSaveVarSuggestedName(path ? toVariableName(path) : '');
+            setSaveVarExtractMode(true);
+            setShowSaveVarModal(true);
+        };
+        window.addEventListener('devmanus:save-as-variable', handleSave as any);
+        window.addEventListener('devmanus:extract-to-variable', handleExtract as any);
+        return () => {
+            window.removeEventListener('devmanus:save-as-variable', handleSave as any);
+            window.removeEventListener('devmanus:extract-to-variable', handleExtract as any);
+        };
+    }, [currentReq, response]);
+
     const previewContent = useMemo(() => {
         if (!doc) return '';
         let md = `# ${doc.title}\n\n`;

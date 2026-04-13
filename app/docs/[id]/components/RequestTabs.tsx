@@ -341,6 +341,36 @@ export const RequestTabs = memo(({
                                                 value={responseText}
                                                 theme={theme === 'dark' ? 'vs-dark' : 'light'}
                                                 onChange={(value) => onRequestChange({ body: { ...currentReq.body, mode: currentReq.body?.mode || 'raw', raw: value || '' } })}
+                                                onMount={(editor) => {
+                                                    editor.addAction({
+                                                        id: 'save-as-variable',
+                                                        label: 'Save as Variable',
+                                                        contextMenuGroupId: 'devmanus',
+                                                        contextMenuOrder: 0.1,
+                                                        run: (ed) => {
+                                                            const sel = ed.getSelection();
+                                                            const model = ed.getModel();
+                                                            if (!sel || !model) return;
+                                                            const text = model.getValueInRange(sel);
+                                                            if (!text) return;
+                                                            window.dispatchEvent(new CustomEvent('devmanus:save-as-variable', { detail: { text, source: 'request-body' } }));
+                                                        },
+                                                    });
+                                                    editor.addAction({
+                                                        id: 'extract-to-variable',
+                                                        label: 'Extract to Variable',
+                                                        contextMenuGroupId: 'devmanus',
+                                                        contextMenuOrder: 0.2,
+                                                        run: (ed) => {
+                                                            const sel = ed.getSelection();
+                                                            const model = ed.getModel();
+                                                            if (!sel || !model) return;
+                                                            const text = model.getValueInRange(sel);
+                                                            if (!text) return;
+                                                            window.dispatchEvent(new CustomEvent('devmanus:extract-to-variable', { detail: { text, source: 'request-body' } }));
+                                                        },
+                                                    });
+                                                }}
                                                 options={{
                                                     readOnly: !canEdit,
                                                     fontSize: 13,
