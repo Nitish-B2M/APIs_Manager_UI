@@ -35,7 +35,8 @@ import {
     X,
     Folder,
     Terminal,
-    Eye
+    Eye,
+    Link2
 } from 'lucide-react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { useAuth } from '../../../../context/AuthContext';
@@ -228,11 +229,26 @@ const SidebarComponent = ({
         });
     }, [folders, endpoints, searchTerm]);
 
+    // Detect if a request uses {{variables}} anywhere — marks it as dependent on previous requests
+    const hasVariableDependency = (ep: Endpoint): boolean => {
+        const VAR_RE = /\{\{\s*\w+\s*\}\}/;
+        if (VAR_RE.test(ep.url || '')) return true;
+        if ((ep.headers || []).some((h: any) => VAR_RE.test(h.value || ''))) return true;
+        if ((ep.params || []).some((p: any) => VAR_RE.test(p.value || ''))) return true;
+        if (VAR_RE.test(ep.body?.raw || '')) return true;
+        if (VAR_RE.test((ep as any).body?.graphql?.query || '')) return true;
+        if (VAR_RE.test((ep as any).body?.graphql?.variables || '')) return true;
+        const auth: any = (ep as any).auth;
+        if (auth && VAR_RE.test(JSON.stringify(auth))) return true;
+        return false;
+    };
+
     const renderEndpoint = (ep: Endpoint, index: number) => {
         const isActive = endpoints[selectedIdx]?.id === ep.id;
         const isSelected = selectedRequestIds.has(ep.id || '');
         const isMenuOpen = index === openMenuIdx;
         const otherUsersViewing = activeUsers.filter(u => u.id !== user?.id && u.metadata?.requestId === ep.id);
+        const usesVars = hasVariableDependency(ep);
 
         const label = getDisplayLabel(ep.method, ep.protocol);
         const methodBg = ep.protocol === 'WS' ? '#2D1E3D' : ep.protocol === 'SSE' ? '#2D2416' : ep.protocol === 'GRAPHQL' ? '#3D1A2D' : ep.method === 'GET' ? '#1A3A2A' : ep.method === 'POST' ? '#1E2D3D' : ep.method === 'DELETE' ? '#3D1A1A' : ep.method === 'PATCH' ? '#2D2416' : '#21262D';
@@ -266,7 +282,13 @@ const SidebarComponent = ({
                     {label}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 500, color: isActive ? '#E6EDF3' : '#8B949E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ep.name}</span>
-                
+
+                {usesVars && (
+                    <span title="Uses variables — depends on earlier requests" style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                        <Link2 size={10} style={{ color: '#249d9f' }} />
+                    </span>
+                )}
+
                 {otherUsersViewing.length > 0 && (
                     <div className="flex items-center gap-0.5 opacity-60">
                         <Eye size={10} className="text-[#2ec4c7]" />

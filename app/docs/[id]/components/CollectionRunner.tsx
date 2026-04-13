@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import {
     X, Play, Square, Clock, CheckCircle2, XCircle, Loader2,
-    ChevronDown, ChevronRight, Zap, ArrowRight, Code2
+    ChevronDown, ChevronRight, Zap, ArrowRight, Code2, Link2
 } from 'lucide-react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses, getMethodColor } from '../utils/theme';
@@ -182,6 +182,14 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                         {((ep as any).pre_script || (ep as any).post_script) && (
                                             <span title="Has pre/post scripts"><Code2 size={12} style={{ color: '#249d9f', flexShrink: 0 }} /></span>
                                         )}
+                                        {(() => {
+                                            const VAR_RE = /\{\{\s*\w+\s*\}\}/;
+                                            const usesVars = VAR_RE.test(ep.url || '')
+                                                || (ep.headers || []).some((h: any) => VAR_RE.test(h.value || ''))
+                                                || VAR_RE.test(ep.body?.raw || '')
+                                                || VAR_RE.test(JSON.stringify((ep as any).auth || {}));
+                                            return usesVars ? <span title="Depends on variables from earlier requests"><Link2 size={12} style={{ color: '#D29922', flexShrink: 0 }} /></span> : null;
+                                        })()}
                                         <span style={{ fontSize: 11, color: '#6E7681', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                             {ep.url}
                                         </span>
