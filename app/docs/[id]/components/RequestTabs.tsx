@@ -394,7 +394,7 @@ export const RequestTabs = memo(({
                 )}
 
                 {activeTab === 'scripts' && (
-                    <div className="flex-1 overflow-hidden" style={{ background: '#0D1117', borderRadius: 12, border: '1px solid #21262D' }}>
+                    <div style={{ height: '100%', minHeight: 500, display: 'flex', flexDirection: 'column', background: '#0D1117', borderRadius: 12, border: '1px solid #21262D', overflow: 'hidden' }}>
                         <ScriptsTab
                             preScript={currentReq?.pre_script || ''}
                             postScript={currentReq?.post_script || ''}
