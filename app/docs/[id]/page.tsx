@@ -676,7 +676,19 @@ function ApiClientContent() {
                 onAddFolder={() => { setEditingFolder(null); setShowFolderModal(true); }}
                 onEditFolder={(f) => { setEditingFolder(f); setShowFolderModal(true); }}
                 onDeleteFolder={(f) => setPendingDelete({ type: 'folder', folder: f, name: f.name })}
-                onMoveRequestToFolder={async (ri, fi) => { const r = endpoints[ri]; if (r?.id) { await moveRequestToFolder(r.id, fi); queryClient.invalidateQueries({ queryKey: ['doc', id] }); } }}
+                onMoveRequestToFolder={async (ri, fi) => {
+                    const r = endpoints[ri];
+                    if (!r?.id) return;
+                    // Optimistic update
+                    setEndpoints(prev => prev.map((ep, i) => i === ri ? { ...ep, folderId: fi } : ep));
+                    try {
+                        await moveRequestToFolder(r.id, fi);
+                        queryClient.invalidateQueries({ queryKey: ['doc', id] });
+                    } catch {
+                        // Revert on failure
+                        setEndpoints(prev => prev.map((ep, i) => i === ri ? { ...ep, folderId: r.folderId } : ep));
+                    }
+                }}
                 onRunCollection={() => setShowRunner(true)} onShowSnapshots={() => setShowSnapshots(true)} activeView={activeView} onViewChange={setActiveView}
                 onExportPostman={handleExportPostman} onExportOpenApi={handleExportOpenApi}
             />
