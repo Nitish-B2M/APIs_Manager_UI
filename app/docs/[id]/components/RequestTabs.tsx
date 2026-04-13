@@ -14,6 +14,7 @@ import { getThemeClasses } from '../utils/theme';
 import toast from 'react-hot-toast';
 import { WorkspaceTab } from './WorkspaceTab';
 import { ScriptsTab } from './ScriptsTab';
+import { GraphQLPlayground } from './GraphQLPlayground';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
@@ -369,61 +370,24 @@ export const RequestTabs = memo(({
                                 </div>
                             </div>
                         ) : (
-                            <div className={`relative flex-1 flex flex-col gap-3`}>
-                                <div className={`flex-1 rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
-                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-[#249d9f] opacity-60 pointer-events-none tracking-widest">QUERY</div>
-                                    <Editor
-                                        key="gql-query-editor"
-                                        height="100%"
-                                        language="graphql"
-                                        value={currentReq?.body?.graphql?.query || ''}
-                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                        onChange={(query) => onRequestChange({
-                                            body: {
-                                                ...currentReq.body,
-                                                graphql: { ...currentReq.body?.graphql, query: query || '' }
-                                            }
-                                        })}
-                                        options={{
-                                            readOnly: !canEdit,
-                                            fontSize: 13,
-                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                                            minimap: { enabled: false },
-                                            scrollBeyondLastLine: false,
-                                            automaticLayout: true,
-                                            padding: { top: 12, bottom: 12 },
-                                            lineNumbers: 'on',
-                                            renderLineHighlight: 'none',
-                                        }}
-                                    />
-                                </div>
-                                <div className={`relative h-[180px] rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
-                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-[#249d9f] opacity-60 pointer-events-none tracking-widest">VARIABLES</div>
-                                    <Editor
-                                        key="gql-vars-editor"
-                                        height="100%"
-                                        language="json"
-                                        value={currentReq?.body?.graphql?.variables || ''}
-                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                        onChange={(variables) => onRequestChange({
-                                            body: {
-                                                ...currentReq.body,
-                                                graphql: { ...currentReq.body?.graphql, variables: variables || '' }
-                                            }
-                                        })}
-                                        options={{
-                                            readOnly: !canEdit,
-                                            fontSize: 12,
-                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                                            minimap: { enabled: false },
-                                            scrollBeyondLastLine: false,
-                                            automaticLayout: true,
-                                            padding: { top: 12, bottom: 12 },
-                                            lineNumbers: 'off',
-                                            renderLineHighlight: 'none',
-                                        }}
-                                    />
-                                </div>
+                            <div className="flex-1 min-h-0">
+                                <GraphQLPlayground
+                                    query={currentReq?.body?.graphql?.query || ''}
+                                    variables={currentReq?.body?.graphql?.variables || ''}
+                                    url={currentReq?.url || ''}
+                                    headers={(currentReq?.headers || []).reduce((acc: any, h: any) => { if (h.key) acc[h.key] = h.value; return acc; }, {})}
+                                    canEdit={canEdit}
+                                    operationName={currentReq?.body?.graphql?.operationName}
+                                    onQueryChange={(query) => onRequestChange({
+                                        body: { ...currentReq.body, graphql: { ...currentReq.body?.graphql, query } }
+                                    })}
+                                    onVariablesChange={(vars) => onRequestChange({
+                                        body: { ...currentReq.body, graphql: { ...currentReq.body?.graphql, variables: vars } }
+                                    })}
+                                    onOperationNameChange={(name) => onRequestChange({
+                                        body: { ...currentReq.body, graphql: { ...currentReq.body?.graphql, operationName: name } }
+                                    })}
+                                />
                             </div>
                         )}
                     </div>

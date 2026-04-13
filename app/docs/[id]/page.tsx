@@ -289,14 +289,22 @@ function ApiClientContent() {
             }
 
             const hasScripts = !!(currentReq.pre_script?.trim() || currentReq.post_script?.trim());
+            const isGraphQL = currentReq.protocol === 'GRAPHQL';
             let newResponse: any;
 
-            if (hasScripts) {
-                // Route through server execute API for script execution
+            if (hasScripts || isGraphQL) {
+                // Route through server execute API for scripts or GraphQL
+                const graphqlPayload = isGraphQL && currentReq.body?.graphql ? {
+                    query: resolveAll(currentReq.body.graphql.query || '', currentReq),
+                    variables: currentReq.body.graphql.variables ? resolveAll(currentReq.body.graphql.variables, currentReq) : undefined,
+                    operationName: currentReq.body.graphql.operationName,
+                } : undefined;
+
                 const execRes = await api.execute.run({
                     url, method, headers,
-                    body: rawBody,
+                    body: isGraphQL ? undefined : rawBody,
                     protocol: currentReq.protocol || 'REST',
+                    graphql: graphqlPayload,
                     preScript: currentReq.pre_script || undefined,
                     postScript: currentReq.post_script || undefined,
                     variables: resolvedVariables,
