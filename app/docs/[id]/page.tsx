@@ -236,8 +236,28 @@ function ApiClientContent() {
     const { ratio: mainSplitRatio, isResizing: isResizingMain, startResizing: startMainResize } = useHorizontalPanelResize(sidebarResWidth, isSidebarCollapsed);
     const { ratio: verticalSplitRatio, isResizing: isResizingVertical, startResizing: startVerticalResize } = useVerticalPanelResize();
 
-    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect } = useWebSocket(EMPTY_ARRAY);
-    const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect } = useSSE(EMPTY_ARRAY);
+    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect, sendMessage: wsSendMessage, clearMessages: wsClearMessages } = useWebSocket(EMPTY_ARRAY);
+    const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect, clearMessages: sseClearMessages } = useSSE(EMPTY_ARRAY);
+
+    // Choose which socket to use based on active request protocol
+    const isSSE = currentReq?.protocol === 'SSE';
+    const socketMessages = isSSE ? sseMessages : wsMessages;
+    const socketStatus = isSSE ? sseStatus : wsStatus;
+    const socketMode: 'ws' | 'sse' = isSSE ? 'sse' : 'ws';
+    const handleSocketConnect = useCallback(() => {
+        if (!currentReq) return;
+        const url = resolveUrl(currentReq);
+        if (isSSE) sseConnect(url); else wsConnect(url);
+    }, [currentReq, isSSE, resolveUrl, sseConnect, wsConnect]);
+    const handleSocketDisconnect = useCallback(() => {
+        if (isSSE) sseDisconnect(); else wsDisconnect();
+    }, [isSSE, sseDisconnect, wsDisconnect]);
+    const handleSocketSendMessage = useCallback((data: string) => {
+        if (!isSSE) wsSendMessage(data);
+    }, [isSSE, wsSendMessage]);
+    const handleSocketClearMessages = useCallback(() => {
+        if (isSSE) sseClearMessages(); else wsClearMessages();
+    }, [isSSE, sseClearMessages, wsClearMessages]);
 
     const handleTabClose = useCallback((tid: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
@@ -822,7 +842,7 @@ function ApiClientContent() {
                                             if (latestResponseRef.current) setResponse(latestResponseRef.current);
                                             setIsViewingHistory(false);
                                         }}
-                                        isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={wsMessages} wsStatus={wsStatus} socketMode="ws" onWsConnect={() => { }} onWsDisconnect={() => { }} onWsSendMessage={() => { }} onWsClearMessages={() => { }} />
+                                        isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={socketMessages} wsStatus={socketStatus} socketMode={socketMode} onWsConnect={handleSocketConnect} onWsDisconnect={handleSocketDisconnect} onWsSendMessage={handleSocketSendMessage} onWsClearMessages={handleSocketClearMessages} />
                                     </div>
                                 </div>
                             </div>
