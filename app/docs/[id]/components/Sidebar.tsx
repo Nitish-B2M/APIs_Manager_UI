@@ -470,10 +470,30 @@ const SidebarComponent = ({
                             style={{ borderRadius: 6, background: dragOverFolderId === 'ROOT' ? 'rgba(36,157,159,0.1)' : undefined, outline: dragOverFolderId === 'ROOT' ? '1px dashed #249d9f' : undefined, minHeight: 24, padding: 2 }}
                         >
                             {endpoints.filter(r => !r.folderId).map((ep) => renderEndpoint(ep, endpoints.indexOf(ep)))}
-                            {endpoints.filter(r => !r.folderId).length === 0 && dragOverFolderId === 'ROOT' && (
-                                <p style={{ fontSize: 10, color: '#249d9f', padding: '8px 12px', fontStyle: 'italic' }}>Drop here to unfile</p>
-                            )}
                         </div>
+                        {/* Always-visible "drop to unfile" zone while dragging */}
+                        {localDraggedIdx !== null && endpoints[localDraggedIdx]?.folderId && (
+                            <div
+                                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverFolderId('ROOT'); }}
+                                onDragLeave={() => setDragOverFolderId(prev => prev === 'ROOT' ? null : prev)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (localDraggedIdx !== null) {
+                                        onMoveRequestToFolder(localDraggedIdx, null);
+                                    }
+                                    setLocalDraggedIdx(null); setDragOverFolderId(null);
+                                }}
+                                style={{
+                                    marginTop: 8, padding: '14px 12px', borderRadius: 8,
+                                    border: `2px dashed ${dragOverFolderId === 'ROOT' ? '#249d9f' : '#30363D'}`,
+                                    background: dragOverFolderId === 'ROOT' ? 'rgba(36,157,159,0.1)' : 'transparent',
+                                    textAlign: 'center', fontSize: 11, color: dragOverFolderId === 'ROOT' ? '#249d9f' : '#6E7681',
+                                    fontWeight: 500, transition: 'all 0.15s',
+                                }}
+                            >
+                                ↓ Drop here to unfile (move to root)
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
