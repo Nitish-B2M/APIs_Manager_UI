@@ -35,7 +35,8 @@ import {
     X,
     Folder,
     Terminal,
-    Eye
+    Eye,
+    Link2
 } from 'lucide-react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { useAuth } from '../../../../context/AuthContext';
@@ -154,6 +155,9 @@ const SidebarComponent = ({
     const [showBulkMoveMenu, setShowBulkMoveMenu] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    // Local drag state for request-to-folder moves
+    const [localDraggedIdx, setLocalDraggedIdx] = useState<number | null>(null);
+    const [dragOverFolderId, setDragOverFolderId] = useState<string | null | 'ROOT'>(null);
 
     // Theme Constants
     const isDark = theme === 'dark';
@@ -225,11 +229,26 @@ const SidebarComponent = ({
         });
     }, [folders, endpoints, searchTerm]);
 
+    // Detect if a request uses {{variables}} anywhere — marks it as dependent on previous requests
+    const hasVariableDependency = (ep: Endpoint): boolean => {
+        const VAR_RE = /\{\{\s*\w+\s*\}\}/;
+        if (VAR_RE.test(ep.url || '')) return true;
+        if ((ep.headers || []).some((h: any) => VAR_RE.test(h.value || ''))) return true;
+        if ((ep.params || []).some((p: any) => VAR_RE.test(p.value || ''))) return true;
+        if (VAR_RE.test(ep.body?.raw || '')) return true;
+        if (VAR_RE.test((ep as any).body?.graphql?.query || '')) return true;
+        if (VAR_RE.test((ep as any).body?.graphql?.variables || '')) return true;
+        const auth: any = (ep as any).auth;
+        if (auth && VAR_RE.test(JSON.stringify(auth))) return true;
+        return false;
+    };
+
     const renderEndpoint = (ep: Endpoint, index: number) => {
         const isActive = endpoints[selectedIdx]?.id === ep.id;
         const isSelected = selectedRequestIds.has(ep.id || '');
         const isMenuOpen = index === openMenuIdx;
         const otherUsersViewing = activeUsers.filter(u => u.id !== user?.id && u.metadata?.requestId === ep.id);
+        const usesVars = hasVariableDependency(ep);
 
         const label = getDisplayLabel(ep.method, ep.protocol);
         const methodBg = ep.protocol === 'WS' ? '#2D1E3D' : ep.protocol === 'SSE' ? '#2D2416' : ep.protocol === 'GRAPHQL' ? '#3D1A2D' : ep.method === 'GET' ? '#1A3A2A' : ep.method === 'POST' ? '#1E2D3D' : ep.method === 'DELETE' ? '#3D1A1A' : ep.method === 'PATCH' ? '#2D2416' : '#21262D';
@@ -239,9 +258,9 @@ const SidebarComponent = ({
             <div
                 key={ep.id}
                 draggable={canEdit && !isSelectionMode}
-                onDragStart={() => onDragStart(index)}
+                onDragStart={(e) => { setLocalDraggedIdx(index); e.dataTransfer.effectAllowed = 'move'; onDragStart(index); }}
                 onDragOver={onDragOver}
-                onDragEnd={onDragEnd}
+                onDragEnd={() => { setLocalDraggedIdx(null); setDragOverFolderId(null); onDragEnd(); }}
                 onClick={(e) => isSelectionMode ? toggleRequestSelection(ep.id || '', e) : onSelectEndpoint(endpoints.indexOf(ep))}
                 className="group"
                 style={{
@@ -263,7 +282,13 @@ const SidebarComponent = ({
                     {label}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 500, color: isActive ? '#E6EDF3' : '#8B949E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ep.name}</span>
-                
+
+                {usesVars && (
+                    <span title="Uses variables — depends on earlier requests" style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                        <Link2 size={10} style={{ color: '#249d9f' }} />
+                    </span>
+                )}
+
                 {otherUsersViewing.length > 0 && (
                     <div className="flex items-center gap-0.5 opacity-60">
                         <Eye size={10} className="text-[#2ec4c7]" />
@@ -409,7 +434,18 @@ const SidebarComponent = ({
                     <div style={{ padding: '8px 8px' }}>
                         {/* Folders as collapsible groups */}
                         {rootFolders.map(folder => (
-                            <div key={folder.id}>
+                            <div key={folder.id}
+                                onDragOver={(e) => { if (localDraggedIdx !== null) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverFolderId(folder.id); } }}
+                                onDragLeave={() => setDragOverFolderId(prev => prev === folder.id ? null : prev)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (localDraggedIdx !== null) {
+                                        onMoveRequestToFolder(localDraggedIdx, folder.id);
+                                    }
+                                    setLocalDraggedIdx(null); setDragOverFolderId(null);
+                                }}
+                                style={{ borderRadius: 6, background: dragOverFolderId === folder.id ? 'rgba(36,157,159,0.1)' : undefined, outline: dragOverFolderId === folder.id ? '1px dashed #249d9f' : undefined }}
+                            >
                                 {/* Folder header: 34px, hover Surface 3 */}
                                 <div
                                     onClick={(e) => toggleFolder(folder.id, e)}
@@ -443,7 +479,43 @@ const SidebarComponent = ({
                         {endpoints.filter(r => !r.folderId).length > 0 && rootFolders.length > 0 && (
                             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '6px 0' }} />
                         )}
-                        {endpoints.filter(r => !r.folderId).map((ep) => renderEndpoint(ep, endpoints.indexOf(ep)))}
+                        <div
+                            onDragOver={(e) => { if (localDraggedIdx !== null) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverFolderId('ROOT'); } }}
+                            onDragLeave={() => setDragOverFolderId(prev => prev === 'ROOT' ? null : prev)}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                if (localDraggedIdx !== null) {
+                                    onMoveRequestToFolder(localDraggedIdx, null);
+                                }
+                                setLocalDraggedIdx(null); setDragOverFolderId(null);
+                            }}
+                            style={{ borderRadius: 6, background: dragOverFolderId === 'ROOT' ? 'rgba(36,157,159,0.1)' : undefined, outline: dragOverFolderId === 'ROOT' ? '1px dashed #249d9f' : undefined, minHeight: 24, padding: 2 }}
+                        >
+                            {endpoints.filter(r => !r.folderId).map((ep) => renderEndpoint(ep, endpoints.indexOf(ep)))}
+                        </div>
+                        {/* Always-visible "drop to unfile" zone while dragging */}
+                        {localDraggedIdx !== null && endpoints[localDraggedIdx]?.folderId && (
+                            <div
+                                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverFolderId('ROOT'); }}
+                                onDragLeave={() => setDragOverFolderId(prev => prev === 'ROOT' ? null : prev)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (localDraggedIdx !== null) {
+                                        onMoveRequestToFolder(localDraggedIdx, null);
+                                    }
+                                    setLocalDraggedIdx(null); setDragOverFolderId(null);
+                                }}
+                                style={{
+                                    marginTop: 8, padding: '14px 12px', borderRadius: 8,
+                                    border: `2px dashed ${dragOverFolderId === 'ROOT' ? '#249d9f' : '#30363D'}`,
+                                    background: dragOverFolderId === 'ROOT' ? 'rgba(36,157,159,0.1)' : 'transparent',
+                                    textAlign: 'center', fontSize: 11, color: dragOverFolderId === 'ROOT' ? '#249d9f' : '#6E7681',
+                                    fontWeight: 500, transition: 'all 0.15s',
+                                }}
+                            >
+                                ↓ Drop here to unfile (move to root)
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

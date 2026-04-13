@@ -11,6 +11,10 @@ interface SaveVariableModalProps {
     onClose: () => void;
     selectedValue: string;
     documentationId: string;
+    suggestedName?: string;
+    /** When set, also replace the selected text in the request body with {{varName}} */
+    onExtract?: (varName: string) => void;
+    extractMode?: boolean;
 }
 
 export default function SaveVariableModal({
@@ -18,6 +22,9 @@ export default function SaveVariableModal({
     onClose,
     selectedValue,
     documentationId,
+    suggestedName,
+    onExtract,
+    extractMode,
 }: SaveVariableModalProps) {
     const { theme } = useTheme();
     const { environments, activeEnvironment, updateEnvironment, isUpdating } = useEnvironments({ documentationId });
@@ -34,10 +41,19 @@ export default function SaveVariableModal({
 
     useEffect(() => {
         if (isOpen) {
-            // Suggest a generic name or keep empty
-            setVarName('');
+            // Auto-suggest variable name from prop or try to detect from value
+            if (suggestedName) {
+                setVarName(suggestedName.replace(/[^a-zA-Z0-9_]/g, '_'));
+            } else {
+                // Try common patterns: looks like a JWT, UUID, email, etc.
+                const v = selectedValue.trim();
+                if (/^eyJ/.test(v)) setVarName('token');
+                else if (/^[0-9a-f]{8}-/.test(v)) setVarName('id');
+                else if (/@/.test(v)) setVarName('email');
+                else setVarName('');
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, suggestedName, selectedValue]);
 
     const handleSave = async () => {
         if (!varName.trim()) {
@@ -60,6 +76,9 @@ export default function SaveVariableModal({
 
         try {
             await updateEnvironment(selectedEnvId, { variables: updatedVariables });
+            if (extractMode && onExtract) {
+                onExtract(varName.trim());
+            }
             onClose();
         } catch (e) {
             // Error handled by hook
@@ -83,7 +102,7 @@ export default function SaveVariableModal({
                 <div className={`px-6 py-4 border-b ${borderCol} flex justify-between items-center bg-opacity-50`}>
                     <h3 className={`font-bold text-lg ${textColor} flex items-center gap-2`}>
                         <Save size={20} className="text-[#249d9f]" />
-                        Save as Variable
+                        {extractMode ? 'Extract to Variable' : 'Save as Variable'}
                     </h3>
                     <button onClick={onClose} className={`p-2 ${subTextColor} hover:bg-gray-800 rounded-lg transition-colors`}>
                         <X size={20} />
@@ -164,7 +183,7 @@ export default function SaveVariableModal({
                         disabled={isUpdating || !varName.trim() || !selectedEnvId}
                         className="flex-1 px-4 py-2 rounded-xl text-sm font-bold bg-[#1a7a7c] text-white hover:bg-[#1a7a7c] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                     >
-                        {isUpdating ? 'Saving...' : 'Save Variable'}
+                        {isUpdating ? 'Saving...' : extractMode ? 'Extract & Replace' : 'Save Variable'}
                     </button>
                 </div>
             </div>

@@ -2,6 +2,15 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { Endpoint, AuthConfig } from '@/types';
+import { api } from '../../../../utils/api';
+
+export interface ScriptOutput {
+    success: boolean;
+    output: string[];
+    variables?: Record<string, string>;
+    error?: string;
+    duration: number;
+}
 
 export interface RunResult {
     endpointId: string;
@@ -14,6 +23,8 @@ export interface RunResult {
     passed: boolean;
     error?: string;
     responseData?: unknown;
+    preScriptResult?: ScriptOutput | null;
+    postScriptResult?: ScriptOutput | null;
 }
 
 interface UseCollectionRunnerProps {
@@ -85,80 +96,118 @@ export function useCollectionRunner({ variables }: UseCollectionRunnerProps): Us
         return requestUrl;
     };
 
-    const extractVariables = (responseData: unknown, existingVars: Record<string, string>): Record<string, string> => {
-        const extracted: Record<string, string> = {};
-        if (!responseData || typeof responseData !== 'object') return extracted;
-
-        const flatData = responseData as Record<string, unknown>;
-        // Also check nested 'data' property (common API pattern)
-        const dataObj = (flatData.data && typeof flatData.data === 'object') ? flatData.data as Record<string, unknown> : {};
-
-        const allKeys = Object.keys(existingVars);
-        for (const key of allKeys) {
-            const cleanKey = key.replace(/[{}]/g, '');
-            if (cleanKey in flatData && flatData[cleanKey] != null) {
-                extracted[cleanKey] = String(flatData[cleanKey]);
-            } else if (cleanKey in dataObj && dataObj[cleanKey] != null) {
-                extracted[cleanKey] = String(dataObj[cleanKey]);
-            }
-        }
-        return extracted;
+    const hasScripts = (endpoint: Endpoint): boolean => {
+        return !!(endpoint as any).pre_script?.trim() || !!(endpoint as any).post_script?.trim();
     };
 
-    const executeOne = async (endpoint: Endpoint, vars: Record<string, string>): Promise<RunResult> => {
+    /**
+     * Execute a single request — uses server execute API if scripts exist,
+     * otherwise uses direct fetch for speed.
+     */
+    const executeOne = async (endpoint: Endpoint, vars: Record<string, string>): Promise<{ result: RunResult; updatedVars: Record<string, string> }> => {
         const startTime = Date.now();
+        const ep = endpoint as any;
+
         try {
             let finalUrl = buildUrl(endpoint, vars);
-            const rawBody = endpoint.body?.raw || '';
-            const finalBody = rawBody ? resolveVars(rawBody, vars, endpoint) : undefined;
-
             const headers = (endpoint.headers || []).reduce((acc: Record<string, string>, h) => {
                 if (h.key) acc[h.key] = resolveVars(h.value, vars, endpoint);
                 return acc;
             }, {});
+            const rawBody = endpoint.body?.raw || '';
+            const finalBody = rawBody ? resolveVars(rawBody, vars, endpoint) : undefined;
 
             if (finalBody && !headers['Content-Type']) {
                 headers['Content-Type'] = 'application/json';
             }
-
             finalUrl = injectAuth(headers, endpoint.auth, vars, endpoint, finalUrl);
 
-            const res = await fetch(finalUrl, {
-                method: endpoint.method,
-                headers,
-                body: ['GET', 'HEAD'].includes(endpoint.method) ? undefined : finalBody,
-            });
+            let updatedVars = { ...vars };
 
-            const endTime = Date.now();
-            let responseData: unknown;
-            try {
-                responseData = await res.json();
-            } catch {
-                responseData = null;
+            if (hasScripts(endpoint)) {
+                // Route through server execute API for script execution
+                const execRes = await api.execute.run({
+                    url: finalUrl,
+                    method: endpoint.method,
+                    headers,
+                    body: finalBody,
+                    protocol: endpoint.protocol || 'REST',
+                    preScript: ep.pre_script || undefined,
+                    postScript: ep.post_script || undefined,
+                    variables: vars,
+                });
+                const d = execRes.data;
+
+                // Merge script-extracted variables
+                if (d.variables) updatedVars = { ...updatedVars, ...d.variables };
+
+                return {
+                    result: {
+                        endpointId: endpoint.id || '',
+                        name: endpoint.name,
+                        method: endpoint.method,
+                        url: finalUrl,
+                        status: d.status,
+                        statusText: d.statusText || '',
+                        time: d.time,
+                        passed: d.status >= 200 && d.status < 400,
+                        responseData: d.body,
+                        preScriptResult: d.preScriptResult || null,
+                        postScriptResult: d.postScriptResult || null,
+                    },
+                    updatedVars,
+                };
+            } else {
+                // Direct fetch (no scripts)
+                const res = await fetch(finalUrl, {
+                    method: endpoint.method,
+                    headers,
+                    body: ['GET', 'HEAD'].includes(endpoint.method) ? undefined : finalBody,
+                });
+
+                let responseData: unknown;
+                try { responseData = await res.json(); } catch { responseData = null; }
+
+                // Auto-extract variables from response for chaining
+                if (responseData && typeof responseData === 'object') {
+                    const flat = responseData as Record<string, unknown>;
+                    const dataObj = (flat.data && typeof flat.data === 'object') ? flat.data as Record<string, unknown> : {};
+                    for (const key of Object.keys(updatedVars)) {
+                        const cleanKey = key.replace(/[{}]/g, '');
+                        if (cleanKey in flat && flat[cleanKey] != null) updatedVars[cleanKey] = String(flat[cleanKey]);
+                        else if (cleanKey in dataObj && dataObj[cleanKey] != null) updatedVars[cleanKey] = String(dataObj[cleanKey]);
+                    }
+                }
+
+                return {
+                    result: {
+                        endpointId: endpoint.id || '',
+                        name: endpoint.name,
+                        method: endpoint.method,
+                        url: finalUrl,
+                        status: res.status,
+                        statusText: res.statusText,
+                        time: Date.now() - startTime,
+                        passed: res.status >= 200 && res.status < 400,
+                        responseData,
+                    },
+                    updatedVars,
+                };
             }
-
-            return {
-                endpointId: endpoint.id || '',
-                name: endpoint.name,
-                method: endpoint.method,
-                url: finalUrl,
-                status: res.status,
-                statusText: res.statusText,
-                time: endTime - startTime,
-                passed: res.status >= 200 && res.status < 400,
-                responseData,
-            };
         } catch (error) {
             return {
-                endpointId: endpoint.id || '',
-                name: endpoint.name,
-                method: endpoint.method,
-                url: endpoint.url,
-                status: null,
-                statusText: 'Error',
-                time: Date.now() - startTime,
-                passed: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
+                result: {
+                    endpointId: endpoint.id || '',
+                    name: endpoint.name,
+                    method: endpoint.method,
+                    url: endpoint.url,
+                    status: null,
+                    statusText: 'Error',
+                    time: Date.now() - startTime,
+                    passed: false,
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                },
+                updatedVars: vars,
             };
         }
     };
@@ -177,19 +226,15 @@ export function useCollectionRunner({ variables }: UseCollectionRunnerProps): Us
                 if (abortRef.current) break;
                 setCurrentIndex(i);
 
-                const result = await executeOne(endpoints[i], currentVars);
+                const { result, updatedVars } = await executeOne(endpoints[i], currentVars);
                 setResults(prev => [...prev, result]);
 
-                // Extract variables from response
-                if (enableChaining && result.responseData) {
-                    const extracted = extractVariables(result.responseData, currentVars);
-                    if (Object.keys(extracted).length > 0) {
-                        Object.assign(currentVars, extracted);
-                        setRunVariables({ ...currentVars });
-                    }
+                // Merge extracted/script variables for chaining
+                if (enableChaining) {
+                    Object.assign(currentVars, updatedVars);
+                    setRunVariables({ ...currentVars });
                 }
 
-                // Delay between requests
                 if (delay > 0 && i < endpoints.length - 1 && !abortRef.current) {
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }

@@ -3,12 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import {
     X, Play, Square, Clock, CheckCircle2, XCircle, Loader2,
-    ChevronDown, ChevronRight, Zap, ArrowRight
+    ChevronDown, ChevronRight, Zap, ArrowRight, Code2, Link2
 } from 'lucide-react';
 import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses, getMethodColor } from '../utils/theme';
 import { useCollectionRunner, RunResult } from '../hooks/useCollectionRunner';
-import { useBetaMode } from '../../../../context/BetaModeContext';
 import { Endpoint } from '@/types';
 
 interface CollectionRunnerProps {
@@ -28,8 +27,6 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
     const [showExtracted, setShowExtracted] = useState(false);
     const [expandedResult, setExpandedResult] = useState<string | null>(null);
     const [isChainingEnabled, setIsChainingEnabled] = useState(true);
-    const { isBeta } = useBetaMode();
-
     const { results, isRunning, currentIndex, runVariables, start, stop } = useCollectionRunner({ variables });
 
     const selectedEndpoints = useMemo(
@@ -53,7 +50,7 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
         }
     };
 
-    const handleStart = () => start(selectedEndpoints, delay, isBeta && isChainingEnabled);
+    const handleStart = () => start(selectedEndpoints, delay, isChainingEnabled);
 
     const stats = useMemo(() => {
         const passed = results.filter(r => r.passed).length;
@@ -137,12 +134,10 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                         </div>
                     </div>
 
-                    {isBeta && (
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8B949E', cursor: 'pointer', marginTop: 8 }}>
-                            <input type="checkbox" checked={isChainingEnabled} onChange={e => setIsChainingEnabled(e.target.checked)} className="accent-[#249d9f]" />
-                            Smart Chaining
-                        </label>
-                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8B949E', cursor: 'pointer', marginTop: 8 }}>
+                        <input type="checkbox" checked={isChainingEnabled} onChange={e => setIsChainingEnabled(e.target.checked)} className="accent-[#249d9f]" />
+                        Variable Chaining — pass extracted variables between requests
+                    </label>
 
                     {results.length > 0 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, fontWeight: 600, marginTop: 8 }}>
@@ -184,6 +179,17 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                         <span style={{ fontSize: 13, fontWeight: 500, color: '#E6EDF3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {ep.name || ep.url}
                                         </span>
+                                        {((ep as any).pre_script || (ep as any).post_script) && (
+                                            <span title="Has pre/post scripts"><Code2 size={12} style={{ color: '#249d9f', flexShrink: 0 }} /></span>
+                                        )}
+                                        {(() => {
+                                            const VAR_RE = /\{\{\s*\w+\s*\}\}/;
+                                            const usesVars = VAR_RE.test(ep.url || '')
+                                                || (ep.headers || []).some((h: any) => VAR_RE.test(h.value || ''))
+                                                || VAR_RE.test(ep.body?.raw || '')
+                                                || VAR_RE.test(JSON.stringify((ep as any).auth || {}));
+                                            return usesVars ? <span title="Depends on variables from earlier requests"><Link2 size={12} style={{ color: '#D29922', flexShrink: 0 }} /></span> : null;
+                                        })()}
                                         <span style={{ fontSize: 11, color: '#6E7681', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                             {ep.url}
                                         </span>
@@ -256,17 +262,39 @@ export function CollectionRunner({ endpoints, variables, onClose }: CollectionRu
                                             )}
                                         </div>
 
-                                        {/* Expanded response detail */}
+                                        {/* Expanded response + script detail */}
                                         {result && expandedResult === ep.id && (
-                                            <div className={`ml-8 mt-1 mb-2 p-3 rounded-lg text-xs font-mono max-h-40 overflow-y-auto border ${theme === 'dark' ? 'bg-[#12122a] border-gray-800 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'
-                                                }`}>
-                                                {result.error && <p className="text-red-400 mb-2">{result.error}</p>}
-                                                <pre className="whitespace-pre-wrap break-all">
-                                                    {result.responseData
-                                                        ? JSON.stringify(result.responseData, null, 2)
-                                                        : 'No response body'
-                                                    }
-                                                </pre>
+                                            <div className={`ml-8 mt-1 mb-2 rounded-lg text-xs font-mono overflow-hidden border ${theme === 'dark' ? 'bg-[#0D1117] border-gray-800 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'}`}>
+                                                {/* Script outputs */}
+                                                {(result.preScriptResult || result.postScriptResult) && (
+                                                    <div style={{ padding: '8px 12px', borderBottom: '1px solid #21262D' }}>
+                                                        {result.preScriptResult && (
+                                                            <div style={{ marginBottom: result.postScriptResult ? 6 : 0 }}>
+                                                                <span style={{ fontSize: 9, fontWeight: 700, color: '#484F58', textTransform: 'uppercase', letterSpacing: 1 }}>Pre-script</span>
+                                                                {result.preScriptResult.output.map((line: string, li: number) => (
+                                                                    <div key={li} style={{ color: line.startsWith('✓') ? '#3FB950' : line.startsWith('✗') ? '#F85149' : '#8B949E' }}>{line}</div>
+                                                                ))}
+                                                                {result.preScriptResult.error && <div style={{ color: '#F85149' }}>{result.preScriptResult.error}</div>}
+                                                            </div>
+                                                        )}
+                                                        {result.postScriptResult && (
+                                                            <div>
+                                                                <span style={{ fontSize: 9, fontWeight: 700, color: '#484F58', textTransform: 'uppercase', letterSpacing: 1 }}>Post-script</span>
+                                                                {result.postScriptResult.output.map((line: string, li: number) => (
+                                                                    <div key={li} style={{ color: line.startsWith('✓') ? '#3FB950' : line.startsWith('✗') ? '#F85149' : '#8B949E' }}>{line}</div>
+                                                                ))}
+                                                                {result.postScriptResult.error && <div style={{ color: '#F85149' }}>{result.postScriptResult.error}</div>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {/* Response body */}
+                                                <div style={{ padding: '8px 12px', maxHeight: 160, overflowY: 'auto' }}>
+                                                    {result.error && <p className="text-red-400 mb-2">{result.error}</p>}
+                                                    <pre className="whitespace-pre-wrap break-all">
+                                                        {result.responseData ? JSON.stringify(result.responseData, null, 2) : 'No response body'}
+                                                    </pre>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

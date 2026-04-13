@@ -442,7 +442,7 @@ export function ResponsePanel({
                     const isVisible = response && !response.error && !reqLoading && (currentReq.protocol === 'REST' || currentReq.protocol === 'GRAPHQL' || !currentReq.protocol);
 
                     return (
-                        <div className={`absolute inset-0 w-full h-full ${isVisible ? 'block' : 'hidden'}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
+                        <div data-selection-source="response-body" className={`absolute inset-0 w-full h-full ${isVisible ? 'block' : 'hidden'}`} onMouseUp={onSelection} onContextMenu={onContextMenu}>
                             <div className="w-full h-full overflow-hidden">
                                 {showDiff && hasDiffData ? (
                                     <div className="w-full h-full flex flex-col">

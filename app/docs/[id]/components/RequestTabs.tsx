@@ -13,6 +13,8 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { getThemeClasses } from '../utils/theme';
 import toast from 'react-hot-toast';
 import { WorkspaceTab } from './WorkspaceTab';
+import { ScriptsTab } from './ScriptsTab';
+import { GraphQLPlayground } from './GraphQLPlayground';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
     ssr: false,
@@ -23,7 +25,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
     )
 });
 
-type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'code' | 'mocking' | 'notes';
+type TabType = 'docs' | 'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'code' | 'mocking' | 'notes' | 'scripts';
 
 interface RequestTabsProps {
     currentReq: any;
@@ -44,6 +46,8 @@ interface RequestTabsProps {
     onContextMenu: (e: React.MouseEvent) => void;
     aiEnabled?: boolean;
     onAiGenerateTests?: () => void;
+    lastPreScriptResult?: any;
+    lastPostScriptResult?: any;
 }
 
 export const RequestTabs = memo(({
@@ -65,6 +69,8 @@ export const RequestTabs = memo(({
     onContextMenu,
     aiEnabled,
     onAiGenerateTests,
+    lastPreScriptResult,
+    lastPostScriptResult,
 }: RequestTabsProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -78,7 +84,7 @@ export const RequestTabs = memo(({
 
     const [wrapLines, setWrapLines] = React.useState(false);
 
-    const allTabs: TabType[] = ['body', 'headers', 'params', 'auth', 'tests', 'code', 'docs', 'schema', 'notes', 'mocking'];
+    const allTabs: TabType[] = ['body', 'headers', 'params', 'auth', 'scripts', 'tests', 'code', 'docs', 'schema', 'notes', 'mocking'];
     const tabs = React.useMemo(() => {
         const protocol = currentReq?.protocol || 'REST';
         switch (protocol) {
@@ -314,7 +320,7 @@ export const RequestTabs = memo(({
                         </div>
 
                         {(currentReq?.body?.mode || 'raw') === 'raw' ? (
-                            <div className={`relative flex-1 rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
+                            <div data-selection-source="request-body" className={`relative flex-1 rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
                                 {(() => {
                                     const responseText = currentReq?.body?.raw || '';
                                     const isVisible = (currentReq?.body?.mode || 'raw') === 'raw';
@@ -364,63 +370,39 @@ export const RequestTabs = memo(({
                                 </div>
                             </div>
                         ) : (
-                            <div className={`relative flex-1 flex flex-col gap-3`}>
-                                <div className={`flex-1 rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
-                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-[#249d9f] opacity-60 pointer-events-none tracking-widest">QUERY</div>
-                                    <Editor
-                                        key="gql-query-editor"
-                                        height="100%"
-                                        language="graphql"
-                                        value={currentReq?.body?.graphql?.query || ''}
-                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                        onChange={(query) => onRequestChange({
-                                            body: {
-                                                ...currentReq.body,
-                                                graphql: { ...currentReq.body?.graphql, query: query || '' }
-                                            }
-                                        })}
-                                        options={{
-                                            readOnly: !canEdit,
-                                            fontSize: 13,
-                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                                            minimap: { enabled: false },
-                                            scrollBeyondLastLine: false,
-                                            automaticLayout: true,
-                                            padding: { top: 12, bottom: 12 },
-                                            lineNumbers: 'on',
-                                            renderLineHighlight: 'none',
-                                        }}
-                                    />
-                                </div>
-                                <div className={`relative h-[180px] rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
-                                    <div className="absolute top-2 right-4 z-10 text-[9px] font-black text-[#249d9f] opacity-60 pointer-events-none tracking-widest">VARIABLES</div>
-                                    <Editor
-                                        key="gql-vars-editor"
-                                        height="100%"
-                                        language="json"
-                                        value={currentReq?.body?.graphql?.variables || ''}
-                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                        onChange={(variables) => onRequestChange({
-                                            body: {
-                                                ...currentReq.body,
-                                                graphql: { ...currentReq.body?.graphql, variables: variables || '' }
-                                            }
-                                        })}
-                                        options={{
-                                            readOnly: !canEdit,
-                                            fontSize: 12,
-                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                                            minimap: { enabled: false },
-                                            scrollBeyondLastLine: false,
-                                            automaticLayout: true,
-                                            padding: { top: 12, bottom: 12 },
-                                            lineNumbers: 'off',
-                                            renderLineHighlight: 'none',
-                                        }}
-                                    />
-                                </div>
+                            <div className="flex-1 min-h-0">
+                                <GraphQLPlayground
+                                    query={currentReq?.body?.graphql?.query || ''}
+                                    variables={currentReq?.body?.graphql?.variables || ''}
+                                    url={currentReq?.url || ''}
+                                    headers={(currentReq?.headers || []).reduce((acc: any, h: any) => { if (h.key) acc[h.key] = h.value; return acc; }, {})}
+                                    canEdit={canEdit}
+                                    operationName={currentReq?.body?.graphql?.operationName}
+                                    onQueryChange={(query) => onRequestChange({
+                                        body: { ...currentReq.body, graphql: { ...currentReq.body?.graphql, query } }
+                                    })}
+                                    onVariablesChange={(vars) => onRequestChange({
+                                        body: { ...currentReq.body, graphql: { ...currentReq.body?.graphql, variables: vars } }
+                                    })}
+                                    onOperationNameChange={(name) => onRequestChange({
+                                        body: { ...currentReq.body, graphql: { ...currentReq.body?.graphql, operationName: name } }
+                                    })}
+                                />
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'scripts' && (
+                    <div className="flex-1 overflow-hidden" style={{ background: '#0D1117', borderRadius: 12, border: '1px solid #21262D' }}>
+                        <ScriptsTab
+                            preScript={currentReq?.pre_script || ''}
+                            postScript={currentReq?.post_script || ''}
+                            canEdit={canEdit}
+                            onChange={(updates) => onRequestChange(updates)}
+                            lastPreResult={lastPreScriptResult}
+                            lastPostResult={lastPostScriptResult}
+                        />
                     </div>
                 )}
 

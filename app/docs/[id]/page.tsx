@@ -31,6 +31,7 @@ import { DocumentationView } from './components/DocumentationView';
 import { ChangelogView } from './components/ChangelogView';
 import { RequestTabBar } from './components/RequestTabBar';
 import SaveVariableModal from './components/SaveVariableModal';
+import { detectJsonPath, toVariableName } from '../../../utils/jsonPath';
 import { CollectionRunner } from './components/CollectionRunner';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { SnapshotModal } from './components/SnapshotModal';
@@ -93,7 +94,9 @@ function ApiClientContent() {
     const [currentReq, setCurrentReq] = useState<any>(null);
     const [response, setResponse] = useState<any>(null);
     const [reqLoading, setReqLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking' | 'notes'>('params');
+    const [lastPreScriptResult, setLastPreScriptResult] = useState<any>(null);
+    const [lastPostScriptResult, setLastPostScriptResult] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'auth' | 'body' | 'tests' | 'schema' | 'docs' | 'code' | 'mocking' | 'notes' | 'scripts'>('params');
     const [activeView, setActiveView] = useState<'client' | 'docs' | 'changelog' | 'monitoring' | 'webhooks'>('client');
     const [aiCommand, setAiCommand] = useState('Generate a professional name and a simple, clear description explaining what the request does and what the response means.');
     const [aiEnabled, setAiEnabled] = useState<boolean>(true);
@@ -118,7 +121,9 @@ function ApiClientContent() {
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
     const [selectedText, setSelectedText] = useState('');
     const [showSaveVarModal, setShowSaveVarModal] = useState(false);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean; source: 'request-body' | 'response-body' | 'other' }>({ x: 0, y: 0, visible: false, source: 'other' });
+    const [saveVarSuggestedName, setSaveVarSuggestedName] = useState<string>('');
+    const [saveVarExtractMode, setSaveVarExtractMode] = useState(false);
     const [isViewingHistory, setIsViewingHistory] = useState(false);
     const latestResponseRef = useRef<any>(null);
     const [urlHistory, setUrlHistory] = useState<string[]>([]);
@@ -234,8 +239,28 @@ function ApiClientContent() {
     const { ratio: mainSplitRatio, isResizing: isResizingMain, startResizing: startMainResize } = useHorizontalPanelResize(sidebarResWidth, isSidebarCollapsed);
     const { ratio: verticalSplitRatio, isResizing: isResizingVertical, startResizing: startVerticalResize } = useVerticalPanelResize();
 
-    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect } = useWebSocket(EMPTY_ARRAY);
-    const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect } = useSSE(EMPTY_ARRAY);
+    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect, sendMessage: wsSendMessage, clearMessages: wsClearMessages } = useWebSocket(EMPTY_ARRAY);
+    const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect, clearMessages: sseClearMessages } = useSSE(EMPTY_ARRAY);
+
+    // Choose which socket to use based on active request protocol
+    const isSSE = currentReq?.protocol === 'SSE';
+    const socketMessages = isSSE ? sseMessages : wsMessages;
+    const socketStatus = isSSE ? sseStatus : wsStatus;
+    const socketMode: 'ws' | 'sse' = isSSE ? 'sse' : 'ws';
+    const handleSocketConnect = useCallback(() => {
+        if (!currentReq) return;
+        const url = resolveUrl(currentReq);
+        if (isSSE) sseConnect(url); else wsConnect(url);
+    }, [currentReq, isSSE, resolveUrl, sseConnect, wsConnect]);
+    const handleSocketDisconnect = useCallback(() => {
+        if (isSSE) sseDisconnect(); else wsDisconnect();
+    }, [isSSE, sseDisconnect, wsDisconnect]);
+    const handleSocketSendMessage = useCallback((data: string) => {
+        if (!isSSE) wsSendMessage(data);
+    }, [isSSE, wsSendMessage]);
+    const handleSocketClearMessages = useCallback(() => {
+        if (isSSE) sseClearMessages(); else wsClearMessages();
+    }, [isSSE, sseClearMessages, wsClearMessages]);
 
     const handleTabClose = useCallback((tid: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
@@ -273,14 +298,57 @@ function ApiClientContent() {
     const handleSendRequest = useCallback(async () => {
         if (!currentReq) return;
         setReqLoading(true); setResponse(null);
+        setLastPreScriptResult(null); setLastPostScriptResult(null);
         try {
             const url = resolveUrl(currentReq);
+            const method = (currentReq.method || 'GET').toUpperCase();
             const headers = (currentReq.headers || []).reduce((acc: any, h: any) => { if (h.key) acc[h.key] = resolveAll(h.value, currentReq); return acc; }, {});
-            const body = currentReq.body?.raw ? resolveAll(currentReq.body.raw, currentReq) : undefined;
-            const start = Date.now();
-            const res = await fetch(url, { method: currentReq.method, headers, body });
-            const data = await res.json().catch(() => res.text());
-            const newResponse = { status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 };
+            const canHaveBody = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+            const rawBody = canHaveBody && currentReq.body?.raw ? resolveAll(currentReq.body.raw, currentReq) : undefined;
+
+            // Auto-set Content-Type if body exists and user didn't specify one
+            if (rawBody && !Object.keys(headers).some(k => k.toLowerCase() === 'content-type')) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            const hasScripts = !!(currentReq.pre_script?.trim() || currentReq.post_script?.trim());
+            const isGraphQL = currentReq.protocol === 'GRAPHQL';
+            let newResponse: any;
+
+            if (hasScripts || isGraphQL) {
+                // Route through server execute API for scripts or GraphQL
+                const graphqlPayload = isGraphQL && currentReq.body?.graphql ? {
+                    query: resolveAll(currentReq.body.graphql.query || '', currentReq),
+                    variables: currentReq.body.graphql.variables ? resolveAll(currentReq.body.graphql.variables, currentReq) : undefined,
+                    operationName: currentReq.body.graphql.operationName,
+                } : undefined;
+
+                const execRes = await api.execute.run({
+                    url, method, headers,
+                    body: isGraphQL ? undefined : rawBody,
+                    protocol: currentReq.protocol || 'REST',
+                    graphql: graphqlPayload,
+                    preScript: currentReq.pre_script || undefined,
+                    postScript: currentReq.post_script || undefined,
+                    variables: resolvedVariables,
+                    assertions: currentReq.assertions,
+                });
+                const execData = execRes.data;
+                newResponse = {
+                    status: execData.status, statusText: execData.statusText || '',
+                    time: execData.time, data: execData.body, headers: execData.headers,
+                    timestamp: new Date().toISOString(), size: execData.size || 0,
+                };
+                if (execData.preScriptResult) setLastPreScriptResult(execData.preScriptResult);
+                if (execData.postScriptResult) setLastPostScriptResult(execData.postScriptResult);
+            } else {
+                // Direct fetch (no scripts needed)
+                const start = Date.now();
+                const res = await fetch(url, { method, headers, body: rawBody });
+                const data = await res.json().catch(() => res.text());
+                newResponse = { status: res.status, statusText: res.statusText, time: Date.now() - start, data, timestamp: new Date().toISOString(), size: 0 };
+            }
+
             setResponse(newResponse);
             latestResponseRef.current = newResponse;
             setIsViewingHistory(false);
@@ -295,7 +363,7 @@ function ApiClientContent() {
             }
         } catch (e: any) { setResponse({ error: true, message: e.message }); }
         finally { setReqLoading(false); }
-    }, [currentReq, resolveUrl, resolveAll, updateRequestMutation]);
+    }, [currentReq, resolveUrl, resolveAll, updateRequestMutation, resolvedVariables]);
 
     const handleSaveSingleRequest = useCallback(async () => {
         if (!currentReq?.id) return;
@@ -571,9 +639,25 @@ function ApiClientContent() {
     const handleSelection = useCallback(() => { const s = window.getSelection()?.toString().trim(); if (s) setSelectedText(s); else setSelectedText(''); }, []);
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         const s = window.getSelection()?.toString().trim();
-        if (s) { e.preventDefault(); setSelectedText(s); setContextMenu({ x: e.clientX, y: e.clientY, visible: true }); }
+        if (s) {
+            e.preventDefault();
+            setSelectedText(s);
+            // Detect whether selection is in request or response body by walking up the DOM
+            const target = e.target as HTMLElement | null;
+            const container = target?.closest('[data-selection-source]') as HTMLElement | null;
+            const source = (container?.dataset.selectionSource || 'other') as any;
+            setContextMenu({ x: e.clientX, y: e.clientY, visible: true, source });
+        }
         else setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
     }, []);
+
+    // Close context menu on click anywhere
+    useEffect(() => {
+        if (!contextMenu.visible) return;
+        const handler = () => setContextMenu(p => ({ ...p, visible: false }));
+        window.addEventListener('click', handler);
+        return () => window.removeEventListener('click', handler);
+    }, [contextMenu.visible]);
 
     const previewContent = useMemo(() => {
         if (!doc) return '';
@@ -631,7 +715,19 @@ function ApiClientContent() {
                 onAddFolder={() => { setEditingFolder(null); setShowFolderModal(true); }}
                 onEditFolder={(f) => { setEditingFolder(f); setShowFolderModal(true); }}
                 onDeleteFolder={(f) => setPendingDelete({ type: 'folder', folder: f, name: f.name })}
-                onMoveRequestToFolder={async (ri, fi) => { const r = endpoints[ri]; if (r?.id) { await moveRequestToFolder(r.id, fi); queryClient.invalidateQueries({ queryKey: ['doc', id] }); } }}
+                onMoveRequestToFolder={async (ri, fi) => {
+                    const r = endpoints[ri];
+                    if (!r?.id) return;
+                    // Optimistic update
+                    setEndpoints(prev => prev.map((ep, i) => i === ri ? { ...ep, folderId: fi } : ep));
+                    try {
+                        await moveRequestToFolder(r.id, fi);
+                        queryClient.invalidateQueries({ queryKey: ['doc', id] });
+                    } catch {
+                        // Revert on failure
+                        setEndpoints(prev => prev.map((ep, i) => i === ri ? { ...ep, folderId: r.folderId } : ep));
+                    }
+                }}
                 onRunCollection={() => setShowRunner(true)} onShowSnapshots={() => setShowSnapshots(true)} activeView={activeView} onViewChange={setActiveView}
                 onExportPostman={handleExportPostman} onExportOpenApi={handleExportOpenApi}
             />
@@ -741,7 +837,7 @@ function ApiClientContent() {
                                 <RequestUrlBar currentReq={currentReq} canEdit={canEdit} isDirty={isDirty} reqLoading={reqLoading} variables={resolvedVariables} urlHistory={urlHistory} onMethodChange={(m) => handleRequestChange({ method: m })} onProtocolChange={(p) => handleRequestChange({ protocol: p })} onUrlChange={(u) => handleRequestChange({ url: u })} onSend={handleSendRequest} onSave={handleSaveSingleRequest} onCopyUrl={() => { }} onCopyMarkdown={() => { }} onDownloadMarkdown={() => { }} onFocus={(field) => handlePresenceUpdate({ field, requestId: currentReq.id })} />
                                 <div className={`flex-1 overflow-hidden flex ${paneLayout === 'vertical' ? 'flex-col' : 'flex-row'}`}>
                                     <div className="overflow-hidden" style={paneLayout === 'vertical' ? { height: `${verticalSplitRatio}%` } : { width: `${mainSplitRatio}%` }}>
-                                        <RequestTabs currentReq={currentReq} variables={resolvedVariables} activeTab={activeTab} canEdit={canEdit} aiCommand={aiCommand} aiLoading={aiMutation.isPending} aiEnabled={aiEnabled} onTabChange={setActiveTab} onRequestChange={handleRequestChange} onAiCommandChange={setAiCommand} onAiGenerate={handleAiGenerate} onAiGenerateTests={handleAiGenerateTests} onFormatJson={() => { }} onCopyBody={() => { }} onCopyTitle={() => { }} onCopyMarkdown={() => { }} onSelection={handleSelection} onContextMenu={handleContextMenu} />
+                                        <RequestTabs currentReq={currentReq} variables={resolvedVariables} activeTab={activeTab} canEdit={canEdit} aiCommand={aiCommand} aiLoading={aiMutation.isPending} aiEnabled={aiEnabled} onTabChange={setActiveTab} onRequestChange={handleRequestChange} onAiCommandChange={setAiCommand} onAiGenerate={handleAiGenerate} onAiGenerateTests={handleAiGenerateTests} onFormatJson={() => { }} onCopyBody={() => { }} onCopyTitle={() => { }} onCopyMarkdown={() => { }} onSelection={handleSelection} onContextMenu={handleContextMenu} lastPreScriptResult={lastPreScriptResult} lastPostScriptResult={lastPostScriptResult} />
                                     </div>
                                     <div className={`bg-[#1a7a7c]/10 hover:bg-[#1a7a7c]/50 transition-colors z-10 ${paneLayout === 'vertical' ? 'h-1 w-full cursor-row-resize' : 'w-1 h-full cursor-col-resize'} ${isResizingMain || isResizingVertical ? 'bg-[#1a7a7c]' : ''}`} onMouseDown={paneLayout === 'vertical' ? startVerticalResize : startMainResize} />
                                     <div className="flex-1 h-full overflow-hidden">
@@ -757,7 +853,7 @@ function ApiClientContent() {
                                             if (latestResponseRef.current) setResponse(latestResponseRef.current);
                                             setIsViewingHistory(false);
                                         }}
-                                        isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={wsMessages} wsStatus={wsStatus} socketMode="ws" onWsConnect={() => { }} onWsDisconnect={() => { }} onWsSendMessage={() => { }} onWsClearMessages={() => { }} />
+                                        isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={socketMessages} wsStatus={socketStatus} socketMode={socketMode} onWsConnect={handleSocketConnect} onWsDisconnect={handleSocketDisconnect} onWsSendMessage={handleSocketSendMessage} onWsClearMessages={handleSocketClearMessages} />
                                     </div>
                                 </div>
                             </div>
@@ -782,12 +878,82 @@ function ApiClientContent() {
                     </div>
                 </div>
             )}
+            {/* Right-click context menu */}
+            {contextMenu.visible && selectedText && (
+                <div
+                    style={{
+                        position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 200,
+                        background: '#161B22', border: '1px solid #30363D', borderRadius: 10,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: 220, overflow: 'hidden',
+                    }}
+                    onClick={() => setContextMenu(p => ({ ...p, visible: false }))}
+                >
+                    <button
+                        onClick={() => { navigator.clipboard.writeText(selectedText); toast.success('Copied'); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#E6EDF3', fontSize: 12, cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #21262D' }}
+                        className="hover:bg-white/5"
+                    >
+                        Copy
+                    </button>
+                    <button
+                        onClick={() => {
+                            // Auto-detect JSON path from whichever body the selection came from
+                            const sourceText = contextMenu.source === 'request-body'
+                                ? (currentReq?.body?.raw || '')
+                                : contextMenu.source === 'response-body'
+                                    ? (typeof response?.data === 'string' ? response.data : JSON.stringify(response?.data || ''))
+                                    : '';
+                            const path = detectJsonPath(sourceText, selectedText);
+                            setSaveVarSuggestedName(path ? toVariableName(path) : '');
+                            setSaveVarExtractMode(false);
+                            setShowSaveVarModal(true);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#249d9f', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left', borderBottom: contextMenu.source === 'request-body' ? '1px solid #21262D' : 'none' }}
+                        className="hover:bg-white/5"
+                    >
+                        Save as Variable
+                    </button>
+                    {contextMenu.source === 'request-body' && (
+                        <button
+                            onClick={() => {
+                                const path = detectJsonPath(currentReq?.body?.raw || '', selectedText);
+                                setSaveVarSuggestedName(path ? toVariableName(path) : '');
+                                setSaveVarExtractMode(true);
+                                setShowSaveVarModal(true);
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#D29922', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                            className="hover:bg-white/5"
+                        >
+                            Extract to Variable
+                            <span style={{ fontSize: 10, color: '#6E7681', marginLeft: 'auto', fontWeight: 400 }}>→ replace in body</span>
+                        </button>
+                    )}
+                </div>
+            )}
+
             <CreateFolderModal isOpen={showFolderModal} onClose={() => setShowFolderModal(false)} onSubmit={async (data) => { if (editingFolder) await updateFolder(editingFolder.id, data); else await createFolder(data); }} parentFolder={parentFolderForNew} editingFolder={editingFolder} />
             <CollaboratorModal isOpen={showCollaborators} onClose={() => setShowCollaborators(false)} documentationId={id as string} isPublic={doc.isPublic} slug={doc.slug} onTogglePublic={handleShare} onSlugUpdate={handleUpdateSlug} userRole={userRole as any} />
             <SnapshotModal isOpen={showSnapshots} onClose={() => setShowSnapshots(false)} documentationId={id as string} />
             {showRunner && <CollectionRunner endpoints={endpoints} variables={resolvedVariables} onClose={() => setShowRunner(false)} />}
             <DeleteConfirmModal isOpen={!!pendingDelete} itemName={pendingDelete?.name || ''} itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'} onConfirm={async () => { if (pendingDelete?.type === 'request' && pendingDelete.idx !== undefined) { const rid = endpoints[pendingDelete.idx].id; if (rid) await deleteRequestMutation.mutateAsync(rid); queryClient.invalidateQueries({ queryKey: ['doc', id] }); setEndpoints(prev => prev.filter((_, i) => !pendingDelete || i !== pendingDelete.idx)); } else if (pendingDelete?.type === 'folder') await deleteFolder(pendingDelete.folder.id, true); setPendingDelete(null); }} onCancel={() => setPendingDelete(null)} />
-            <SaveVariableModal isOpen={showSaveVarModal} onClose={() => setShowSaveVarModal(false)} selectedValue={selectedText} documentationId={id as string} />
+            <SaveVariableModal
+                isOpen={showSaveVarModal}
+                onClose={() => { setShowSaveVarModal(false); setSaveVarExtractMode(false); setSaveVarSuggestedName(''); }}
+                selectedValue={selectedText}
+                documentationId={id as string}
+                suggestedName={saveVarSuggestedName}
+                extractMode={saveVarExtractMode}
+                onExtract={(varName) => {
+                    // Replace selectedText in request body with {{varName}}
+                    if (!currentReq || !saveVarExtractMode) return;
+                    const currentBody = currentReq.body?.raw || '';
+                    const updated = currentBody.split(selectedText).join(`{{${varName}}}`);
+                    const updatedReq = { ...currentReq, body: { ...currentReq.body, raw: updated } };
+                    setCurrentReq(updatedReq);
+                    setIsDirty(true);
+                    toast.success(`Replaced with {{${varName}}}`);
+                }}
+            />
         </div>
     );
 }
