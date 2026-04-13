@@ -310,7 +310,27 @@ export const RequestTabs = memo(({
                                         <WrapText size={12} /> {wrapLines ? 'WRAP ON' : 'WRAP OFF'}
                                     </button>
                                     <button
-                                        onClick={onFormatJson}
+                                        onClick={() => {
+                                            const raw = currentReq?.body?.raw || '';
+                                            if (!raw.trim()) return;
+                                            // Substitute {{var}} with a unique string token so JSON.parse succeeds,
+                                            // then restore after formatting.
+                                            const placeholders: string[] = [];
+                                            const masked = raw.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m: string, name: string) => {
+                                                const i = placeholders.length;
+                                                placeholders.push(name);
+                                                return `"__VAR_${i}__"`;
+                                            });
+                                            try {
+                                                const parsed = JSON.parse(masked);
+                                                let formatted = JSON.stringify(parsed, null, 2);
+                                                formatted = formatted.replace(/"__VAR_(\d+)__"/g, (_m: string, i: string) => `{{${placeholders[Number(i)]}}}`);
+                                                onRequestChange({ body: { ...currentReq.body, mode: currentReq.body?.mode || 'raw', raw: formatted } });
+                                                toast.success('Formatted');
+                                            } catch (e: any) {
+                                                toast.error('Invalid JSON — cannot format');
+                                            }
+                                        }}
                                         className="px-2 py-1 hover:bg-[#1a7a7c]/20 text-[#2ec4c7] rounded-lg border border-[#249d9f]/20 flex items-center gap-1.5 font-black text-[9px] uppercase tracking-widest transition-all"
                                     >
                                         <CheckCircle2 size={12} /> FORMAT
@@ -341,7 +361,13 @@ export const RequestTabs = memo(({
                                                 value={responseText}
                                                 theme={theme === 'dark' ? 'vs-dark' : 'light'}
                                                 onChange={(value) => onRequestChange({ body: { ...currentReq.body, mode: currentReq.body?.mode || 'raw', raw: value || '' } })}
-                                                onMount={(editor) => {
+                                                onMount={(editor, monaco) => {
+                                                    // Disable JSON validation so {{variable}} placeholders don't show errors
+                                                    monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                                                        validate: false,
+                                                        allowComments: true,
+                                                        schemas: [],
+                                                    });
                                                     editor.addAction({
                                                         id: 'save-as-variable',
                                                         label: 'Save as Variable',
