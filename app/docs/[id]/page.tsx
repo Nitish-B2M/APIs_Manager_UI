@@ -31,6 +31,7 @@ import { DocumentationView } from './components/DocumentationView';
 import { ChangelogView } from './components/ChangelogView';
 import { RequestTabBar } from './components/RequestTabBar';
 import SaveVariableModal from './components/SaveVariableModal';
+import { detectJsonPath, toVariableName } from '../../../utils/jsonPath';
 import { CollectionRunner } from './components/CollectionRunner';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { SnapshotModal } from './components/SnapshotModal';
@@ -120,7 +121,9 @@ function ApiClientContent() {
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
     const [selectedText, setSelectedText] = useState('');
     const [showSaveVarModal, setShowSaveVarModal] = useState(false);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean; source: 'request-body' | 'response-body' | 'other' }>({ x: 0, y: 0, visible: false, source: 'other' });
+    const [saveVarSuggestedName, setSaveVarSuggestedName] = useState<string>('');
+    const [saveVarExtractMode, setSaveVarExtractMode] = useState(false);
     const [isViewingHistory, setIsViewingHistory] = useState(false);
     const latestResponseRef = useRef<any>(null);
     const [urlHistory, setUrlHistory] = useState<string[]>([]);
@@ -636,7 +639,15 @@ function ApiClientContent() {
     const handleSelection = useCallback(() => { const s = window.getSelection()?.toString().trim(); if (s) setSelectedText(s); else setSelectedText(''); }, []);
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         const s = window.getSelection()?.toString().trim();
-        if (s) { e.preventDefault(); setSelectedText(s); setContextMenu({ x: e.clientX, y: e.clientY, visible: true }); }
+        if (s) {
+            e.preventDefault();
+            setSelectedText(s);
+            // Detect whether selection is in request or response body by walking up the DOM
+            const target = e.target as HTMLElement | null;
+            const container = target?.closest('[data-selection-source]') as HTMLElement | null;
+            const source = (container?.dataset.selectionSource || 'other') as any;
+            setContextMenu({ x: e.clientX, y: e.clientY, visible: true, source });
+        }
         else setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
     }, []);
 
@@ -873,7 +884,7 @@ function ApiClientContent() {
                     style={{
                         position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 200,
                         background: '#161B22', border: '1px solid #30363D', borderRadius: 10,
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: 200, overflow: 'hidden',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: 220, overflow: 'hidden',
                     }}
                     onClick={() => setContextMenu(p => ({ ...p, visible: false }))}
                 >
@@ -885,13 +896,38 @@ function ApiClientContent() {
                         Copy
                     </button>
                     <button
-                        onClick={() => { setShowSaveVarModal(true); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#249d9f', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                        onClick={() => {
+                            // Auto-detect JSON path from whichever body the selection came from
+                            const sourceText = contextMenu.source === 'request-body'
+                                ? (currentReq?.body?.raw || '')
+                                : contextMenu.source === 'response-body'
+                                    ? (typeof response?.data === 'string' ? response.data : JSON.stringify(response?.data || ''))
+                                    : '';
+                            const path = detectJsonPath(sourceText, selectedText);
+                            setSaveVarSuggestedName(path ? toVariableName(path) : '');
+                            setSaveVarExtractMode(false);
+                            setShowSaveVarModal(true);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#249d9f', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left', borderBottom: contextMenu.source === 'request-body' ? '1px solid #21262D' : 'none' }}
                         className="hover:bg-white/5"
                     >
                         Save as Variable
-                        <span style={{ fontSize: 10, color: '#6E7681', marginLeft: 'auto', fontWeight: 400 }}>→ {`{{${selectedText.length > 20 ? '...' : selectedText}}}`}</span>
                     </button>
+                    {contextMenu.source === 'request-body' && (
+                        <button
+                            onClick={() => {
+                                const path = detectJsonPath(currentReq?.body?.raw || '', selectedText);
+                                setSaveVarSuggestedName(path ? toVariableName(path) : '');
+                                setSaveVarExtractMode(true);
+                                setShowSaveVarModal(true);
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', background: 'none', border: 'none', color: '#D29922', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                            className="hover:bg-white/5"
+                        >
+                            Extract to Variable
+                            <span style={{ fontSize: 10, color: '#6E7681', marginLeft: 'auto', fontWeight: 400 }}>→ replace in body</span>
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -900,7 +936,24 @@ function ApiClientContent() {
             <SnapshotModal isOpen={showSnapshots} onClose={() => setShowSnapshots(false)} documentationId={id as string} />
             {showRunner && <CollectionRunner endpoints={endpoints} variables={resolvedVariables} onClose={() => setShowRunner(false)} />}
             <DeleteConfirmModal isOpen={!!pendingDelete} itemName={pendingDelete?.name || ''} itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'} onConfirm={async () => { if (pendingDelete?.type === 'request' && pendingDelete.idx !== undefined) { const rid = endpoints[pendingDelete.idx].id; if (rid) await deleteRequestMutation.mutateAsync(rid); queryClient.invalidateQueries({ queryKey: ['doc', id] }); setEndpoints(prev => prev.filter((_, i) => !pendingDelete || i !== pendingDelete.idx)); } else if (pendingDelete?.type === 'folder') await deleteFolder(pendingDelete.folder.id, true); setPendingDelete(null); }} onCancel={() => setPendingDelete(null)} />
-            <SaveVariableModal isOpen={showSaveVarModal} onClose={() => setShowSaveVarModal(false)} selectedValue={selectedText} documentationId={id as string} />
+            <SaveVariableModal
+                isOpen={showSaveVarModal}
+                onClose={() => { setShowSaveVarModal(false); setSaveVarExtractMode(false); setSaveVarSuggestedName(''); }}
+                selectedValue={selectedText}
+                documentationId={id as string}
+                suggestedName={saveVarSuggestedName}
+                extractMode={saveVarExtractMode}
+                onExtract={(varName) => {
+                    // Replace selectedText in request body with {{varName}}
+                    if (!currentReq || !saveVarExtractMode) return;
+                    const currentBody = currentReq.body?.raw || '';
+                    const updated = currentBody.split(selectedText).join(`{{${varName}}}`);
+                    const updatedReq = { ...currentReq, body: { ...currentReq.body, raw: updated } };
+                    setCurrentReq(updatedReq);
+                    setIsDirty(true);
+                    toast.success(`Replaced with {{${varName}}}`);
+                }}
+            />
         </div>
     );
 }

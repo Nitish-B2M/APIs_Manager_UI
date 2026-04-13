@@ -320,7 +320,7 @@ export const RequestTabs = memo(({
                         </div>
 
                         {(currentReq?.body?.mode || 'raw') === 'raw' ? (
-                            <div className={`relative flex-1 rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
+                            <div data-selection-source="request-body" className={`relative flex-1 rounded-2xl border ${borderCol} overflow-hidden ${isDark ? 'bg-black/40 backdrop-blur-md' : 'bg-white'}`}>
                                 {(() => {
                                     const responseText = currentReq?.body?.raw || '';
                                     const isVisible = (currentReq?.body?.mode || 'raw') === 'raw';
