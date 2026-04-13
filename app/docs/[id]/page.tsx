@@ -239,7 +239,7 @@ function ApiClientContent() {
     const { ratio: mainSplitRatio, isResizing: isResizingMain, startResizing: startMainResize } = useHorizontalPanelResize(sidebarResWidth, isSidebarCollapsed);
     const { ratio: verticalSplitRatio, isResizing: isResizingVertical, startResizing: startVerticalResize } = useVerticalPanelResize();
 
-    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect, sendMessage: wsSendMessage, clearMessages: wsClearMessages } = useWebSocket(EMPTY_ARRAY);
+    const { messages: wsMessages, status: wsStatus, connect: wsConnect, disconnect: wsDisconnect, sendMessage: wsSendMessage, clearMessages: wsClearMessages, autoReconnect: wsAutoReconnect, setAutoReconnect: setWsAutoReconnect } = useWebSocket(EMPTY_ARRAY);
     const { messages: sseMessages, status: sseStatus, connect: sseConnect, disconnect: sseDisconnect, clearMessages: sseClearMessages } = useSSE(EMPTY_ARRAY);
 
     // Choose which socket to use based on active request protocol
@@ -255,8 +255,8 @@ function ApiClientContent() {
     const handleSocketDisconnect = useCallback(() => {
         if (isSSE) sseDisconnect(); else wsDisconnect();
     }, [isSSE, sseDisconnect, wsDisconnect]);
-    const handleSocketSendMessage = useCallback((data: string) => {
-        if (!isSSE) wsSendMessage(data);
+    const handleSocketSendMessage = useCallback((data: string, dataType?: 'text' | 'binary') => {
+        if (!isSSE) wsSendMessage(data, dataType);
     }, [isSSE, wsSendMessage]);
     const handleSocketClearMessages = useCallback(() => {
         if (isSSE) sseClearMessages(); else wsClearMessages();
@@ -853,7 +853,7 @@ function ApiClientContent() {
                                             if (latestResponseRef.current) setResponse(latestResponseRef.current);
                                             setIsViewingHistory(false);
                                         }}
-                                        isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={socketMessages} wsStatus={socketStatus} socketMode={socketMode} onWsConnect={handleSocketConnect} onWsDisconnect={handleSocketDisconnect} onWsSendMessage={handleSocketSendMessage} onWsClearMessages={handleSocketClearMessages} />
+                                        isViewingHistory={isViewingHistory} onSelection={handleSelection} onContextMenu={handleContextMenu} shouldCopySingleLine={shouldCopySingleLine} aiEnabled={aiEnabled} onExplainError={handleAiExplainError} wsMessages={socketMessages} wsStatus={socketStatus} socketMode={socketMode} onWsConnect={handleSocketConnect} onWsDisconnect={handleSocketDisconnect} onWsSendMessage={handleSocketSendMessage} onWsClearMessages={handleSocketClearMessages} wsAutoReconnect={wsAutoReconnect} onWsAutoReconnectChange={setWsAutoReconnect} />
                                     </div>
                                 </div>
                             </div>

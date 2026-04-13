@@ -90,8 +90,10 @@ interface ResponsePanelProps {
     socketMode?: 'ws' | 'sse';
     onWsConnect?: () => void;
     onWsDisconnect?: () => void;
-    onWsSendMessage?: (data: string) => void;
+    onWsSendMessage?: (data: string, dataType?: 'text' | 'binary') => void;
     onWsClearMessages?: () => void;
+    wsAutoReconnect?: boolean;
+    onWsAutoReconnectChange?: (v: boolean) => void;
     aiEnabled?: boolean;
     onExplainError?: (error: any) => Promise<string | null>;
     shouldCopySingleLine?: boolean;
@@ -117,6 +119,8 @@ export function ResponsePanel({
     onWsDisconnect,
     onWsSendMessage,
     onWsClearMessages,
+    wsAutoReconnect,
+    onWsAutoReconnectChange,
     aiEnabled,
     onExplainError,
     shouldCopySingleLine
@@ -420,6 +424,8 @@ export function ResponsePanel({
                             messages={wsMessages}
                             status={wsStatus}
                             mode={socketMode}
+                            autoReconnect={wsAutoReconnect}
+                            onAutoReconnectChange={onWsAutoReconnectChange}
                             onConnect={onWsConnect || (() => { })}
                             onDisconnect={onWsDisconnect || (() => { })}
                             onSendMessage={onWsSendMessage || (() => { })}
