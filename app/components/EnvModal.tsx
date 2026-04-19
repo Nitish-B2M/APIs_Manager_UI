@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Settings, Check, ChevronDown, Edit3, Globe, Eye, EyeOff, Shield, Download, Upload, FileJson, FileText, Save } from 'lucide-react';
+import { X, Plus, Trash2, Settings, Check, ChevronDown, Edit3, Globe, Eye, EyeOff, Shield, Download, Upload, FileJson, FileText, Save, GitCompare } from 'lucide-react';
+import { EnvironmentPromotion } from '../docs/[id]/components/EnvironmentPromotion';
 import { useTheme } from '../../context/ThemeContext';
 import { useBetaMode } from '../../context/BetaModeContext';
 import { useEnvironments } from '../../hooks/useEnvironments';
@@ -21,6 +22,7 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
     const { theme } = useTheme();
     const { isBeta } = useBetaMode();
     const [scope, setScope] = useState<'COLLECTION' | 'GLOBAL'>('COLLECTION');
+    const [showPromotion, setShowPromotion] = useState(false);
 
     // Collection environments
     const collEnv = useEnvironments({
@@ -700,6 +702,16 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                         </div>
                     </div>
                     <div className="flex gap-3">
+                        {scope === 'COLLECTION' && environments.length >= 2 && (
+                            <button
+                                onClick={() => setShowPromotion(true)}
+                                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
+                                style={{ background: 'transparent', color: '#249d9f', border: '1px solid #249d9f' }}
+                                title="Compare two environments and promote variables between them"
+                            >
+                                <GitCompare size={14} /> Compare &amp; Promote
+                            </button>
+                        )}
                         {selectedEnv && (
                             <button
                                 onClick={handleSaveEnvironment}
@@ -719,6 +731,13 @@ export default function EnvModal({ isOpen, onClose, documentationId, variables: 
                     </div>
                 </div>
             </div>
+
+            {showPromotion && (
+                <EnvironmentPromotion
+                    documentationId={documentationId}
+                    onClose={() => setShowPromotion(false)}
+                />
+            )}
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (

@@ -8,7 +8,7 @@ import {
     Layout, FileText, Copy, X, Download, Keyboard, Search, Clock,
     Activity, Shield, Users, Trash2, ExternalLink, Plus, AlertTriangle,
     AlertCircle, Database, HelpCircle, Mail, User, Check, RotateCcw, Sparkles,
-    Settings2, Terminal, Zap, Columns2, Rows2, Save, Globe, ChevronRight, Gauge, ShieldAlert, Network
+    Settings2, Terminal, Zap, Columns2, Rows2, Save, Globe, ChevronRight, Gauge, ShieldAlert, Network, GitCompare
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { GlassCard, PremiumButton } from '@/components/UIComponents';
@@ -36,6 +36,7 @@ import { CollectionRunner } from './components/CollectionRunner';
 import { LoadTestPanel } from './components/LoadTestPanel';
 import { SecurityScanPanel } from './components/SecurityScanPanel';
 import { DependencyGraph } from './components/DependencyGraph';
+import { EnvironmentPromotion } from './components/EnvironmentPromotion';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { SnapshotModal } from './components/SnapshotModal';
 import { MonitorDashboard } from './components/MonitorDashboard';
@@ -115,6 +116,7 @@ function ApiClientContent() {
     const [showLoadTest, setShowLoadTest] = useState(false);
     const [showSecurityScan, setShowSecurityScan] = useState(false);
     const [showDependencyGraph, setShowDependencyGraph] = useState(false);
+    const [showEnvPromotion, setShowEnvPromotion] = useState(false);
     const [showSnapshots, setShowSnapshots] = useState(false);
     const [showCollaborators, setShowCollaborators] = useState(false);
     const [showAiBuilder, setShowAiBuilder] = useState(false);
@@ -854,6 +856,7 @@ function ApiClientContent() {
                         <ToolbarBtn icon={<Gauge size={15} />} tooltip="Load Test" onClick={() => setShowLoadTest(true)} />
                         <ToolbarBtn icon={<ShieldAlert size={15} />} tooltip="Security Scan" onClick={() => setShowSecurityScan(true)} />
                         <ToolbarBtn icon={<Network size={15} />} tooltip="Dependency Graph" onClick={() => setShowDependencyGraph(true)} />
+                        <ToolbarBtn icon={<GitCompare size={15} />} tooltip="Promote Environment" onClick={() => setShowEnvPromotion(true)} />
                         <ToolbarBtn icon={<Clock size={15} />} tooltip="Snapshots" onClick={() => setShowSnapshots(true)} />
 
                         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
@@ -1004,6 +1007,7 @@ function ApiClientContent() {
             {showLoadTest && <LoadTestPanel endpoints={endpoints} variables={resolvedVariables} onClose={() => setShowLoadTest(false)} />}
             {showSecurityScan && <SecurityScanPanel endpoints={endpoints} variables={resolvedVariables} onClose={() => setShowSecurityScan(false)} />}
             {showDependencyGraph && <DependencyGraph endpoints={endpoints} onClose={() => setShowDependencyGraph(false)} onSelectEndpoint={(idx) => setSelectedIdx(idx)} />}
+            {showEnvPromotion && <EnvironmentPromotion documentationId={id as string} onClose={() => setShowEnvPromotion(false)} />}
             <DeleteConfirmModal isOpen={!!pendingDelete} itemName={pendingDelete?.name || ''} itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'} onConfirm={async () => { if (pendingDelete?.type === 'request' && pendingDelete.idx !== undefined) { const rid = endpoints[pendingDelete.idx].id; if (rid) await deleteRequestMutation.mutateAsync(rid); queryClient.invalidateQueries({ queryKey: ['doc', id] }); setEndpoints(prev => prev.filter((_, i) => !pendingDelete || i !== pendingDelete.idx)); } else if (pendingDelete?.type === 'folder') await deleteFolder(pendingDelete.folder.id, true); setPendingDelete(null); }} onCancel={() => setPendingDelete(null)} />
             <SaveVariableModal
                 isOpen={showSaveVarModal}
