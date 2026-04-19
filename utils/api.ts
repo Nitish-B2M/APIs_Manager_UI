@@ -121,6 +121,7 @@ export const api = {
         exportPostman: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/postman`, { headers: getHeaders() }).then(r => r.blob()),
         exportOpenApi: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/openapi`, { headers: getHeaders() }).then(r => r.blob()),
         getAuditLogs: (id: string) => apiFetch(`/documentation/${id}/audit-logs`),
+        getAuditHeatmap: (id: string) => apiFetch(`/documentation/${id}/audit-logs/heatmap`),
         getRequestHistory: (requestId: string, page = 1, limit = 30) => apiFetch(`/documentation/request/${requestId}/history?page=${page}&limit=${limit}`),
         clearRequestHistory: (requestId: string) => apiFetch(`/documentation/request/${requestId}/history`, { method: 'DELETE' }),
     },
