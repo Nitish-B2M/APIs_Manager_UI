@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../utils/api';
 import { X, Camera, RotateCcw, Trash2, Clock, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
@@ -25,6 +25,15 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
     const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
     const [diffSnapshot, setDiffSnapshot] = useState<any | null>(null);
     const { isBeta } = useBetaMode();
+
+    // Reset sub-modal state whenever this modal closes so reopening
+    // always lands on the snapshot list, not a stale diff view.
+    useEffect(() => {
+        if (!isOpen) {
+            setDiffSnapshot(null);
+            setConfirmRestore(null);
+        }
+    }, [isOpen]);
 
     const { data: snapshotsRes, isLoading: snapshotsLoading } = useQuery({
         queryKey: ['snapshots', documentationId],
@@ -178,11 +187,9 @@ export function SnapshotModal({ isOpen, onClose, documentationId }: SnapshotModa
 
                                     {/* Right: actions */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                        {isBeta && (
-                                            <button onClick={() => handleCompare(s)} title="Compare" className="opacity-0 group-hover:opacity-100" style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: '#249d9f', transition: 'opacity 0.15s' }}>
-                                                <Eye size={15} />
-                                            </button>
-                                        )}
+                                        <button onClick={() => handleCompare(s)} title="View changes / changelog" className="opacity-0 group-hover:opacity-100" style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: '#249d9f', transition: 'opacity 0.15s' }}>
+                                            <Eye size={15} />
+                                        </button>
                                         {confirmRestore === s.id ? (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <button onClick={() => restoreMutation.mutate(s.id)} style={{ padding: '5px 12px', borderRadius: 6, background: '#249d9f', color: 'white', fontSize: 11, fontWeight: 600, border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
