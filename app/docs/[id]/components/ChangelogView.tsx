@@ -75,7 +75,7 @@ export function ChangelogView({ docId, theme }: ChangelogViewProps) {
                                     theme === 'dark' ? 'bg-white/5 border-white/5 hover:border-white/10' : 'bg-white border-gray-100'
                                 }`}>
                                     <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-1">
+                                        <div className="space-y-1 flex-1 min-w-0">
                                             <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
                                                 <span className="font-black text-[#249d9f]">{log.userName || log.userEmail.split('@')[0]}</span>
                                                 <span className="mx-1.5 opacity-60">performed</span>
@@ -94,7 +94,7 @@ export function ChangelogView({ docId, theme }: ChangelogViewProps) {
                                                 <div className="mt-3 overflow-hidden">
                                                     <details className="group">
                                                         <summary className="cursor-pointer list-none text-[9px] font-black text-[#2ec4c7] uppercase tracking-widest hover:underline">View Change Details</summary>
-                                                        <pre className={`mt-2 p-3 rounded-xl font-mono text-[10px] overflow-x-auto ${theme === 'dark' ? 'bg-black/40 text-gray-400 border border-white/5' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
+                                                        <pre className={`mt-2 p-3 rounded-xl font-mono text-[10px] max-h-96 overflow-auto whitespace-pre-wrap break-all ${theme === 'dark' ? 'bg-black/40 text-gray-400 border border-white/5' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
                                                             {JSON.stringify(log.changes, null, 2)}
                                                         </pre>
                                                     </details>

@@ -8,7 +8,7 @@ import {
     Layout, FileText, Copy, X, Download, Keyboard, Search, Clock,
     Activity, Shield, Users, Trash2, ExternalLink, Plus, AlertTriangle,
     AlertCircle, Database, HelpCircle, Mail, User, Check, RotateCcw, Sparkles,
-    Settings2, Terminal, Zap, Columns2, Rows2, Save, Globe, ChevronRight, Gauge, ShieldAlert, Network, GitCompare
+    Settings2, Terminal, Zap, Columns2, Rows2, Save, Globe, ChevronRight, Gauge, ShieldAlert, Network, Wrench, GitCompare, BarChart3, Loader2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { GlassCard, PremiumButton } from '@/components/UIComponents';
@@ -37,6 +37,7 @@ import { LoadTestPanel } from './components/LoadTestPanel';
 import { SecurityScanPanel } from './components/SecurityScanPanel';
 import { DependencyGraph } from './components/DependencyGraph';
 import { EnvironmentPromotion } from './components/EnvironmentPromotion';
+import { InsightsPanel } from './components/InsightsPanel';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { SnapshotModal } from './components/SnapshotModal';
 import { MonitorDashboard } from './components/MonitorDashboard';
@@ -83,6 +84,64 @@ function ToolbarBtn({ icon, tooltip, onClick, active }: { icon: React.ReactNode;
     );
 }
 
+interface ToolbarMenuItem {
+    icon: React.ReactNode;
+    label: string;
+    description?: string;
+    onClick: () => void;
+    disabled?: boolean;
+}
+
+/** Toolbar dropdown — trigger icon opens a floating menu of grouped actions. */
+function ToolbarMenu({ icon, tooltip, items }: { icon: React.ReactNode; tooltip: string; items: ToolbarMenuItem[] }) {
+    const [open, setOpen] = React.useState(false);
+    const ref = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (!open) return;
+        const onDocClick = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [open]);
+
+    return (
+        <div ref={ref} style={{ position: 'relative' }}>
+            <ToolbarBtn icon={icon} tooltip={tooltip} onClick={() => setOpen(v => !v)} active={open} />
+            {open && (
+                <div style={{
+                    position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 50,
+                    minWidth: 220, background: '#0D1117', border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', padding: 4,
+                }}>
+                    {items.map((item, i) => (
+                        <button
+                            key={i}
+                            disabled={item.disabled}
+                            onClick={() => { setOpen(false); item.onClick(); }}
+                            style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                                padding: '8px 10px', borderRadius: 6, background: 'transparent', border: 'none',
+                                color: '#E6EDF3', fontSize: 12, textAlign: 'left', cursor: item.disabled ? 'not-allowed' : 'pointer',
+                                opacity: item.disabled ? 0.4 : 1,
+                            }}
+                            onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.background = '#1C2128'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <span style={{ color: '#8B949E', flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                            <span style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600 }}>{item.label}</div>
+                                {item.description && <div style={{ fontSize: 11, color: '#6E7681', marginTop: 1 }}>{item.description}</div>}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ApiClientContent() {
     const { id } = useParams();
     const router = useRouter();
@@ -117,6 +176,7 @@ function ApiClientContent() {
     const [showSecurityScan, setShowSecurityScan] = useState(false);
     const [showDependencyGraph, setShowDependencyGraph] = useState(false);
     const [showEnvPromotion, setShowEnvPromotion] = useState(false);
+    const [showInsights, setShowInsights] = useState(false);
     const [showSnapshots, setShowSnapshots] = useState(false);
     const [showCollaborators, setShowCollaborators] = useState(false);
     const [showAiBuilder, setShowAiBuilder] = useState(false);
@@ -137,10 +197,17 @@ function ApiClientContent() {
     const [urlHistory, setUrlHistory] = useState<string[]>([]);
 
     // Queries & Mutations
-    const { data: docRes, isLoading, error } = useQuery<any>({
+    const { data: docRes, isLoading, error, refetch, isFetching } = useQuery<any>({
         queryKey: ['doc', id],
         queryFn: () => api.documentation.getById(id as string),
-        retry: false
+        // Retry transient network failures (but not auth errors — apiFetch
+        // already handles 401s via refresh). Don't retry 4xx messages.
+        retry: (failureCount, err: any) => {
+            const msg = String(err?.message || '').toLowerCase();
+            if (msg.includes('unauthorized') || msg.includes('forbidden') || msg.includes('not found')) return false;
+            return failureCount < 2;
+        },
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     });
     const doc = docRes?.data;
 
@@ -373,6 +440,23 @@ function ApiClientContent() {
                 };
                 if (execData.preScriptResult) setLastPreScriptResult(execData.preScriptResult);
                 if (execData.postScriptResult) setLastPostScriptResult(execData.postScriptResult);
+
+                // Persist any variables set by pre/post scripts back to the active env
+                const scriptVars = execData.postScriptResult?.variables || execData.preScriptResult?.variables;
+                if (scriptVars && activeEnvironment?.id) {
+                    const baseVars = activeEnvironment.variables || {};
+                    const changed: Record<string, string> = {};
+                    for (const [k, v] of Object.entries(scriptVars)) {
+                        if (String(v) !== String(baseVars[k] ?? '')) changed[k] = String(v);
+                    }
+                    if (Object.keys(changed).length > 0) {
+                        api.environments.update(activeEnvironment.id, {
+                            variables: { ...baseVars, ...changed },
+                        }).then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['environments', id] });
+                        }).catch(() => {});
+                    }
+                }
             } else {
                 // Direct fetch (no scripts needed)
                 const start = Date.now();
@@ -395,7 +479,7 @@ function ApiClientContent() {
             }
         } catch (e: any) { setResponse({ error: true, message: e.message }); }
         finally { setReqLoading(false); }
-    }, [currentReq, resolveUrl, resolveAll, updateRequestMutation, resolvedVariables]);
+    }, [currentReq, resolveUrl, resolveAll, updateRequestMutation, resolvedVariables, activeEnvironment, queryClient, id]);
 
     const handleSaveSingleRequest = useCallback(async () => {
         if (!currentReq?.id) return;
@@ -746,7 +830,36 @@ function ApiClientContent() {
     }, [doc]);
 
     if (isLoading) return <div className="h-screen flex items-center justify-center bg-gray-900 text-white font-black tracking-widest animate-pulse">LOADING WORKSPACE...</div>;
-    if (error || !doc) return <div className="h-screen flex items-center justify-center bg-gray-900 text-red-500">Failed to load documentation</div>;
+    if (error || !doc) {
+        const errMsg = String((error as any)?.message || '').toLowerCase();
+        const isAuth = errMsg.includes('unauthorized');
+        return (
+            <div className="h-screen flex flex-col items-center justify-center gap-4 bg-gray-900 text-white p-6">
+                <AlertCircle size={40} className="text-red-500" />
+                <div className="text-center">
+                    <div className="text-base font-bold">Couldn&apos;t load this collection</div>
+                    <div className="text-sm text-gray-400 mt-1 max-w-md">
+                        {isAuth ? 'Your session may have expired.' : 'This could be a temporary network issue or the collection may have been removed.'}
+                    </div>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => refetch()}
+                        disabled={isFetching}
+                        className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#249d9f] hover:bg-[#2ec4c7] text-white disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {isFetching ? <><Loader2 size={14} className="animate-spin" /> Retrying…</> : <><RotateCcw size={14} /> Try again</>}
+                    </button>
+                    <button
+                        onClick={() => router.push('/dashboard')}
+                        className="px-5 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                    >
+                        Back to dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const navItems = [
         { id: 'client', label: 'API Client', icon: Zap, color: 'text-amber-400' },
@@ -850,21 +963,40 @@ function ApiClientContent() {
 
                         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 2px' }} />
 
-                        {/* Group 1: Builder + Runner + Snapshots */}
+                        {/* Primary actions — single-click, most-used */}
                         <ToolbarBtn icon={<Sparkles size={15} />} tooltip="AI Builder" onClick={() => setShowAiBuilder(true)} />
                         <ToolbarBtn icon={<Zap size={15} />} tooltip="Run Collection" onClick={() => setShowRunner(true)} />
-                        <ToolbarBtn icon={<Gauge size={15} />} tooltip="Load Test" onClick={() => setShowLoadTest(true)} />
-                        <ToolbarBtn icon={<ShieldAlert size={15} />} tooltip="Security Scan" onClick={() => setShowSecurityScan(true)} />
-                        <ToolbarBtn icon={<Network size={15} />} tooltip="Dependency Graph" onClick={() => setShowDependencyGraph(true)} />
-                        <ToolbarBtn icon={<GitCompare size={15} />} tooltip="Promote Environment" onClick={() => setShowEnvPromotion(true)} />
-                        <ToolbarBtn icon={<Clock size={15} />} tooltip="Snapshots" onClick={() => setShowSnapshots(true)} />
+
+                        {/* Tools menu — load test, scanner, graph, snapshots */}
+                        <ToolbarMenu
+                            icon={<Wrench size={15} />}
+                            tooltip="Tools"
+                            items={[
+                                { icon: <Gauge size={14} />, label: 'Load Test', description: 'Concurrent request performance', onClick: () => setShowLoadTest(true) },
+                                { icon: <ShieldAlert size={14} />, label: 'Security Scan', description: '8 vulnerability checks', onClick: () => setShowSecurityScan(true) },
+                                { icon: <Network size={14} />, label: 'Dependency Graph', description: 'Visualize variable flows', onClick: () => setShowDependencyGraph(true) },
+                                { icon: <GitCompare size={14} />, label: 'Promote Environment', description: 'Compare & copy vars (Dev→Stage→Prod)', onClick: () => setShowEnvPromotion(true) },
+                                { icon: <BarChart3 size={14} />, label: 'Insights', description: 'Coverage, activity & contributions', onClick: () => setShowInsights(true) },
+                                { icon: <Clock size={14} />, label: 'Snapshots', description: 'Versioning & diff', onClick: () => setShowSnapshots(true) },
+                            ]}
+                        />
 
                         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
 
-                        {/* Group 2: Export + Share */}
-                        <ToolbarBtn icon={<Download size={15} />} tooltip="Download Markdown" onClick={() => handleGenerateMarkdown(true)} />
-                        <ToolbarBtn icon={<Download size={15} />} tooltip="Export Postman" onClick={handleExportPostman} />
-                        <ToolbarBtn icon={<Download size={15} />} tooltip="Export OpenAPI" onClick={handleExportOpenApi} />
+                        {/* Export menu — markdown, postman, openapi, copy url */}
+                        <ToolbarMenu
+                            icon={<Download size={15} />}
+                            tooltip="Export"
+                            items={[
+                                { icon: <Download size={14} />, label: 'Download Markdown', description: 'Full collection as .md', onClick: () => handleGenerateMarkdown(true) },
+                                { icon: <Download size={14} />, label: 'Export Postman v2.1', description: 'Postman collection JSON', onClick: handleExportPostman },
+                                { icon: <Download size={14} />, label: 'Export OpenAPI 3', description: 'OpenAPI spec JSON', onClick: handleExportOpenApi },
+                                ...(userRole === 'OWNER' && doc.isPublic && doc.slug
+                                    ? [{ icon: <Copy size={14} />, label: 'Copy Public URL', onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/public/${doc.slug}`); toast.success('Link copied'); } }]
+                                    : []),
+                            ]}
+                        />
+
                         {userRole === 'OWNER' && (
                             <ToolbarBtn
                                 icon={doc.isPublic ? <Globe size={15} /> : <Users size={15} />}
@@ -872,9 +1004,6 @@ function ApiClientContent() {
                                 onClick={() => setShowCollaborators(true)}
                                 active={doc.isPublic}
                             />
-                        )}
-                        {userRole === 'OWNER' && doc.isPublic && doc.slug && (
-                            <ToolbarBtn icon={<Copy size={14} />} tooltip="Copy Public URL" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/public/${doc.slug}`); toast.success('Link copied'); }} />
                         )}
 
                         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
@@ -1008,6 +1137,16 @@ function ApiClientContent() {
             {showSecurityScan && <SecurityScanPanel endpoints={endpoints} variables={resolvedVariables} onClose={() => setShowSecurityScan(false)} />}
             {showDependencyGraph && <DependencyGraph endpoints={endpoints} onClose={() => setShowDependencyGraph(false)} onSelectEndpoint={(idx) => setSelectedIdx(idx)} />}
             {showEnvPromotion && <EnvironmentPromotion documentationId={id as string} onClose={() => setShowEnvPromotion(false)} />}
+            {showInsights && <InsightsPanel
+                documentationId={id as string}
+                endpoints={endpoints}
+                onClose={() => setShowInsights(false)}
+                onSelectEndpoint={(idx, opts) => {
+                    setSelectedIdx(idx);
+                    setActiveView('client');
+                    if (opts?.tab) setActiveTab(opts.tab as any);
+                }}
+            />}
             <DeleteConfirmModal isOpen={!!pendingDelete} itemName={pendingDelete?.name || ''} itemType={pendingDelete?.type === 'folder' ? 'folder' : 'request'} onConfirm={async () => { if (pendingDelete?.type === 'request' && pendingDelete.idx !== undefined) { const rid = endpoints[pendingDelete.idx].id; if (rid) await deleteRequestMutation.mutateAsync(rid); queryClient.invalidateQueries({ queryKey: ['doc', id] }); setEndpoints(prev => prev.filter((_, i) => !pendingDelete || i !== pendingDelete.idx)); } else if (pendingDelete?.type === 'folder') await deleteFolder(pendingDelete.folder.id, true); setPendingDelete(null); }} onCancel={() => setPendingDelete(null)} />
             <SaveVariableModal
                 isOpen={showSaveVarModal}
