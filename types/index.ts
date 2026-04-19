@@ -82,6 +82,12 @@ export interface WebsocketMessage {
     type: 'sent' | 'received';
     data: string;
     timestamp: string;
+    size?: number;
+    dataType?: 'text' | 'binary';
+    /** SSE-only: event type (from `event:` field) */
+    eventType?: string;
+    /** SSE-only: last-event-id */
+    eventId?: string;
 }
 
 export interface SSEEvent {

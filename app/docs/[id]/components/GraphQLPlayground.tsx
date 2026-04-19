@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Book, Search, ChevronRight, ChevronDown, Loader2, Wand2, RefreshCw } from 'lucide-react';
+import { Book, Search, ChevronRight, ChevronDown, Loader2, Wand2, RefreshCw, History, X } from 'lucide-react';
 import { api } from '../../../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -47,6 +47,43 @@ export function GraphQLPlayground({
     const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['Query', 'Mutation']));
     const [search, setSearch] = useState('');
     const [showSchema, setShowSchema] = useState(true);
+    const [showHistory, setShowHistory] = useState(false);
+    const [history, setHistory] = useState<Array<{ query: string; variables: string; timestamp: string }>>([]);
+    const [docType, setDocType] = useState<GQLType | null>(null);
+
+    const historyKey = useMemo(() => `gql:history:${url || 'unknown'}`, [url]);
+
+    // Load history from localStorage
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(historyKey);
+            if (raw) setHistory(JSON.parse(raw));
+            else setHistory([]);
+        } catch { setHistory([]); }
+    }, [historyKey]);
+
+    // Save the current query to history (called externally or when user changes query substantially)
+    const saveToHistory = () => {
+        if (!query.trim()) return;
+        const entry = { query, variables, timestamp: new Date().toISOString() };
+        const next = [entry, ...history.filter(h => h.query !== query)].slice(0, 20);
+        setHistory(next);
+        try { localStorage.setItem(historyKey, JSON.stringify(next)); } catch { /* quota */ }
+    };
+
+    // Auto-save history when query changes (debounced via blur-like trigger on unmount)
+    useEffect(() => {
+        const t = setTimeout(() => {
+            if (!query.trim()) return;
+            setHistory(prev => {
+                if (prev[0]?.query === query) return prev; // no change
+                const next = [{ query, variables, timestamp: new Date().toISOString() }, ...prev.filter(h => h.query !== query)].slice(0, 20);
+                try { localStorage.setItem(historyKey, JSON.stringify(next)); } catch { /* quota */ }
+                return next;
+            });
+        }, 2000);
+        return () => clearTimeout(t);
+    }, [query, variables, historyKey]);
 
     // Extract all operation names from the query
     const operations = useMemo(() => {
@@ -134,7 +171,7 @@ export function GraphQLPlayground({
     }, [schema, search]);
 
     return (
-        <div style={{ display: 'flex', height: '100%', gap: 8 }}>
+        <div style={{ display: 'flex', height: '100%', gap: 8, position: 'relative' }}>
             {/* Main editor column */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
                 {/* Toolbar */}
@@ -164,15 +201,27 @@ export function GraphQLPlayground({
                         <Wand2 size={11} /> Prettify
                     </button>
                     <button
-                        onClick={() => setShowSchema(!showSchema)}
+                        onClick={() => { setShowHistory(!showHistory); if (!showHistory) setShowSchema(false); }}
+                        style={{
+                            padding: '6px 10px', background: showHistory ? 'rgba(36,157,159,0.15)' : '#161B22',
+                            border: `1px solid ${showHistory ? '#249d9f' : '#30363D'}`, borderRadius: 6,
+                            color: showHistory ? '#249d9f' : '#8B949E', fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto',
+                        }}
+                    >
+                        <History size={11} /> History
+                        {history.length > 0 && <span style={{ fontSize: 9, background: '#249d9f', color: '#0D1117', padding: '0 5px', borderRadius: 7, fontWeight: 700 }}>{history.length}</span>}
+                    </button>
+                    <button
+                        onClick={() => { setShowSchema(!showSchema); if (!showSchema) setShowHistory(false); }}
                         style={{
                             padding: '6px 10px', background: showSchema ? 'rgba(36,157,159,0.15)' : '#161B22',
                             border: `1px solid ${showSchema ? '#249d9f' : '#30363D'}`, borderRadius: 6,
                             color: showSchema ? '#249d9f' : '#8B949E', fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto',
+                            display: 'flex', alignItems: 'center', gap: 4,
                         }}
                     >
-                        <Book size={11} /> {showSchema ? 'Hide' : 'Show'} Schema
+                        <Book size={11} /> Schema
                     </button>
                 </div>
 
@@ -220,6 +269,60 @@ export function GraphQLPlayground({
                     />
                 </div>
             </div>
+
+            {/* History sidebar */}
+            {showHistory && (
+                <div style={{
+                    width: 260, flexShrink: 0, background: '#0D1117', border: '1px solid #21262D',
+                    borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                }}>
+                    <div style={{ padding: '10px 12px', borderBottom: '1px solid #21262D', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <History size={13} style={{ color: '#249d9f' }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#E6EDF3' }}>History</span>
+                        {history.length > 0 && (
+                            <button
+                                onClick={() => { setHistory([]); localStorage.removeItem(historyKey); toast.success('History cleared'); }}
+                                style={{ marginLeft: 'auto', padding: 4, borderRadius: 4, background: 'none', border: 'none', color: '#8B949E', cursor: 'pointer', fontSize: 10 }}
+                                title="Clear history"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
+                        {history.length === 0 ? (
+                            <div style={{ padding: 16, textAlign: 'center' }}>
+                                <History size={20} style={{ color: '#484F58', margin: '0 auto 8px' }} />
+                                <p style={{ fontSize: 11, color: '#8B949E' }}>No queries yet. Your queries will appear here automatically.</p>
+                            </div>
+                        ) : history.map((h, i) => (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    onQueryChange(h.query);
+                                    if (h.variables) onVariablesChange(h.variables);
+                                    toast.success('Query loaded');
+                                }}
+                                style={{
+                                    display: 'block', width: '100%', textAlign: 'left', padding: '6px 8px',
+                                    marginBottom: 4, background: '#161B22', border: '1px solid #21262D',
+                                    borderRadius: 6, color: '#E6EDF3', fontSize: 10, fontFamily: 'monospace',
+                                    cursor: 'pointer', overflow: 'hidden',
+                                }}
+                                className="hover:border-[#249d9f]"
+                                title={h.query}
+                            >
+                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#E6EDF3' }}>
+                                    {h.query.replace(/\s+/g, ' ').substring(0, 60)}
+                                </div>
+                                <div style={{ fontSize: 9, color: '#6E7681', marginTop: 2 }}>
+                                    {new Date(h.timestamp).toLocaleString()}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Schema explorer sidebar */}
             {showSchema && (
@@ -285,22 +388,32 @@ export function GraphQLPlayground({
                         )}
                         {displayTypes.map(type => (
                             <div key={type.name} style={{ marginBottom: 2 }}>
-                                <button
-                                    onClick={() => toggleType(type.name)}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 4, width: '100%',
-                                        padding: '4px 8px', background: 'none', border: 'none',
-                                        color: '#E6EDF3', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                                        textAlign: 'left', borderRadius: 4,
-                                    }}
-                                    className="hover:bg-white/5"
-                                >
-                                    {expandedTypes.has(type.name) ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                                    <span style={{ color: type.name === 'Query' ? '#58A6FF' : type.name === 'Mutation' ? '#F85149' : type.name === 'Subscription' ? '#D29922' : '#E6EDF3' }}>
-                                        {type.name}
-                                    </span>
-                                    <span style={{ fontSize: 9, color: '#6E7681', marginLeft: 'auto' }}>{type.fields?.length || 0}</span>
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <button
+                                        onClick={() => toggleType(type.name)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 4, flex: 1,
+                                            padding: '4px 8px', background: 'none', border: 'none',
+                                            color: '#E6EDF3', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                            textAlign: 'left', borderRadius: 4,
+                                        }}
+                                        className="hover:bg-white/5"
+                                    >
+                                        {expandedTypes.has(type.name) ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                                        <span style={{ color: type.name === 'Query' ? '#58A6FF' : type.name === 'Mutation' ? '#F85149' : type.name === 'Subscription' ? '#D29922' : '#E6EDF3' }}>
+                                            {type.name}
+                                        </span>
+                                        <span style={{ fontSize: 9, color: '#6E7681', marginLeft: 'auto' }}>{type.fields?.length || 0}</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setDocType(type)}
+                                        title="View docs"
+                                        style={{ padding: 4, borderRadius: 4, background: 'none', border: 'none', color: '#6E7681', cursor: 'pointer' }}
+                                        className="hover:text-[#249d9f]"
+                                    >
+                                        <Book size={10} />
+                                    </button>
+                                </div>
                                 {expandedTypes.has(type.name) && type.fields && (
                                     <div style={{ paddingLeft: 14 }}>
                                         {type.fields.map(field => (
@@ -330,6 +443,63 @@ export function GraphQLPlayground({
                                 )}
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Type documentation overlay */}
+            {docType && (
+                <div style={{
+                    position: 'absolute', top: 42, right: 8, width: 320, maxHeight: 'calc(100% - 56px)',
+                    background: '#161B22', border: '1px solid #249d9f', borderRadius: 10,
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.6)', zIndex: 50, display: 'flex', flexDirection: 'column',
+                }}>
+                    <div style={{ padding: '10px 12px', borderBottom: '1px solid #21262D', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Book size={13} style={{ color: '#249d9f' }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#E6EDF3' }}>{docType.name}</span>
+                        <span style={{ fontSize: 10, color: '#6E7681', padding: '2px 6px', background: '#0D1117', borderRadius: 4 }}>{docType.kind}</span>
+                        <button onClick={() => setDocType(null)} style={{ marginLeft: 'auto', padding: 2, borderRadius: 4, background: 'none', border: 'none', color: '#8B949E', cursor: 'pointer' }}>
+                            <X size={14} />
+                        </button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+                        {docType.description && (
+                            <p style={{ fontSize: 11, color: '#8B949E', marginBottom: 12, lineHeight: 1.5 }}>{docType.description}</p>
+                        )}
+                        {docType.fields && docType.fields.length > 0 ? (
+                            <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#484F58', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Fields</div>
+                                {docType.fields.map(field => (
+                                    <div key={field.name} style={{ padding: '6px 8px', background: '#0D1117', borderRadius: 4, marginBottom: 4, fontFamily: 'monospace', fontSize: 10 }}>
+                                        <div>
+                                            <span style={{ color: '#E6EDF3' }}>{field.name}</span>
+                                            {field.args && field.args.length > 0 && (
+                                                <span style={{ color: '#6E7681' }}>
+                                                    (
+                                                    {field.args.map((a: any, i: number) => (
+                                                        <span key={a.name}>
+                                                            {i > 0 && ', '}
+                                                            <span style={{ color: '#D29922' }}>{a.name}</span>
+                                                            <span style={{ color: '#6E7681' }}>: {typeName(a.type)}</span>
+                                                        </span>
+                                                    ))}
+                                                    )
+                                                </span>
+                                            )}
+                                            <span style={{ color: '#6E7681' }}>: </span>
+                                            <span style={{ color: '#58A6FF' }}>{typeName(field.type)}</span>
+                                        </div>
+                                        {field.description && (
+                                            <div style={{ fontSize: 10, color: '#6E7681', marginTop: 3, fontFamily: 'sans-serif', lineHeight: 1.4 }}>
+                                                {field.description}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: 11, color: '#6E7681', fontStyle: 'italic' }}>No fields defined.</p>
+                        )}
                     </div>
                 </div>
             )}

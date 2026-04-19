@@ -121,6 +121,7 @@ export const api = {
         exportPostman: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/postman`, { headers: getHeaders() }).then(r => r.blob()),
         exportOpenApi: (id: string) => fetch(`${API_URL}/api/documentation/${id}/export/openapi`, { headers: getHeaders() }).then(r => r.blob()),
         getAuditLogs: (id: string) => apiFetch(`/documentation/${id}/audit-logs`),
+        getAuditHeatmap: (id: string) => apiFetch(`/documentation/${id}/audit-logs/heatmap`),
         getRequestHistory: (requestId: string, page = 1, limit = 30) => apiFetch(`/documentation/request/${requestId}/history?page=${page}&limit=${limit}`),
         clearRequestHistory: (requestId: string) => apiFetch(`/documentation/request/${requestId}/history`, { method: 'DELETE' }),
     },
@@ -147,6 +148,8 @@ export const api = {
             apiFetch(`/documentation/environments/${environmentId}`, { method: 'DELETE' }),
         setActive: (documentationId: string, environmentId: string | null) =>
             apiFetch(`/documentation/${documentationId}/environments/set-active`, { method: 'PATCH', body: JSON.stringify({ environmentId }) }),
+        promote: (documentationId: string, data: { sourceId: string; targetId: string; keys?: string[]; overwrite?: boolean }) =>
+            apiFetch(`/documentation/${documentationId}/environments/promote`, { method: 'POST', body: JSON.stringify(data) }),
         listGlobal: () => apiFetch('/documentation/global/list'),
         createGlobal: (data: { name: string; variables?: Record<string, string>; isActive?: boolean; secrets?: string[] }) =>
             apiFetch('/documentation/global', { method: 'POST', body: JSON.stringify(data) }),

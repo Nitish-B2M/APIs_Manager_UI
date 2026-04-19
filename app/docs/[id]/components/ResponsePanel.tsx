@@ -11,6 +11,30 @@ import { WebsocketMessage, ConnectionStatus } from '@/types';
 
 type PaneLayout = 'horizontal' | 'vertical';
 
+/**
+ * Flag response-time anomalies against the request's own history.
+ * Returns a label+severity when the current time is materially slower than
+ * the rolling p95, or null if there isn't enough data / it's normal.
+ */
+function detectTimeAnomaly(currentTime: number | undefined, history: any): null | { label: string; severity: 'warn' | 'bad'; baseline: number } {
+    if (currentTime == null) return null;
+    let items: any[] = [];
+    if (Array.isArray(history)) items = history;
+    else if (typeof history === 'string') {
+        try { items = JSON.parse(history); } catch { return null; }
+    }
+    // Need at least 5 past samples (excluding the current one) for a meaningful baseline.
+    const times = items
+        .map(h => Number(h?.lastResponse?.time ?? h?.time ?? h?.responseTime))
+        .filter(t => Number.isFinite(t) && t > 0);
+    if (times.length < 5) return null;
+    const sorted = [...times].sort((a, b) => a - b);
+    const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
+    if (currentTime > p95 * 2) return { label: 'Much slower than usual', severity: 'bad', baseline: p95 };
+    if (currentTime > p95 * 1.3) return { label: 'Slower than usual', severity: 'warn', baseline: p95 };
+    return null;
+}
+
 function validateSchema(data: any, schema: any): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
     if (!schema || typeof schema !== 'object' || Object.keys(schema).length === 0) return { valid: true, errors: [] };
@@ -90,8 +114,10 @@ interface ResponsePanelProps {
     socketMode?: 'ws' | 'sse';
     onWsConnect?: () => void;
     onWsDisconnect?: () => void;
-    onWsSendMessage?: (data: string) => void;
+    onWsSendMessage?: (data: string, dataType?: 'text' | 'binary') => void;
     onWsClearMessages?: () => void;
+    wsAutoReconnect?: boolean;
+    onWsAutoReconnectChange?: (v: boolean) => void;
     aiEnabled?: boolean;
     onExplainError?: (error: any) => Promise<string | null>;
     shouldCopySingleLine?: boolean;
@@ -117,6 +143,8 @@ export function ResponsePanel({
     onWsDisconnect,
     onWsSendMessage,
     onWsClearMessages,
+    wsAutoReconnect,
+    onWsAutoReconnectChange,
     aiEnabled,
     onExplainError,
     shouldCopySingleLine
@@ -167,8 +195,22 @@ export function ResponsePanel({
     const [explanation, setExplanation] = useState<string | null>(null);
     const [editorInstance, setEditorInstance] = useState<any>(null);
 
-    const handleEditorDidMount = (editor: any, monaco: any) => {
+    const handleEditorDidMount = (editor: any, _monaco: any) => {
         setEditorInstance(editor);
+        editor.addAction({
+            id: 'save-as-variable',
+            label: 'Save as Variable',
+            contextMenuGroupId: 'devmanus',
+            contextMenuOrder: 0.1,
+            run: (ed: any) => {
+                const sel = ed.getSelection();
+                const model = ed.getModel();
+                if (!sel || !model) return;
+                const text = model.getValueInRange(sel);
+                if (!text) return;
+                window.dispatchEvent(new CustomEvent('devmanus:save-as-variable', { detail: { text, source: 'response-body' } }));
+            },
+        });
     };
 
     const handleCopyResponse = () => {
@@ -223,6 +265,25 @@ export function ResponsePanel({
                                 {response.status} {response.statusText}
                             </span>
                             <span className={themeClasses.subTextColor}>{response.time}ms</span>
+                            {/* Response-time anomaly — compared against the request's own history p95 */}
+                            {(() => {
+                                const anomaly = detectTimeAnomaly(response.time, currentReq?.history);
+                                if (!anomaly) return null;
+                                const isBad = anomaly.severity === 'bad';
+                                return (
+                                    <span
+                                        title={`Baseline (p95): ${Math.round(anomaly.baseline)}ms. Current: ${response.time}ms.`}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                                            isBad
+                                                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                                                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                                        }`}
+                                    >
+                                        <AlertCircle size={9} />
+                                        {anomaly.label}
+                                    </span>
+                                );
+                            })()}
                             <span className={themeClasses.subTextColor}>{formatSize(response.size)}</span>
                             <button
                                 onClick={() => setShowAbsoluteTime(!showAbsoluteTime)}
@@ -420,6 +481,8 @@ export function ResponsePanel({
                             messages={wsMessages}
                             status={wsStatus}
                             mode={socketMode}
+                            autoReconnect={wsAutoReconnect}
+                            onAutoReconnectChange={onWsAutoReconnectChange}
                             onConnect={onWsConnect || (() => { })}
                             onDisconnect={onWsDisconnect || (() => { })}
                             onSendMessage={onWsSendMessage || (() => { })}

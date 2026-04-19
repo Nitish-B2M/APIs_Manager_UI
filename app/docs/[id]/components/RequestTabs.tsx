@@ -310,7 +310,27 @@ export const RequestTabs = memo(({
                                         <WrapText size={12} /> {wrapLines ? 'WRAP ON' : 'WRAP OFF'}
                                     </button>
                                     <button
-                                        onClick={onFormatJson}
+                                        onClick={() => {
+                                            const raw = currentReq?.body?.raw || '';
+                                            if (!raw.trim()) return;
+                                            // Substitute {{var}} with a unique string token so JSON.parse succeeds,
+                                            // then restore after formatting.
+                                            const placeholders: string[] = [];
+                                            const masked = raw.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m: string, name: string) => {
+                                                const i = placeholders.length;
+                                                placeholders.push(name);
+                                                return `"__VAR_${i}__"`;
+                                            });
+                                            try {
+                                                const parsed = JSON.parse(masked);
+                                                let formatted = JSON.stringify(parsed, null, 2);
+                                                formatted = formatted.replace(/"__VAR_(\d+)__"/g, (_m: string, i: string) => `{{${placeholders[Number(i)]}}}`);
+                                                onRequestChange({ body: { ...currentReq.body, mode: currentReq.body?.mode || 'raw', raw: formatted } });
+                                                toast.success('Formatted');
+                                            } catch (e: any) {
+                                                toast.error('Invalid JSON — cannot format');
+                                            }
+                                        }}
                                         className="px-2 py-1 hover:bg-[#1a7a7c]/20 text-[#2ec4c7] rounded-lg border border-[#249d9f]/20 flex items-center gap-1.5 font-black text-[9px] uppercase tracking-widest transition-all"
                                     >
                                         <CheckCircle2 size={12} /> FORMAT
@@ -341,6 +361,42 @@ export const RequestTabs = memo(({
                                                 value={responseText}
                                                 theme={theme === 'dark' ? 'vs-dark' : 'light'}
                                                 onChange={(value) => onRequestChange({ body: { ...currentReq.body, mode: currentReq.body?.mode || 'raw', raw: value || '' } })}
+                                                onMount={(editor, monaco) => {
+                                                    // Disable JSON validation so {{variable}} placeholders don't show errors
+                                                    monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                                                        validate: false,
+                                                        allowComments: true,
+                                                        schemas: [],
+                                                    });
+                                                    editor.addAction({
+                                                        id: 'save-as-variable',
+                                                        label: 'Save as Variable',
+                                                        contextMenuGroupId: 'devmanus',
+                                                        contextMenuOrder: 0.1,
+                                                        run: (ed) => {
+                                                            const sel = ed.getSelection();
+                                                            const model = ed.getModel();
+                                                            if (!sel || !model) return;
+                                                            const text = model.getValueInRange(sel);
+                                                            if (!text) return;
+                                                            window.dispatchEvent(new CustomEvent('devmanus:save-as-variable', { detail: { text, source: 'request-body' } }));
+                                                        },
+                                                    });
+                                                    editor.addAction({
+                                                        id: 'extract-to-variable',
+                                                        label: 'Extract to Variable',
+                                                        contextMenuGroupId: 'devmanus',
+                                                        contextMenuOrder: 0.2,
+                                                        run: (ed) => {
+                                                            const sel = ed.getSelection();
+                                                            const model = ed.getModel();
+                                                            if (!sel || !model) return;
+                                                            const text = model.getValueInRange(sel);
+                                                            if (!text) return;
+                                                            window.dispatchEvent(new CustomEvent('devmanus:extract-to-variable', { detail: { text, source: 'request-body' } }));
+                                                        },
+                                                    });
+                                                }}
                                                 options={{
                                                     readOnly: !canEdit,
                                                     fontSize: 13,
@@ -394,7 +450,7 @@ export const RequestTabs = memo(({
                 )}
 
                 {activeTab === 'scripts' && (
-                    <div className="flex-1 overflow-hidden" style={{ background: '#0D1117', borderRadius: 12, border: '1px solid #21262D' }}>
+                    <div style={{ height: '100%', minHeight: 500, display: 'flex', flexDirection: 'column', background: '#0D1117', borderRadius: 12, border: '1px solid #21262D', overflow: 'hidden' }}>
                         <ScriptsTab
                             preScript={currentReq?.pre_script || ''}
                             postScript={currentReq?.post_script || ''}

@@ -124,7 +124,8 @@ export const ScriptsTab = memo(({ preScript, postScript, canEdit, onChange, last
             </div>
 
             {/* Editor */}
-            <div style={{ flex: 1, minHeight: 0 }}>
+            <div style={{ flex: 1, minHeight: 300, position: 'relative' }}>
+                <div style={{ position: 'absolute', inset: 0 }}>
                 <Editor
                     height="100%"
                     language="javascript"
@@ -143,11 +144,9 @@ export const ScriptsTab = memo(({ preScript, postScript, canEdit, onChange, last
                         lineNumbers: 'on',
                         renderLineHighlight: 'none',
                         tabSize: 2,
-                        placeholder: activeSection === 'pre'
-                            ? '// Runs before the request is sent\n// Use pm.variables.set("key", "value") to set variables\n'
-                            : '// Runs after the response is received\n// Use pm.response.json() to access response body\n// Use pm.test("name", () => { ... }) to write tests\n',
                     }}
                 />
+                </div>
             </div>
 
             {/* Console output */}
